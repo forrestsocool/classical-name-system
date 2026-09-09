@@ -6,7 +6,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  测试:
+  test:
+    name: 自动测试
     runs-on: ubuntu-latest
     steps:
       - name: 检出代码
