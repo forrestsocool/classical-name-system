@@ -10,6 +10,7 @@ from pathlib import Path
 根目录 = Path(__file__).resolve().parents[1]
 默认输入 = 根目录 / "古籍与东亚年号参考资料" / "古籍全文" / "周易.txt"
 默认输出 = 根目录 / "构建产物" / "周易字形核验.json"
+默认规范化输出 = 根目录 / "构建产物" / "展示资料" / "周易-规范化展示.txt"
 标题正则 = re.compile(r"^【([^】]+)】$")
 卦名语境正则 = re.compile(
     r"《干》|干（卦|干下|干上|乎干|干行|干，健|干为|干知|干以|"
@@ -88,15 +89,37 @@ def 生成报告(路径: Path) -> dict:
     }
 
 
+def 生成规范化文本(路径: Path, 报告: dict) -> str:
+    """只应用高置信建议生成展示副本，原始文件保持不变。"""
+    行列表 = 路径.read_text(encoding="utf-8").splitlines()
+    替换位置: dict[int, dict[int, str]] = {}
+    for 项目 in 报告["正文逐字核验"]:
+        if 项目["建议字符"] == "乾" and 项目["置信度"] == "高":
+            替换位置.setdefault(项目["行"] - 1, {})[项目["列"] - 1] = "乾"
+    新行列表: list[str] = []
+    for 行索引, 行 in enumerate(行列表):
+        字符列表 = list(行)
+        for 列索引, 字符 in 替换位置.get(行索引, {}).items():
+            字符列表[列索引] = 字符
+        新行列表.append("".join(字符列表))
+    return "\n".join(新行列表) + "\n"
+
+
 def 主程序() -> int:
     解析器 = argparse.ArgumentParser(description="生成周易干乾字形核验报告")
     解析器.add_argument("--输入", type=Path, default=默认输入)
     解析器.add_argument("--输出", type=Path, default=默认输出)
+    解析器.add_argument("--规范化输出", type=Path, default=默认规范化输出)
     参数 = 解析器.parse_args()
     if not 参数.输入.exists():
         raise FileNotFoundError(f"文件不存在：{参数.输入}")
     参数.输出.parent.mkdir(parents=True, exist_ok=True)
     报告 = 生成报告(参数.输入)
+    参数.规范化输出.parent.mkdir(parents=True, exist_ok=True)
+    参数.规范化输出.write_text(
+        生成规范化文本(参数.输入, 报告), encoding="utf-8", newline="\n"
+    )
+    报告["规范化展示文件"] = str(参数.规范化输出)
     参数.输出.write_text(
         json.dumps(报告, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )

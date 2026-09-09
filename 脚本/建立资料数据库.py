@@ -436,11 +436,6 @@ def 读入古籍(连接: sqlite3.Connection, 资料目录: Path) -> int:
                 "INSERT INTO audit_issues(source_id, issue_type, detail) VALUES (?, ?, ?)",
                 (来源编号, "字形核验", "文本包含“干”，需要逐处核对是否应为“乾”"),
             )
-        if 路径.stem == "诗经":
-            连接.execute(
-                "INSERT INTO audit_issues(source_id, issue_type, detail) VALUES (?, ?, ?)",
-                (来源编号, "篇名核验", "当前分类标题重复出现，需要补齐诗篇名并确认篇章边界"),
-            )
         数量 += len(片段)
     return 数量
 
