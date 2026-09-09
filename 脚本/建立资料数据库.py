@@ -141,7 +141,11 @@ def 建立表结构(连接: sqlite3.Connection) -> None:
             era_name TEXT NOT NULL,
             period TEXT NOT NULL,
             duration TEXT NOT NULL,
-            status TEXT NOT NULL
+            status TEXT NOT NULL,
+            source_line INTEGER NOT NULL DEFAULT 0,
+            record_type TEXT NOT NULL DEFAULT '正式年号',
+            person TEXT NOT NULL DEFAULT '',
+            note TEXT NOT NULL DEFAULT ''
         );
 
         CREATE TABLE IF NOT EXISTS directions (
@@ -340,6 +344,18 @@ def 建立表结构(连接: sqlite3.Connection) -> None:
     for 列名 in ("reviewed_at", "reviewer", "review_note"):
         if 列名 not in 问题现有列:
             连接.execute(f"ALTER TABLE audit_issues ADD COLUMN {列名} TEXT")
+    年号现有列 = {
+        行[1]
+        for 行 in 连接.execute("PRAGMA table_info(eras)").fetchall()
+    }
+    for 列名, 定义 in (
+        ("source_line", "INTEGER NOT NULL DEFAULT 0"),
+        ("record_type", "TEXT NOT NULL DEFAULT '正式年号'"),
+        ("person", "TEXT NOT NULL DEFAULT ''"),
+        ("note", "TEXT NOT NULL DEFAULT ''"),
+    ):
+        if 列名 not in 年号现有列:
+            连接.execute(f"ALTER TABLE eras ADD COLUMN {列名} {定义}")
 
 
 def 清空可重建表(连接: sqlite3.Connection) -> None:
@@ -575,6 +591,61 @@ def 年号地区(文本: str, 当前地区: str) -> str:
     return 当前地区
 
 
+年号网页标记正则 = re.compile(r"\{\{.*?\}\}")
+年号属性标记正则 = re.compile(r"(?:rowspan|colspan)=\"[^\"]*\"\|")
+
+
+def 清洗年号字段(字段: str) -> tuple[str, bool]:
+    原字段 = 字段.strip()
+    字段 = 年号网页标记正则.sub("", 原字段)
+    字段 = 年号属性标记正则.sub("", 字段)
+    字段 = re.sub(r"\s+", " ", 字段).strip()
+    return 字段, 字段 != 原字段
+
+
+def 是年数字段(字段: str) -> bool:
+    return bool(
+        re.fullmatch(
+            r"[0-9０-９一二三四五六七八九十百千万？?－—-]+年?",
+            字段,
+        )
+    ) or 字段 in {"现行", "未详", "未标注"}
+
+
+def 解析年号字段(字段: list[str]) -> tuple[str, str, str, str, str, str]:
+    """返回年号名、时期、年数、人物、记录类型和清洗备注。"""
+    年号名, 名有标记 = 清洗年号字段(字段[0])
+    时期, 期有标记 = 清洗年号字段(字段[1])
+    备注: list[str] = []
+    if 名有标记 or 期有标记:
+        备注.append("原始字段含网页标记，已清洗展示字段")
+    if len(字段) == 2:
+        备注.append("原始资料未提供年数")
+        年数 = "现行"
+        人物 = ""
+        记录类型 = "现行年号"
+    else:
+        第三字段, 第三字段有标记 = 清洗年号字段(字段[2])
+        if 第三字段有标记:
+            备注.append("原始人物字段含网页属性标记，已清洗展示字段")
+        if 是年数字段(第三字段):
+            年数 = 第三字段
+            人物 = ""
+            记录类型 = "正式年号"
+        else:
+            年数 = "未标注"
+            人物 = 第三字段
+            记录类型 = "其他政权年号"
+            备注.append("第三字段按人物或政权处理")
+    if any(
+        "？" in 项目 or "?" in 项目 or "□" in 项目
+        for 项目 in (年号名, 时期, 年数, 人物)
+    ):
+        记录类型 = "存疑记录"
+        备注.append("含待核对字符")
+    return 年号名, 时期, 年数, 人物, 记录类型, "；".join(备注)
+
+
 def 读入年号(连接: sqlite3.Connection, 资料目录: Path) -> int:
     路径 = 资料目录 / "儒家文化圈历史年号汇总.txt"
     if not 路径.exists():
@@ -600,21 +671,35 @@ def 读入年号(连接: sqlite3.Connection, 资料目录: Path) -> int:
             if 新地区 != 地区:
                 地区 = 新地区
             else:
-                分类 = 行
+                分类, _ = 清洗年号字段(行)
             continue
         字段 = [项目.strip() for 项目 in 行.split("｜")]
-        if len(字段) != 3:
+        if len(字段) not in (2, 3):
             连接.execute(
                 "INSERT INTO audit_issues(source_id, issue_type, detail) VALUES (?, ?, ?)",
                 (来源编号, "年号字段", f"第{行号}行不是三字段记录：{行}"),
             )
             continue
+        年号名, 时期, 年数, 人物, 记录类型, 备注 = 解析年号字段(字段)
         连接.execute(
             """
-            INSERT INTO eras(source_id, region, category, era_name, period, duration, status)
-            VALUES (?, ?, ?, ?, ?, ?, '待核验')
+            INSERT INTO eras(
+                source_id, region, category, era_name, period, duration, status,
+                source_line, record_type, person, note
+            ) VALUES (?, ?, ?, ?, ?, ?, '待核验', ?, ?, ?, ?)
             """,
-            (来源编号, 地区, 分类, 字段[0], 字段[1], 字段[2]),
+            (
+                来源编号,
+                地区,
+                分类,
+                年号名,
+                时期,
+                年数,
+                行号,
+                记录类型,
+                人物,
+                备注,
+            ),
         )
         数量 += 1
     return 数量

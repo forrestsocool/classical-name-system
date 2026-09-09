@@ -107,6 +107,17 @@ class 起名系统测试(unittest.TestCase):
         详情 = 获取年号(年号编号)
         self.assertEqual(详情["id"], 年号编号)
         self.assertTrue(详情["era_name"])
+        self.assertIn("record_type", 详情)
+        self.assertIn("source_line", 详情)
+
+        现行 = 搜索年号(关键词="令和", 地区="日本", 状态=None, 数量=5)
+        self.assertEqual(现行["数量"], 1)
+        现行详情 = 获取年号(现行["结果"][0]["id"])
+        self.assertEqual(现行详情["duration"], "现行")
+        self.assertEqual(现行详情["record_type"], "现行年号")
+
+        人物记录 = 搜索年号(关键词="龙兴", 地区="中国", 状态=None, 数量=100)
+        self.assertTrue(any(项目["person"] == "公孙述" for 项目 in 人物记录["结果"]))
 
     def test八字计算和五行统计(self) -> None:
         结果 = 计算八字接口(

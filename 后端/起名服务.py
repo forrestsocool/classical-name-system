@@ -466,7 +466,8 @@ def 搜索年号(
         条件.append("status = ?")
         参数.append(状态)
     查询 = """
-        SELECT id, region, category, era_name, period, duration, status
+        SELECT id, region, category, era_name, period, duration, status,
+               source_line, record_type, person, note
         FROM eras
     """
     if 条件:
@@ -489,7 +490,8 @@ def 获取年号(era_id: int) -> dict:
     with 连接数据库() as 连接:
         行 = 连接.execute(
             """
-            SELECT id, region, category, era_name, period, duration, status
+            SELECT id, region, category, era_name, period, duration, status,
+                   source_line, record_type, person, note
             FROM eras WHERE id = ?
             """,
             (era_id,),
