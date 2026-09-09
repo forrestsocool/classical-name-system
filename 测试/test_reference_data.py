@@ -24,9 +24,9 @@ class 参考资料结构测试(unittest.TestCase):
         报告路径 = 根目录 / "构建产物" / "周易字形核验.json"
         报告 = json.loads(报告路径.read_text(encoding="utf-8"))
         self.assertEqual(报告["原文干字总数"], 79)
-        self.assertEqual(报告["统计"]["建议改为乾"], 48)
+        self.assertEqual(报告["统计"]["建议改为乾"], 53)
         self.assertEqual(报告["统计"]["建议保留干"], 26)
-        self.assertEqual(报告["统计"]["待人工核验"], 5)
+        self.assertEqual(报告["统计"]["待人工核验"], 0)
         self.assertEqual(报告["章节标题修正规则"][0]["建议"], "01. 乾（卦一）")
 
 

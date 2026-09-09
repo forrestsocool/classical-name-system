@@ -14,13 +14,15 @@ from pathlib import Path
 卦名语境正则 = re.compile(
     r"《干》|干（卦|干下|干上|乎干|干行|干，健|干为|干知|干以|"
     r"干之策|战乎干|干，天|干，阳物|夫干|大哉干|干始|成象为干|"
-    r"辟户谓之干|盖取诸《干》|干君|干，确然|干，天下"
+    r"成象之谓干|干元|干：|干:|辟户谓之干|盖取诸《干》|干君|干，确然|干，天下"
 )
-保留语境正则 = re.compile(r"干干|干事|干父|干母|干胏|干肉|干城|于干")
+保留语境正则 = re.compile(
+    r"干干|事之干|干事|干父|干母|干胏|干肉|干城|于干"
+)
 
 
-def 分类(行: str, 位置: int) -> tuple[str, str, str]:
-    左右 = 行[max(0, 位置 - 10) : min(len(行), 位置 + 14)]
+def 分类(行: str, 位置: int, 后续文本: str = "") -> tuple[str, str, str]:
+    左右 = 行[max(0, 位置 - 10) : min(len(行), 位置 + 14)] + 后续文本
     if 卦名语境正则.search(左右):
         return "乾", "高", "卦名、卦象或八卦语境"
     if 保留语境正则.search(左右):
@@ -33,7 +35,9 @@ def 生成报告(路径: Path) -> dict:
     结果: list[dict] = []
     标题结果: list[dict] = []
     字符总数 = 0
-    for 行号, 行 in enumerate(原文.splitlines(), 1):
+    行列表 = 原文.splitlines()
+    for 行索引, 行 in enumerate(行列表):
+        行号 = 行索引 + 1
         标题匹配 = 标题正则.fullmatch(行.strip())
         if 标题匹配 and "干（卦一）" in 标题匹配.group(1):
             标题结果.append(
@@ -49,7 +53,12 @@ def 生成报告(路径: Path) -> dict:
             位置 = 行.find("干", 起点)
             if 位置 < 0:
                 break
-            建议, 置信度, 依据 = 分类(行, 位置)
+            后续文本 = (
+                行列表[行索引 + 1].lstrip()
+                if 行索引 + 1 < len(行列表)
+                else ""
+            )
+            建议, 置信度, 依据 = 分类(行, 位置, 后续文本)
             结果.append(
                 {
                     "行": 行号,
