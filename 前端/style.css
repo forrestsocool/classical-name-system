@@ -1,0 +1,91 @@
+:root {
+  color-scheme: light;
+  font-family: "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  color: #27352f;
+  background: #f5f0e6;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: radial-gradient(circle at top, #fbf8f0, #f1eadc); }
+.页面 { width: min(980px, calc(100% - 32px)); margin: 0 auto; padding: 48px 0 72px; }
+.页头 { text-align: center; margin-bottom: 28px; }
+.眉题 { color: #8d6c45; letter-spacing: .16em; font-size: 13px; }
+h1 { margin: 12px 0; font-family: "STKaiti", "KaiTi", serif; font-size: clamp(30px, 6vw, 54px); font-weight: 500; }
+.副题 { color: #68736b; }
+.面板, .八字卡片, .名字卡片, .空结果 { background: rgba(255, 253, 247, .88); border: 1px solid #e4d9c5; border-radius: 16px; box-shadow: 0 10px 30px rgba(93, 75, 49, .06); }
+.面板 { padding: 24px; }
+.字段网格 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+label { display: grid; gap: 7px; color: #59655d; font-size: 14px; }
+input, select { width: 100%; border: 1px solid #d6c9b5; border-radius: 9px; background: #fffdf8; padding: 11px 12px; color: #27352f; font: inherit; }
+fieldset { margin: 22px 0; border: 1px solid #e4d9c5; border-radius: 12px; padding: 16px; }
+legend { padding: 0 8px; color: #8d6c45; }
+.方向列表 { display: flex; flex-wrap: wrap; gap: 10px; }
+.方向项 { display: flex; grid-template-columns: auto auto; align-items: center; gap: 7px; border: 1px solid #ded2bf; border-radius: 99px; padding: 8px 12px; cursor: pointer; }
+.方向项 input { width: auto; }
+.字段提示 { display: block; margin-top: 10px; color: #8a8b83; }
+details { margin: 12px 0 22px; color: #59655d; }
+summary { cursor: pointer; padding: 8px 0; }
+button { width: 100%; border: 0; border-radius: 10px; padding: 13px 16px; background: #426b5a; color: white; font: inherit; cursor: pointer; }
+button:hover { background: #315747; }
+.收藏按钮 { margin-top: 14px; padding: 9px 12px; background: #8d6c45; }
+.收藏按钮:hover { background: #705332; }
+.收藏按钮:disabled { opacity: .7; cursor: default; }
+.反馈操作 { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+.反馈按钮 { width: auto; padding: 7px 9px; background: #eee7d9; color: #59655d; font-size: 12px; }
+.反馈按钮:hover { background: #ddd1bd; }
+.反馈按钮:disabled { opacity: .65; cursor: default; }
+.管理面板 { margin-top: 24px; }
+.历史面板 { margin-top: 24px; }
+.历史面板 > details > button { width: auto; margin: 12px 0; background: #426b5a; }
+.历史列表 { display: grid; gap: 10px; }
+.历史卡片 { display: grid; gap: 6px; border: 1px solid #e4d9c5; border-radius: 10px; padding: 12px; background: #fffdf8; }
+.历史卡片 small { color: #7b817a; overflow-wrap: anywhere; }
+.历史删除按钮 { width: auto; padding: 7px 10px; background: #a14d42; }
+.历史删除按钮:disabled { opacity: .65; cursor: default; }
+.年号面板 { margin-top: 24px; }
+.年号面板 > details > button { width: auto; margin: 12px 0; background: #426b5a; }
+.年号列表 { display: grid; gap: 10px; }
+.年号卡片 { display: grid; gap: 6px; border: 1px solid #e4d9c5; border-radius: 10px; padding: 12px; background: #fffdf8; }
+.年号卡片 span, .年号卡片 small { color: #7b817a; }
+.管理面板 summary { color: #8d6c45; }
+.管理操作 { display: flex; gap: 10px; margin: 16px 0; }
+.管理操作 button { width: auto; background: #426b5a; }
+.质量统计 { min-height: 24px; color: #68736b; margin-bottom: 12px; }
+.复核列表 { display: grid; gap: 12px; }
+.复核卡片 { border: 1px solid #e4d9c5; border-radius: 10px; padding: 14px; background: #fffdf8; }
+.复核卡片 p { line-height: 1.8; margin: 8px 0; }
+.复核卡片 small { color: #7b817a; }
+.复核按钮组 { display: flex; gap: 8px; margin-top: 10px; }
+.复核按钮 { width: auto; padding: 8px 12px; background: #426b5a; }
+.复核按钮[data-state="不采用"] { background: #a14d42; }
+.复核按钮:disabled { opacity: .65; cursor: default; }
+.五行复核按钮 { width: auto; padding: 8px 12px; background: #426b5a; }
+.五行复核按钮[data-state="不采用"] { background: #a14d42; }
+.五行复核按钮:disabled { opacity: .65; cursor: default; }
+.审计复核按钮 { width: auto; padding: 8px 12px; background: #426b5a; }
+.审计复核按钮[data-state="忽略"] { background: #8d6c45; }
+.审计复核按钮:disabled { opacity: .65; cursor: default; }
+.状态 { min-height: 28px; padding: 18px 4px 8px; color: #68736b; }
+.状态.成功 { color: #2f6a4f; }
+.状态.错误 { color: #a14d42; }
+.状态.提示 { color: #8d6c45; }
+.换一批按钮 { width: auto; margin: 4px 0 18px; background: #8d6c45; }
+.换一批按钮:hover { background: #705332; }
+.八字结果 { margin-bottom: 18px; }
+.八字卡片 { display: grid; gap: 8px; padding: 16px 18px; }
+.八字卡片 strong { font-size: 20px; letter-spacing: .12em; }
+.八字卡片 small, .名字卡片 small { color: #7b817a; line-height: 1.7; }
+.结果列表 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.名字卡片 { padding: 20px; }
+.名字行 { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.名字行 h2 { margin: 0; font-family: "STKaiti", "KaiTi", serif; font-size: 30px; font-weight: 500; }
+.名字行 span { color: #8d6c45; font-size: 13px; }
+.词组 { color: #426b5a; font-size: 17px; margin: 8px 0; }
+.拼音 { color: #8d6c45; font-size: 13px; letter-spacing: .03em; }
+blockquote { margin: 14px 0; padding: 12px 14px; border-left: 3px solid #caa878; background: #fbf6eb; line-height: 1.8; }
+.空结果 { padding: 22px; color: #68736b; }
+@media (max-width: 700px) {
+  .页面 { width: min(100% - 20px, 620px); padding-top: 28px; }
+  .字段网格, .结果列表 { grid-template-columns: 1fr; }
+  .面板 { padding: 16px; }
+}
