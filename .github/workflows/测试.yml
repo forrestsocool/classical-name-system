@@ -29,6 +29,9 @@ jobs:
       - name: 检查前端语法
         run: node --check 前端/app.js
 
+      - name: 检查 Python 编译
+        run: python -m compileall -q 后端 脚本 测试
+
       - name: 检查数据库和部署配置
         env:
           起名管理密钥: ci-test-admin-key-2026

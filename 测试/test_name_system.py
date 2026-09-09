@@ -26,6 +26,7 @@ from 后端.起名服务 import (
     获取收藏,
     获取质量统计,
     获取模型候选,
+    获取请求指标,
     获取复核队列,
     获取五行复核队列,
     获取审计问题队列,
@@ -33,6 +34,7 @@ from 后端.起名服务 import (
     获取起名任务,
     获取任务列表,
     生成模型候选,
+    生成Prometheus指标,
     计算八字接口,
     健康检查,
     就绪检查,
@@ -55,6 +57,8 @@ from 后端.起名服务 import (
     复核审计问题,
     复核五行规则,
     请求是否超限,
+    规范监控路径,
+    记录请求指标,
     创建起名任务,
 )
 
@@ -462,6 +466,22 @@ class 起名系统测试(unittest.TestCase):
         缓存.写入("乙", {"值": 2})
         self.assertIsNone(缓存.读取("甲"))
         self.assertEqual(缓存.数量(), 1)
+
+    def test请求监控指标(self) -> None:
+        开始 = 获取请求指标()
+        记录请求指标("GET", "/api/监控测试", 200, 12.5)
+        记录请求指标("GET", "/api/监控测试", 500, 7.5)
+        当前 = 获取请求指标()
+        self.assertEqual(当前["请求总数"], 开始["请求总数"] + 2)
+        self.assertEqual(当前["错误请求数"], 开始["错误请求数"] + 1)
+        self.assertIn("GET /api/监控测试", 当前["路径"])
+        self.assertEqual(
+            规范监控路径("/api/name-runs/测试编号/model-candidates"),
+            "/api/name-runs/{id}/model-candidates",
+        )
+        文本 = 生成Prometheus指标()
+        self.assertIn("name_service_requests_total", 文本)
+        self.assertIn('path="/api/监控测试"', 文本)
 
     def test候选生成约束和随机种子(self) -> None:
         连接 = sqlite3.connect(":memory:")

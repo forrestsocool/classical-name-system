@@ -15,7 +15,7 @@ from typing import Literal
 from typing import Annotated
 
 from fastapi import FastAPI, Header, HTTPException, Query
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -38,6 +38,101 @@ from .模型接口 import (
 限流记录: dict[str, deque[float]] = defaultdict(deque)
 限流锁 = Lock()
 查询缓存 = TTL缓存(有效秒数=60, 最大数量=256)
+请求指标锁 = Lock()
+请求指标数据 = {
+    "请求总数": 0,
+    "错误请求数": 0,
+    "耗时毫秒总数": 0.0,
+    "路径": {},
+}
+
+
+def 记录请求指标(方法: str, 路径: str, 状态码: int, 耗时毫秒: float) -> None:
+    """记录不含查询参数和请求正文的进程内监控指标。"""
+    路径键 = f"{方法} {路径}"
+    with 请求指标锁:
+        请求指标数据["请求总数"] += 1
+        请求指标数据["耗时毫秒总数"] += max(0.0, 耗时毫秒)
+        if 状态码 >= 400:
+            请求指标数据["错误请求数"] += 1
+        路径指标 = 请求指标数据["路径"].setdefault(
+            路径键,
+            {"请求数": 0, "错误数": 0, "耗时毫秒总数": 0.0},
+        )
+        路径指标["请求数"] += 1
+        路径指标["耗时毫秒总数"] += max(0.0, 耗时毫秒)
+        if 状态码 >= 400:
+            路径指标["错误数"] += 1
+
+
+def 规范监控路径(路径: str) -> str:
+    """将资源编号归一化，避免监控标签因用户数据产生高基数。"""
+    规则 = (
+        (r"^/api/name-runs/[^/]+/model-candidates$", "/api/name-runs/{id}/model-candidates"),
+        (r"^/api/name-runs/[^/]+$", "/api/name-runs/{id}"),
+        (r"^/api/admin/passages/[^/]+/review$", "/api/admin/passages/{id}/review"),
+        (r"^/api/admin/characters/[^/]+/element-review$", "/api/admin/characters/{char}/element-review"),
+        (r"^/api/admin/audit-issues/[^/]+/review$", "/api/admin/audit-issues/{id}/review"),
+        (r"^/api/eras/[^/]+$", "/api/eras/{id}"),
+        (r"^/api/passages/[^/]+$", "/api/passages/{id}"),
+        (r"^/api/characters/[^/]+$", "/api/characters/{char}"),
+        (r"^/api/favorites/[^/]+$", "/api/favorites/{id}"),
+    )
+    for 模式, 替换 in 规则:
+        if re.fullmatch(模式, 路径):
+            return 替换
+    return 路径
+
+
+def 获取请求指标() -> dict:
+    with 请求指标锁:
+        路径 = {
+            键: dict(值) for 键, 值 in 请求指标数据["路径"].items()
+        }
+        return {
+            "请求总数": 请求指标数据["请求总数"],
+            "错误请求数": 请求指标数据["错误请求数"],
+            "耗时毫秒总数": 请求指标数据["耗时毫秒总数"],
+            "路径": 路径,
+        }
+
+
+def _转义Prometheus标签(值: str) -> str:
+    return 值.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+
+
+def 生成Prometheus指标() -> str:
+    指标 = 获取请求指标()
+    总数 = 指标["请求总数"]
+    错误数 = 指标["错误请求数"]
+    总耗时 = 指标["耗时毫秒总数"]
+    行 = [
+        "# HELP name_service_requests_total HTTP请求总数",
+        "# TYPE name_service_requests_total counter",
+        f"name_service_requests_total {总数}",
+        "# HELP name_service_request_errors_total HTTP错误请求总数",
+        "# TYPE name_service_request_errors_total counter",
+        f"name_service_request_errors_total {错误数}",
+        "# HELP name_service_request_duration_ms_sum HTTP请求耗时毫秒总和",
+        "# TYPE name_service_request_duration_ms_sum counter",
+        f"name_service_request_duration_ms_sum {总耗时:.3f}",
+        "# HELP name_service_request_duration_ms_count HTTP请求耗时样本数",
+        "# TYPE name_service_request_duration_ms_count counter",
+        f"name_service_request_duration_ms_count {总数}",
+        "# HELP name_service_request_path_total 按方法和路径统计的HTTP请求数",
+        "# TYPE name_service_request_path_total counter",
+    ]
+    for 路径键, 路径指标 in sorted(指标["路径"].items()):
+        方法, 路径 = 路径键.split(" ", 1)
+        标签 = (
+            f'method="{_转义Prometheus标签(方法)}",'
+            f'path="{_转义Prometheus标签(路径)}"'
+        )
+        行.append(
+            f"name_service_request_path_total{{{标签}}} "
+            f"{路径指标['请求数']}"
+        )
+    return "\n".join(行) + "\n"
 
 
 def 每分钟请求上限() -> int:
@@ -62,26 +157,37 @@ def 请求是否超限(来源: str, 当前时间: float) -> bool:
 
 @应用.middleware("http")
 async def 请求保护(请求, 调用下一个):
-    if 请求.url.path.startswith("/api/"):
-        来源 = 请求.client.host if 请求.client else "未知来源"
-        if 请求是否超限(来源, time.monotonic()):
-            响应 = JSONResponse(
-                {"detail": "请求过于频繁，请稍后再试"},
-                status_code=429,
-                headers={"Retry-After": "60"},
-            )
+    开始时间 = time.perf_counter()
+    状态码 = 500
+    try:
+        if 请求.url.path.startswith("/api/"):
+            来源 = 请求.client.host if 请求.client else "未知来源"
+            if 请求是否超限(来源, time.monotonic()):
+                响应 = JSONResponse(
+                    {"detail": "请求过于频繁，请稍后再试"},
+                    status_code=429,
+                    headers={"Retry-After": "60"},
+                )
+            else:
+                响应 = await 调用下一个(请求)
         else:
             响应 = await 调用下一个(请求)
-    else:
-        响应 = await 调用下一个(请求)
-    响应.headers["X-Content-Type-Options"] = "nosniff"
-    响应.headers["X-Frame-Options"] = "DENY"
-    响应.headers["Referrer-Policy"] = "no-referrer"
-    响应.headers["Content-Security-Policy"] = (
-        "default-src 'self'; script-src 'self'; style-src 'self'; "
-        "img-src 'self' data:; connect-src 'self'"
-    )
-    return 响应
+        状态码 = 响应.status_code
+        响应.headers["X-Content-Type-Options"] = "nosniff"
+        响应.headers["X-Frame-Options"] = "DENY"
+        响应.headers["Referrer-Policy"] = "no-referrer"
+        响应.headers["Content-Security-Policy"] = (
+            "default-src 'self'; script-src 'self'; style-src 'self'; "
+            "img-src 'self' data:; connect-src 'self'"
+        )
+        return 响应
+    finally:
+        记录请求指标(
+            请求.method,
+            规范监控路径(请求.url.path),
+            状态码,
+            (time.perf_counter() - 开始时间) * 1000,
+        )
 
 
 class 起名请求(BaseModel):
@@ -249,6 +355,14 @@ def 就绪检查() -> dict:
     if 完整性 != "ok":
         raise HTTPException(status_code=503, detail="数据库完整性检查未通过")
     return {"状态": "就绪", "数据库完整性": 完整性, "可生成片段数": 可生成数}
+
+
+@应用.get("/metrics", include_in_schema=False)
+def 监控指标() -> PlainTextResponse:
+    return PlainTextResponse(
+        生成Prometheus指标(),
+        media_type="text/plain; version=0.0.4; charset=utf-8",
+    )
 
 
 @应用.post("/api/bazi")

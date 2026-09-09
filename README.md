@@ -123,6 +123,7 @@ python 脚本/备份数据库.py
 | --- | --- | --- |
 | GET | `/api/health` | 查看服务和资料数量 |
 | GET | `/api/ready` | 检查数据库完整性和可生成片段 |
+| GET | `/metrics` | 输出 Prometheus 请求指标 |
 | POST | `/api/bazi` | 计算四柱和五行统计 |
 | GET | `/api/model/status` | 查看模型是否已配置 |
 | GET | `/api/search` | 搜索古籍片段 |
@@ -207,6 +208,15 @@ python 脚本/部署检查.py
 ```
 
 GitHub Actions 工作流位于 `.github/workflows/测试.yml`，会在推送和拉取请求时执行 Python 测试、前端语法检查和数据库部署检查。
+
+本地轻量压测：
+
+```powershell
+python 脚本/压测服务.py --地址 http://127.0.0.1:8000 --模式 检索 --请求数 30 --并发数 5
+python 脚本/压测服务.py --地址 http://127.0.0.1:8000 --模式 起名 --请求数 10 --并发数 3
+```
+
+起名模式会在完成后删除本轮任务。服务启动后可将 `/metrics` 接入 Prometheus；指标只记录方法、归一化路径、状态和耗时，不记录查询参数、请求正文或出生资料。
 
 ## 安全和隐私
 
