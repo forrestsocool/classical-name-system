@@ -110,6 +110,27 @@ def 生成基础候选(
                 来源行.append(行)
         else:
             来源行.append(原行)
+    # 已核验片段是第二层候选池，避免少量人工精选词组耗尽后无法换一批。
+    # 分数低于人工精选词组，仍然经过同样的出处、字形和用户约束校验。
+    if 名字长度 in {1, 2}:
+        补充查询 = """
+            SELECT p.id, p.text, p.section_title, b.name AS book,
+                   p.id AS source_offset, '原文连取' AS origin_type,
+                   45 AS quality_score, '资料检索' AS direction
+            FROM passages p
+            JOIN books b ON b.id = p.book_id
+            WHERE p.can_generate = 1
+            ORDER BY p.id
+        """
+        for 原行 in 连接.execute(补充查询):
+            正文 = 原行["text"]
+            for 中文段匹配 in 中文串正则.finditer(正文):
+                中文段 = 中文段匹配.group(0)
+                for 偏移 in range(0, len(中文段) - 名字长度 + 1):
+                    行 = dict(原行)
+                    行["phrase"] = 中文段[偏移 : 偏移 + 名字长度]
+                    行["source_offset"] = 中文段匹配.start() + 偏移
+                    来源行.append(行)
     for 行 in 来源行:
         名字 = 行["phrase"]
         if not 满足约束(名字, {"姓氏": 姓氏, "名字长度": 名字长度, "必须包含": 必须包含, "避用字": 避用字, "排除名字": 排除名字 or []}):

@@ -162,7 +162,8 @@ async function 执行起名(请求) {
   document.querySelector("#模型补充").disabled = true;
   document.querySelector("#模型结果").textContent = "";
   显示状态("正在生成……");
-  结果列表.innerHTML = "";
+  const 是否换一批 = Boolean(请求.排除名字?.length);
+  if (!是否换一批) 结果列表.innerHTML = "";
   八字结果.innerHTML = "";
   try {
     const 响应 = await 会话请求("/api/name-runs", {
@@ -178,6 +179,11 @@ async function 执行起名(请求) {
     最近请求 = {...请求};
     已展示名字 = [...已展示名字, ...(数据.候选 || []).map((项目) => 项目.姓名)];
     显示八字(数据.八字);
+    if (是否换一批 && !(数据.候选 || []).length) {
+      显示状态("已展示当前条件下的全部候选，请调整方向或限制后继续。", "提示");
+      换一批按钮.hidden = true;
+      return;
+    }
     显示候选(数据.候选 || []);
   } catch (错误) {
     显示状态(错误.message, "错误");
