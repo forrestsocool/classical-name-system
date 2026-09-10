@@ -7,12 +7,9 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:8000:8000"
+    env_file:
+      - .env
     environment:
-      - 起名管理密钥=${起名管理密钥}
-      - 起名每分钟上限=${起名每分钟上限:-60}
-      - 起名模型地址=${起名模型地址:-https://api.openai.com/v1/chat/completions}
-      - 起名模型密钥=${起名模型密钥:-}
-      - 起名模型名称=${起名模型名称:-}
       - 起名数据库路径=/app/构建产物/起名系统.sqlite3
     volumes:
       - ./构建产物:/app/构建产物
