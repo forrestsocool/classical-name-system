@@ -17,14 +17,20 @@ from 脚本.建立资料数据库 import 切分古籍, 建库, 默认资料目�
 
 class 回归测试(unittest.TestCase):
     def test换一批有补充候选(self):
-        第一批 = 服务.创建起名任务(服务.起名请求(姓氏="李", 名字长度=2, 随机种子=101))
-        self.assertTrue(第一批["候选"])
-        排除 = [项目["姓名"] for 项目 in 第一批["候选"]]
-        第二批 = 服务.创建起名任务(服务.起名请求(姓氏="李", 名字长度=2, 随机种子=102, 排除名字=排除))
-        self.assertTrue(第二批["候选"])
-        self.assertTrue(set(排除).isdisjoint({项目["姓名"] for 项目 in 第二批["候选"]}))
-        服务.删除起名任务(第一批["任务编号"])
-        服务.删除起名任务(第二批["任务编号"])
+        with TemporaryDirectory(prefix="name-swap-") as 目录:
+            路径 = Path(目录) / "测试.sqlite3"
+            with closing(sqlite3.connect(服务.数据库路径)) as 源, closing(sqlite3.connect(路径)) as 目标:
+                源.backup(目标)
+            with patch.object(服务, "数据库路径", 路径):
+                第一批 = 服务.创建起名任务(服务.起名请求(姓氏="李", 名字长度=2, 随机种子=101))
+                self.assertTrue(第一批["候选"])
+                排除 = [项目["姓名"] for 项目 in 第一批["候选"]]
+                第二批 = 服务.创建起名任务(服务.起名请求(姓氏="李", 名字长度=2, 随机种子=102, 排除名字=排除))
+                self.assertTrue(第二批["候选"])
+                self.assertTrue(set(排除).isdisjoint({项目["姓名"] for 项目 in 第二批["候选"]}))
+                服务.删除起名任务(第一批["任务编号"])
+                服务.删除起名任务(第二批["任务编号"])
+            服务.查询缓存.清空()
 
     def test同一时刻的节气年月柱不随地区改变(self):
         时间 = datetime.fromisoformat("2024-02-04T09:00:00+00:00")
