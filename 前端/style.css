@@ -85,7 +85,11 @@ button:hover { background: #315747; }
 blockquote { margin: 14px 0; padding: 12px 14px; border-left: 3px solid #caa878; background: #fbf6eb; line-height: 1.8; }
 .空结果 { padding: 22px; color: #68736b; }
 @media (max-width: 700px) {
+  .管理操作, .复核按钮组 { flex-wrap: wrap; }
   .页面 { width: min(100% - 20px, 620px); padding-top: 28px; }
   .字段网格, .结果列表 { grid-template-columns: 1fr; }
   .面板 { padding: 16px; }
 }
+button:disabled { opacity: .6; cursor: wait; }
+#收藏列表, #比较结果, #模型结果 { display: grid; gap: 12px; margin-top: 12px; }
+#收藏列表 article, #比较结果 article, #模型结果 article { border: 1px solid #e4d9c5; padding: 14px; border-radius: 10px; overflow-wrap: anywhere; }

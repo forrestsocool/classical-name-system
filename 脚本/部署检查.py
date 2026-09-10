@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 根目录 = Path(__file__).resolve().parents[1]
-默认数据库 = 根目录 / "构建产物" / "起名系统.sqlite3"
+默认数据库 = Path(os.getenv("起名数据库路径", str(根目录 / "构建产物" / "起名系统.sqlite3")))
 必需文件 = (
     根目录 / "前端" / "index.html",
     根目录 / "前端" / "app.js",

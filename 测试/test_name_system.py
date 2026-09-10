@@ -5,6 +5,10 @@ import json
 import sqlite3
 import threading
 import unittest
+import tempfile
+from pathlib import Path
+from contextlib import closing
+from 后端 import 起名服务 as 服务模块
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from unittest.mock import patch
@@ -64,6 +68,18 @@ from 后端.起名服务 import (
 
 
 class 起名系统测试(unittest.TestCase):
+    def setUp(self) -> None:
+        临时目录 = tempfile.TemporaryDirectory(prefix="name-tests-")
+        self.addCleanup(临时目录.cleanup)
+        测试库 = Path(临时目录.name) / "测试.sqlite3"
+        with closing(sqlite3.connect(服务模块.数据库路径)) as 源, closing(sqlite3.connect(测试库)) as 目标:
+            源.backup(目标)
+        替换 = patch.object(服务模块, "数据库路径", 测试库)
+        替换.start()
+        self.addCleanup(替换.stop)
+        服务模块.查询缓存.清空()
+        self.addCleanup(服务模块.查询缓存.清空)
+
     class 假响应:
         def __init__(self, 内容: bytes) -> None:
             self.内容 = 内容

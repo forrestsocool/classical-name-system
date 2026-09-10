@@ -5,6 +5,7 @@ import hashlib
 import json
 import re
 import sqlite3
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -62,6 +63,14 @@ def 规范化篇章标题(书名: str, 标题: str) -> str:
 
 def 切分古籍(书名: str, 路径: Path, 书籍编号: int, 来源编号: int) -> list[dict]:
     _, _, 行列表 = 读取文本(路径)
+    篇名表 = {}
+    if 书名 == "诗经":
+        try:
+            from 脚本.生成诗经篇章结构 import 提取篇章, 读取篇名配置, 默认篇名配置
+        except ModuleNotFoundError:
+            from 生成诗经篇章结构 import 提取篇章, 读取篇名配置, 默认篇名配置
+        结构 = 提取篇章(路径, 读取篇名配置(默认篇名配置))
+        篇名表 = {项["标题行"]: f"{项['分区']}·{项['正式篇名']}" for 项 in 结构["篇章"]}
     片段 = []
     当前篇章 = "全文"
     序号 = 0
@@ -74,6 +83,7 @@ def 切分古籍(书名: str, 路径: Path, 书籍编号: int, 来源编号: int
             当前篇章 = 规范化篇章标题(
                 书名, 标题匹配.group(1).strip()
             )
+            当前篇章 = 篇名表.get(行号, 当前篇章)
             continue
         # 保留原始行号。过长行分块，但不把文本改写成新的句子。
         最大长度 = 240
@@ -739,6 +749,11 @@ def 写入报告风险(连接: sqlite3.Connection) -> None:
 
 def 建库(资料目录: Path, 数据库路径: Path) -> dict:
     数据库路径.parent.mkdir(parents=True, exist_ok=True)
+    if 数据库路径.exists():
+        with closing(sqlite3.connect(数据库路径)) as 检查:
+            for 表 in ("name_runs", "favorites", "feedback", "model_metrics"):
+                if 检查.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (表,)).fetchone() and 检查.execute(f"SELECT 1 FROM {表} LIMIT 1").fetchone():
+                    raise ValueError("数据库包含业务记录，请使用新的 --数据库 路径建立资料库")
     连接 = sqlite3.connect(数据库路径)
     try:
         建立表结构(连接)

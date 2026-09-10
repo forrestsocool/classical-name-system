@@ -4,11 +4,14 @@ import argparse
 import json
 import statistics
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
+
+压测会话 = "web-" + uuid.uuid4().hex
 
 
 @dataclass
@@ -21,7 +24,7 @@ class 请求结果:
 
 def 请求地址(地址: str, 方法: str = "GET", 数据: dict | None = None) -> 请求结果:
     正文 = None
-    请求头 = {"Accept": "application/json"}
+    请求头 = {"Accept": "application/json", "X-Session-Key": 压测会话}
     if 数据 is not None:
         正文 = json.dumps(数据, ensure_ascii=False).encode("utf-8")
         请求头["Content-Type"] = "application/json"

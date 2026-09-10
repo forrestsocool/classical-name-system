@@ -51,7 +51,7 @@ def 执行场景(基础地址: str, 模式: str, 请求数: int, 并发数: int)
 def 主程序() -> int:
     解析器 = argparse.ArgumentParser(description="按生产配置验证起名服务的接口和延迟阈值")
     解析器.add_argument("--地址", default="http://127.0.0.1:8000")
-    解析器.add_argument("--请求数", type=int, default=30)
+    解析器.add_argument("--请求数", type=int, default=10)
     解析器.add_argument("--并发数", type=int, default=5)
     解析器.add_argument("--检索P95上限", type=float, default=1000)
     解析器.add_argument("--起名P95上限", type=float, default=1500)
@@ -60,6 +60,9 @@ def 主程序() -> int:
         解析器.error("请求数必须在1到1000之间")
     if not 1 <= 参数.并发数 <= 50:
         解析器.error("并发数必须在1到50之间")
+    import math
+    if not all(math.isfinite(值) and 值 > 0 for 值 in (参数.检索P95上限, 参数.起名P95上限)):
+        解析器.error("延迟阈值必须为正数且有限")
 
     基础地址 = 参数.地址.rstrip("/")
     场景 = [

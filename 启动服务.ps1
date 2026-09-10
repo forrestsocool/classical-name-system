@@ -4,6 +4,8 @@ param(
     [int]$工作进程 = 1
 )
 
+Set-Location -LiteralPath $PSScriptRoot
+
 if (-not $env:起名管理密钥) {
     throw "请先设置环境变量：起名管理密钥"
 }

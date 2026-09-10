@@ -109,6 +109,8 @@ def 提取篇章(路径: Path, 篇名配置: dict | None = None) -> dict:
         raise ValueError(f"正式篇名配置数量为{配置篇数}，原始篇章数量为{len(篇章)}")
     if 分区篇名 and 正式篇名数 != len(篇章):
         raise ValueError(f"正式篇名覆盖数量为{正式篇名数}，原始篇章数量为{len(篇章)}")
+    if 分区篇名 and {键: len(值) for 键, 值 in 分区篇名.items()} != 分区统计:
+        raise ValueError("篇名配置与原文的分区数量不一致")
     return {
         "报告版本": "1.1",
         "说明": "正式篇名按配置目录与原始分区顺序关联；首句篇名候选仅作辅助检索字段。",

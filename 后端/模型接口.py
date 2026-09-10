@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationError
+from .名字校验 import 满足约束, 取字位置
 
 
 出处类型 = Literal["原文连取", "同句取字", "跨句组合", "意境延展"]
@@ -131,7 +132,7 @@ def 调用兼容模型(
                     for 项目 in 内容
                     if isinstance(项目, dict)
                 )
-            return 校验模型输出(内容, 证据, int(请求摘要.get("名字长度", 2)))
+            return 校验模型输出(内容, 证据, int(请求摘要.get("名字长度", 2)), 请求摘要)
         except urllib.error.HTTPError as 异常:
             raise RuntimeError(f"起名模型调用失败：{异常.__class__.__name__}") from 异常
         except (urllib.error.URLError, TimeoutError) as 异常:
@@ -188,6 +189,7 @@ def 校验模型输出(
     原始输出: dict[str, Any] | str,
     证据: list[语料证据],
     名字长度: int,
+    请求摘要: dict | None = None,
 ) -> list[dict[str, Any]]:
     if isinstance(原始输出, str):
         try:
@@ -202,6 +204,8 @@ def 校验模型输出(
     结果 = []
     已有名字 = set()
     for 候选 in 输出.候选:
+        if not 满足约束(候选.名字, {**(请求摘要 or {}), "名字长度": 名字长度}):
+            continue
         if len(候选.名字) != 名字长度 or not 中文名正则.fullmatch(候选.名字):
             continue
         if 候选.语料编号 not in 证据表:
@@ -209,6 +213,9 @@ def 校验模型输出(
         if 候选.名字 in 已有名字:
             continue
         当前证据 = 证据表[候选.语料编号]
+        位置列表 = 取字位置(候选.名字, 当前证据.正文, 候选.取字方式)
+        if 位置列表 is None:
+            continue
         if 候选.取字方式 == "原文连取" and 当前证据.正文.find(候选.名字) < 0:
             continue
         if 候选.取字方式 in {"同句取字", "跨句组合"}:
@@ -226,6 +233,7 @@ def 校验模型输出(
                 "风格标签": 候选.风格标签,
                 "风险提示": 候选.风险提示,
                 "原文位置": 当前证据.正文.find(候选.名字),
+                "取字位置": 位置列表,
             }
         )
     return 结果

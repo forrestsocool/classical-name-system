@@ -7,10 +7,12 @@ import re
 import sqlite3
 import time
 import uuid
+import hashlib
+from contextvars import ContextVar
 from collections import defaultdict, deque
 from datetime import datetime, timezone
 from pathlib import Path
-from threading import Lock
+from threading import Lock, BoundedSemaphore
 from typing import Literal
 from typing import Annotated
 
@@ -22,6 +24,7 @@ from pydantic import BaseModel, Field
 from .八字计算 import 计算八字
 from .缓存 import TTL缓存
 from .候选生成 import 生成基础候选
+from .名字校验 import 取字位置
 from .模型接口 import (
     语料证据,
     调用兼容模型,
@@ -31,7 +34,9 @@ from .模型接口 import (
 
 
 根目录 = Path(__file__).resolve().parents[1]
-数据库路径 = 根目录 / "构建产物" / "起名系统.sqlite3"
+数据库路径 = Path(os.getenv("起名数据库路径", str(根目录 / "构建产物" / "起名系统.sqlite3")))
+当前会话 = ContextVar("当前会话", default=None)
+模型并发 = BoundedSemaphore(2)
 
 应用 = FastAPI(title="古籍智能起名服务", version="0.1.0")
 前端目录 = 根目录 / "前端"
@@ -81,7 +86,8 @@ def 规范监控路径(路径: str) -> str:
     for 模式, 替换 in 规则:
         if re.fullmatch(模式, 路径):
             return 替换
-    return 路径
+    固定路径 = {"/", "/metrics", "/api/health", "/api/ready", "/api/search", "/api/directions", "/api/eras", "/api/bazi", "/api/model/status", "/api/name-runs", "/api/favorites", "/api/favorites/compare", "/api/feedback", "/api/admin/review-queue", "/api/admin/element-queue", "/api/admin/audit-queue", "/api/admin/metrics"}
+    return 路径 if 路径 in 固定路径 else "/其他"
 
 
 def 获取请求指标() -> dict:
@@ -146,6 +152,12 @@ def 请求是否超限(来源: str, 当前时间: float) -> bool:
     截止时间 = 当前时间 - 60
     上限 = 每分钟请求上限()
     with 限流锁:
+        if len(限流记录) >= 4096:
+            for 键 in list(限流记录):
+                if not 限流记录[键] or 限流记录[键][-1] <= 截止时间:
+                    del 限流记录[键]
+            if 来源 not in 限流记录 and len(限流记录) >= 4096:
+                return True
         时间队列 = 限流记录[来源]
         while 时间队列 and 时间队列[0] <= 截止时间:
             时间队列.popleft()
@@ -159,7 +171,22 @@ def 请求是否超限(来源: str, 当前时间: float) -> bool:
 async def 请求保护(请求, 调用下一个):
     开始时间 = time.perf_counter()
     状态码 = 500
+    会话令牌 = None
     try:
+        路径 = 请求.url.path
+        if any(路径.startswith(前缀) for 前缀 in ("/api/name-runs", "/api/favorites", "/api/feedback")):
+            密钥 = 请求.headers.get("X-Session-Key", "")
+            if not re.fullmatch(r"web-[a-f0-9]{32}", 密钥):
+                状态码 = 401
+                return JSONResponse({"detail": "请使用有效的浏览器会话"}, status_code=401)
+            会话令牌 = 当前会话.set(密钥)
+            匹配 = re.match(r"^/api/name-runs/([^/]+)", 路径)
+            if 匹配:
+                with 连接数据库() as 连接:
+                    所有者 = 连接.execute("SELECT owner FROM run_owners WHERE run_id = ?", (匹配.group(1),)).fetchone()
+                if 所有者 is None or 所有者[0] != hashlib.sha256(密钥.encode()).hexdigest():
+                    状态码 = 404
+                    return JSONResponse({"detail": "起名任务不存在"}, status_code=404)
         if 请求.url.path.startswith("/api/"):
             来源 = 请求.client.host if 请求.client else "未知来源"
             if 请求是否超限(来源, time.monotonic()):
@@ -173,6 +200,8 @@ async def 请求保护(请求, 调用下一个):
         else:
             响应 = await 调用下一个(请求)
         状态码 = 响应.status_code
+        if 当前会话.get():
+            响应.headers["Cache-Control"] = "no-store"
         响应.headers["X-Content-Type-Options"] = "nosniff"
         响应.headers["X-Frame-Options"] = "DENY"
         响应.headers["Referrer-Policy"] = "no-referrer"
@@ -182,6 +211,8 @@ async def 请求保护(请求, 调用下一个):
         )
         return 响应
     finally:
+        if 会话令牌 is not None:
+            当前会话.reset(会话令牌)
         记录请求指标(
             请求.method,
             规范监控路径(请求.url.path),
@@ -193,11 +224,11 @@ async def 请求保护(请求, 调用下一个):
 class 起名请求(BaseModel):
     姓氏: str = Field(min_length=1, max_length=4)
     名字长度: int = Field(default=2, ge=1, le=2)
-    方向: list[str] = Field(default_factory=list, max_length=3)
+    方向: list[Literal["温润君子", "胸怀天下", "智慧通达", "坚毅担当", "自由洒脱", "文采气质", "安宁福泽"]] = Field(default_factory=list, max_length=3)
     必须包含: str = Field(default="", max_length=2)
     避用字: str = Field(default="", max_length=50)
     关键词: str = Field(default="", max_length=20)
-    随机种子: int | None = None
+    随机种子: int | None = Field(default=None, ge=0, le=2**63 - 1)
     五行偏好: list[str] = Field(default_factory=list, max_length=5)
     出生时间: datetime | None = None
     时区: str = "Asia/Shanghai"
@@ -256,11 +287,20 @@ def 首页() -> FileResponse:
     return FileResponse(前端目录 / "index.html")
 
 
+class 自动关闭连接(sqlite3.Connection):
+    def __exit__(self, *参数):
+        try:
+            return super().__exit__(*参数)
+        finally:
+            self.close()
+
+
 def 连接数据库() -> sqlite3.Connection:
-    连接 = sqlite3.connect(数据库路径, timeout=5.0)
+    连接 = sqlite3.connect(数据库路径, timeout=5.0, factory=自动关闭连接)
     连接.row_factory = sqlite3.Row
     连接.execute("PRAGMA foreign_keys = ON")
     连接.execute("PRAGMA busy_timeout = 5000")
+    连接.execute("CREATE TABLE IF NOT EXISTS run_owners (run_id TEXT PRIMARY KEY, owner TEXT NOT NULL)")
     return 连接
 
 
@@ -279,6 +319,7 @@ def 准备持久化八字(八字结果: dict | None) -> dict | None:
     保存内容 = dict(八字结果)
     保存内容.pop("输入时间", None)
     保存内容.pop("计算本地时间", None)
+    保存内容.pop("农历日期", None)
     保存内容["出生时间已隐去"] = True
     return 保存内容
 
@@ -327,11 +368,10 @@ def 校验管理权限(管理密钥: str | None) -> None:
 @应用.get("/api/health")
 def 健康检查() -> dict:
     if not 数据库路径.exists():
-        return {"状态": "等待建库", "数据库": str(数据库路径)}
+        return {"状态": "等待建库"}
     with 连接数据库() as 连接:
         return {
             "状态": "正常",
-            "数据库": str(数据库路径),
             "古籍数": 连接.execute("SELECT COUNT(*) FROM books").fetchone()[0],
             "片段数": 连接.execute("SELECT COUNT(*) FROM passages").fetchone()[0],
             "可生成片段数": 连接.execute(
@@ -346,7 +386,8 @@ def 就绪检查() -> dict:
         raise HTTPException(status_code=503, detail="数据库尚未建立")
     try:
         with 连接数据库() as 连接:
-            完整性 = 连接.execute("PRAGMA integrity_check").fetchone()[0]
+            连接.execute("SELECT 1 FROM schema_version LIMIT 1").fetchone()
+            完整性 = "ok"
             可生成数 = 连接.execute(
                 "SELECT COUNT(*) FROM passages WHERE can_generate = 1"
             ).fetchone()[0]
@@ -378,7 +419,6 @@ def 模型状态() -> dict:
     配置 = 读取环境配置()
     return {
         "已配置": 模型已配置(配置),
-        "地址": 配置.地址,
         "模型": 配置.模型,
     }
 
@@ -568,6 +608,12 @@ def 创建起名任务(请求: 起名请求) -> dict:
     if 随机种子 is None:
         随机种子 = uuid.uuid4().int % (2**31)
     请求字典 = 请求.model_dump(mode="json")
+    if not re.fullmatch(r"[\u3400-\u4dbf\u4e00-\u9fff]{1,4}", 请求.姓氏):
+        raise HTTPException(status_code=422, detail="姓氏必须为一至四个汉字")
+    if len(请求.必须包含) > 请求.名字长度:
+        raise HTTPException(status_code=422, detail="固定字数量超过名字长度")
+    if set(请求.必须包含) & set(请求.避用字):
+        raise HTTPException(status_code=422, detail="固定字与避用字冲突")
     请求字典["随机种子"] = 随机种子
     不支持五行 = set(请求字典["五行偏好"]) - {"金", "木", "水", "火", "土"}
     if 不支持五行:
@@ -595,6 +641,8 @@ def 创建起名任务(请求: 起名请求) -> dict:
                 datetime.now(timezone.utc).isoformat(),
             ),
         )
+        if 当前会话.get():
+            连接.execute("INSERT INTO run_owners VALUES (?, ?)", (任务编号, hashlib.sha256(当前会话.get().encode()).hexdigest()))
         可生成数 = 连接.execute(
             "SELECT COUNT(*) FROM passages WHERE can_generate = 1"
         ).fetchone()[0]
@@ -709,10 +757,11 @@ def 获取任务列表(
             """
             SELECT id, request_json, random_seed, rule_version, status, created_at
             FROM name_runs
+            WHERE (? IS NULL OR id IN (SELECT run_id FROM run_owners WHERE owner = ?))
             ORDER BY created_at DESC, id DESC
             LIMIT ?
             """,
-            (数量,),
+            (当前会话.get(), hashlib.sha256((当前会话.get() or "").encode()).hexdigest(), 数量),
         ).fetchall():
             项目 = dict(行)
             项目["请求"] = json.loads(项目.pop("request_json"))
@@ -744,18 +793,29 @@ def 删除起名任务(run_id: str) -> dict:
             )
             删除数量[表名] = 游标.rowcount
         连接.execute("DELETE FROM name_runs WHERE id = ?", (run_id,))
+        连接.execute("DELETE FROM run_owners WHERE run_id = ?", (run_id,))
     return {"状态": "已删除", "任务编号": run_id, "删除数量": 删除数量}
 
 
 def 校验收藏夹编号(编号: str) -> None:
+    if 当前会话.get() is not None and 编号 != hashlib.sha256(当前会话.get().encode()).hexdigest():
+        raise HTTPException(status_code=403, detail="无权访问这个收藏夹")
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", 编号):
         raise HTTPException(status_code=422, detail="收藏夹编号格式不正确")
+
+
+def 校验任务归属(连接, 编号: str) -> None:
+    if 当前会话.get() is not None:
+        行 = 连接.execute("SELECT owner FROM run_owners WHERE run_id = ?", (编号,)).fetchone()
+        if 行 is None or 行[0] != hashlib.sha256(当前会话.get().encode()).hexdigest():
+            raise HTTPException(status_code=404, detail="起名任务不存在")
 
 
 @应用.post("/api/favorites")
 def 收藏候选(请求: 收藏请求) -> dict:
     校验收藏夹编号(请求.collection_id)
     with 连接数据库() as 连接:
+        校验任务归属(连接, 请求.run_id)
         候选 = 连接.execute(
             """
             SELECT full_name, given_name, pinyin, pinyin_tone, book,
@@ -881,6 +941,7 @@ def 比较收藏(请求: 比较请求) -> dict:
 def 提交反馈(请求: 反馈请求) -> dict:
     校验收藏夹编号(请求.collection_id)
     with 连接数据库() as 连接:
+        校验任务归属(连接, 请求.run_id)
         候选 = 连接.execute(
             "SELECT 1 FROM candidates WHERE run_id = ? AND full_name = ?",
             (请求.run_id, 请求.full_name),
@@ -985,7 +1046,7 @@ def 复核片段(
             """,
             (passage_id,),
         ).fetchone()
-    查询缓存.删除(("片段", passage_id))
+    查询缓存.清空()
     return dict(结果)
 
 
@@ -1197,11 +1258,17 @@ def 生成模型候选(run_id: str) -> dict:
         ).fetchall()
         证据 = [语料证据(行[0], 行[1], 行[2], 行[3]) for 行 in 证据行]
     开始时间 = time.perf_counter()
+    if not 证据:
+        raise HTTPException(status_code=422, detail="没有可用于模型生成的已核验出处")
+    if not 模型并发.acquire(blocking=False):
+        raise HTTPException(status_code=429, detail="模型服务正在忙，请稍后重试")
     try:
         候选 = 调用兼容模型(请求摘要, 证据, 配置)
     except RuntimeError as 异常:
         记录模型指标(run_id, 配置, 开始时间, "失败", str(异常))
         raise HTTPException(status_code=502, detail=str(异常)) from 异常
+    finally:
+        模型并发.release()
     记录模型指标(run_id, 配置, 开始时间, "完成")
     证据表 = {项目.编号: 项目 for 项目 in 证据}
     with 连接数据库() as 连接:
@@ -1249,8 +1316,9 @@ def 获取模型候选(run_id: str) -> dict:
             dict(行)
             for 行 in 连接.execute(
                 """
-                SELECT * FROM model_candidates
-                WHERE run_id = ? ORDER BY id
+                SELECT m.*, p.text AS evidence_text FROM model_candidates m
+                JOIN passages p ON p.id = m.passage_id
+                WHERE m.run_id = ? ORDER BY m.id
                 """,
                 (run_id,),
             ).fetchall()
@@ -1258,6 +1326,8 @@ def 获取模型候选(run_id: str) -> dict:
     for 项目 in 结果:
         项目["风格标签"] = json.loads(项目.pop("style_json"))
         项目["风险提示"] = json.loads(项目.pop("risks_json"))
+        项目["取字位置"] = 取字位置(项目["name"], 项目.pop("evidence_text"), 项目["origin_type"])
+        项目.pop("provider", None)
     return {"任务编号": run_id, "数量": len(结果), "候选": 结果}
 
 

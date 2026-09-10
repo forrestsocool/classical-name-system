@@ -3,6 +3,7 @@ from __future__ import annotations
 import random
 import re
 import sqlite3
+from .名字校验 import 满足约束
 
 
 中文串正则 = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]+")
@@ -99,8 +100,22 @@ def 生成基础候选(
         ORDER BY cp.quality_score DESC, cp.id
     """
     候选: dict[str, dict] = {}
-    for 行 in 连接.execute(查询):
+    来源行 = []
+    for 原行 in 连接.execute(查询):
+        if 名字长度 == 1 and 原行["origin_type"] == "原文连取":
+            for 偏移, 字 in enumerate(原行["phrase"]):
+                行 = dict(原行)
+                行["phrase"] = 字
+                行["source_offset"] += 偏移
+                来源行.append(行)
+        else:
+            来源行.append(原行)
+    for 行 in 来源行:
         名字 = 行["phrase"]
+        if not 满足约束(名字, {"姓氏": 姓氏, "名字长度": 名字长度, "必须包含": 必须包含, "避用字": 避用字, "排除名字": 排除名字 or []}):
+            continue
+        if 行["origin_type"] == "原文连取" and 行["text"][行["source_offset"]:行["source_offset"] + len(名字)] != 名字:
+            continue
         if 名字 in 排除名字集合 or 姓氏 + 名字 in 排除名字集合:
             continue
         if len(名字) != 名字长度:

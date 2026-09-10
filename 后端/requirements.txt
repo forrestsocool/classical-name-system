@@ -1,5 +1,6 @@
-fastapi
-uvicorn
-pydantic
+fastapi==0.115.9
+uvicorn==0.34.0
+pydantic==2.10.6
+tzdata==2025.2
 lunar-python==1.4.8
 pypinyin==0.55.0

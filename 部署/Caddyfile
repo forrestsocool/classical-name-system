@@ -1,6 +1,6 @@
 :80 {
     encode gzip
     @metrics path /metrics
-    respond @metrics "metrics are internal" 403
+    respond @metrics "监控指标仅供内部访问" 403
     reverse_proxy 127.0.0.1:8000
 }

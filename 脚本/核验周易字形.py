@@ -18,16 +18,20 @@ from pathlib import Path
     r"成象之谓干|干元|干：|干:|辟户谓之干|盖取诸《干》|干君|干，确然|干，天下"
 )
 保留语境正则 = re.compile(
-    r"干干|事之干|干事|干父|干母|干胏|干肉|干城|于干"
+    r"事之干|干事|干父|干母|干胏|干肉|干城|于干"
 )
 
 
 def 分类(行: str, 位置: int, 后续文本: str = "") -> tuple[str, str, str]:
-    左右 = 行[max(0, 位置 - 10) : min(len(行), 位置 + 14)] + 后续文本
-    if 卦名语境正则.search(左右):
-        return "乾", "高", "卦名、卦象或八卦语境"
-    if 保留语境正则.search(左右):
-        return "干", "高", "动词、名词或地名语境"
+    文本 = 行 + 后续文本
+    for 模式, 建议, 依据 in (
+        (保留语境正则, "干", "动词、名词或地名语境"),
+        (re.compile(r"干干|大哉干乎|干西北|干元"), "乾", "乾卦或乾乾语境"),
+        (卦名语境正则, "乾", "卦名、卦象或八卦语境"),
+    ):
+        for 匹配 in 模式.finditer(文本):
+            if 匹配.start() <= 位置 < 匹配.end():
+                return 建议, "高", 依据
     return "待定", "待核验", "仅凭局部语境不能安全判断"
 
 
@@ -111,6 +115,8 @@ def 主程序() -> int:
     解析器.add_argument("--输出", type=Path, default=默认输出)
     解析器.add_argument("--规范化输出", type=Path, default=默认规范化输出)
     参数 = 解析器.parse_args()
+    if 参数.输入.resolve() in {参数.输出.resolve(), 参数.规范化输出.resolve()}:
+        raise ValueError("输出路径不得覆盖原始文件")
     if not 参数.输入.exists():
         raise FileNotFoundError(f"文件不存在：{参数.输入}")
     参数.输出.parent.mkdir(parents=True, exist_ok=True)

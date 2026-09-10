@@ -10,7 +10,7 @@ groups:
           summary: 起名服务监控目标不可用
           description: Prometheus 已连续两分钟无法抓取起名服务指标。
       - alert: NameServiceErrorRateHigh
-        expr: rate(name_service_request_errors_total[5m]) / clamp_min(rate(name_service_requests_total[5m]), 1) > 0.05
+        expr: rate(name_service_request_errors_total[5m]) / clamp_min(rate(name_service_requests_total[5m]), 0.000001) > 0.05
         for: 5m
         labels:
           severity: warning
@@ -18,7 +18,7 @@ groups:
           summary: 起名服务错误率过高
           description: 最近五分钟起名服务错误率超过百分之五。
       - alert: NameServiceLatencyHigh
-        expr: rate(name_service_request_duration_ms_sum[5m]) / clamp_min(rate(name_service_request_duration_ms_count[5m]), 1) > 1000
+        expr: rate(name_service_request_duration_ms_sum[5m]) / clamp_min(rate(name_service_request_duration_ms_count[5m]), 0.000001) > 1000
         for: 10m
         labels:
           severity: warning
