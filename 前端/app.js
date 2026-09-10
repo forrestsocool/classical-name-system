@@ -1,10 +1,5 @@
 (async () => {
-const 方向列表 = document.querySelector("#方向列表");
-const 起名表单 = document.querySelector("#起名表单");
 const 状态 = document.querySelector("#状态");
-const 八字结果 = document.querySelector("#八字结果");
-const 结果列表 = document.querySelector("#结果列表");
-const 换一批按钮 = document.querySelector("#换一批");
 const 管理密钥 = document.querySelector("#管理密钥");
 const 复核人 = document.querySelector("#复核人");
 const 复核列表 = document.querySelector("#复核列表");
@@ -21,14 +16,12 @@ const 年号关键词 = document.querySelector("#年号关键词");
 const 年号地区 = document.querySelector("#年号地区");
 const 加载年号按钮 = document.querySelector("#加载年号");
 const 年号列表 = document.querySelector("#年号列表");
-let 当前任务编号 = "";
-let 最近请求 = null;
-let 已展示名字 = [];
 const 会话密钥 = (() => {
-  const 旧编号 = localStorage.getItem("起名收藏夹");
-  if (旧编号) return 旧编号;
+  let 旧编号;
+  try { 旧编号 = localStorage.getItem("起名收藏夹"); } catch {}
+  if (/^web-[a-f0-9]{32}$/.test(旧编号 || "")) return 旧编号;
   const 新编号 = `web-${crypto.randomUUID().replaceAll("-", "")}`;
-  localStorage.setItem("起名收藏夹", 新编号);
+  try { localStorage.setItem("起名收藏夹", 新编号); } catch {}
   return 新编号;
 })();
 const 收藏夹编号 = [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(会话密钥)))].map(字节 => 字节.toString(16).padStart(2, "0")).join("");
@@ -63,27 +56,13 @@ async function 读取接口(地址, 选项 = {}) {
   return 数据;
 }
 
-document.querySelector("#模型补充").addEventListener("click", async (事件) => {
-  const 编号 = 当前任务编号;
-  const 按钮 = 事件.currentTarget;
-  const 容器 = document.querySelector("#模型结果");
-  按钮.disabled = true;
-  容器.textContent = "正在校验出处并补充释义……";
-  try {
-    const 数据 = await 读取接口(`/api/name-runs/${encodeURIComponent(编号)}/model-candidates`, {method: "POST"});
-    if (编号 !== 当前任务编号) return;
-    容器.innerHTML = 数据.候选.map(项 => `<article><h3>${转义(项.名字)}</h3><p>${转义(项.现代释义)}</p><small>${转义(项.取字方式)} · ${转义((项.风险提示 || []).join("；"))}</small></article>`).join("") || "没有通过出处与用字校验的补充结果。";
-  } catch (错误) {
-    if (编号 === 当前任务编号) 容器.textContent = 错误.message;
-  } finally {
-    if (编号 === 当前任务编号) 按钮.disabled = false;
-  }
-});
-
 async function 读取收藏() {
   const 数据 = await 读取接口(`/api/favorites?collection_id=${encodeURIComponent(收藏夹编号)}`);
+  document.dispatchEvent(new CustomEvent("收藏数量更新", {detail: 数据.结果.length}));
   document.querySelector("#收藏列表").innerHTML = 数据.结果.map(项 => `<article><label><input type="checkbox" name="比较选项" value="${项.id}">${转义(项.full_name)}</label><p>${转义(项.book)} · ${转义(项.section_title)}</p><button type="button" data-delete-favorite="${项.id}">取消收藏</button></article>`).join("") || "还没有收藏名字。";
 }
+document.addEventListener("打开收藏", () => 读取收藏().catch(错误 => { document.querySelector("#收藏列表").textContent = 错误.message; }));
+document.addEventListener("收藏已更新", () => { if (!document.querySelector("#收藏页").hidden) void 读取收藏().catch(() => {}); });
 document.querySelector("#加载收藏").addEventListener("click", () => 读取收藏().catch(错误 => 显示状态(错误.message, "错误")));
 document.querySelector("#收藏列表").addEventListener("click", async (事件) => {
   const 编号 = 事件.target.dataset.deleteFavorite;
@@ -100,178 +79,6 @@ document.querySelector("#比较收藏").addEventListener("click", async () => {
     const 数据 = await 读取接口("/api/favorites/compare", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({collection_id: 收藏夹编号, favorite_ids: 编号})});
     document.querySelector("#比较结果").innerHTML = 数据.结果.map(项 => `<article><h3>${转义(项.full_name)}</h3><p>${转义(项.pinyin_tone)} · ${转义(项.direction)}</p><blockquote>${转义(项.source_text)}</blockquote><small>${转义(项.book)} · ${转义(项.section_title)}</small></article>`).join("");
   } catch (错误) { 显示状态(错误.message, "错误"); }
-});
-
-async function 读取方向() {
-  const 响应 = await 会话请求("/api/directions");
-  const 数据 = await 响应.json();
-  方向列表.innerHTML = 数据.方向.map((项目, 索引) => `
-    <label class="方向项">
-      <input type="checkbox" name="方向" value="${转义(项目.名称)}" ${索引 === 0 ? "checked" : ""}>
-      <span>${转义(项目.名称)}</span>
-    </label>
-  `).join("");
-}
-
-function 显示八字(八字) {
-  if (!八字) {
-    八字结果.innerHTML = "";
-    return;
-  }
-  const 五行 = 八字.五行统计.明干支;
-  八字结果.innerHTML = `
-    <div class="八字卡片">
-      <span>八字辅助</span>
-      <strong>${八字.四柱.map(转义).join("　")}</strong>
-      <small>明干支五行：${Object.entries(五行).map(([键, 值]) => `${键}${值}`).join("　")}　规则：${转义(八字.规则版本)}</small>
-    </div>
-  `;
-}
-
-function 显示候选(候选) {
-  换一批按钮.hidden = !候选.length;
-  if (!候选.length) {
-    结果列表.innerHTML = "<div class=空结果>当前条件下没有候选，请减少限制后重试。</div>";
-    return;
-  }
-  结果列表.innerHTML = 候选.map((项目) => `
-    <article class="名字卡片">
-      <div class="名字行"><h2>${转义(项目.姓名)}</h2><span>${转义(项目.方向)}</span></div>
-      <p>${转义(项目.现代释义 || 项目.五行匹配?.现代释义 || "")}</p>
-      <div class="文化标签">${(项目.文化标签 || 项目.五行匹配?.文化标签 || []).map(标签 => `<span class="结果标签">${转义(标签)}</span>`).join("")}</div>
-      <p class="词组">${转义(项目.名字)}　<span class="拼音">${转义(项目.拼音带调 || 项目.拼音)}</span></p>
-      <p>${转义(项目.书名)} · ${转义(项目.篇章)} · ${转义(项目.取字方式)}</p>
-      <blockquote>${转义(项目.原文)}</blockquote>
-      <small>五行参考：${转义(Object.entries(项目.五行匹配?.已知字符 || {}).map(([字, 行]) => `${字}属${行}`).join("、") || "暂无已核验属性")}</small>
-      <div>${(项目.五行匹配?.标签 || []).map(标签 => `<span class="结果标签">${转义(标签)}</span>`).join("")}</div>
-      <small>${转义(项目.五行匹配?.说明 || "")}　出处：${转义(项目.出处核验状态 || 项目.五行匹配?.出处核验状态 || "待核验")}</small>
-      <details><summary>查看出处位置</summary><small>片段编号：${转义(项目.来源片段编号)}　原文位置：${转义(项目.原文位置)}</small></details>
-      <button class="收藏按钮" data-name="${转义(项目.姓名)}">收藏这个名字</button>
-      <div class="反馈操作" data-name="${转义(项目.姓名)}">
-        <button class="反馈按钮" data-feedback="喜欢">喜欢</button>
-        <button class="反馈按钮" data-feedback="不喜欢">不喜欢</button>
-        <button class="反馈按钮" data-feedback="出处有误">出处有误</button>
-        <button class="反馈按钮" data-feedback="读音不佳">读音不佳</button>
-        <button class="反馈按钮" data-feedback="含义不符">含义不符</button>
-      </div>
-    </article>
-  `).join("");
-}
-
-async function 执行起名(请求) {
-  const 提交按钮 = 起名表单.querySelector('button[type="submit"]');
-  if (提交按钮.disabled) return;
-  提交按钮.disabled = true;
-  换一批按钮.disabled = true;
-  document.querySelector("#模型补充").disabled = true;
-  document.querySelector("#模型结果").textContent = "";
-  显示状态("正在召回古籍并审读名字，通常需要几十秒，请稍候……");
-  const 是否换一批 = Boolean(请求.排除名字?.length);
-  if (!是否换一批) 结果列表.innerHTML = "";
-  八字结果.innerHTML = "";
-  try {
-    const 响应 = await 会话请求("/api/name-runs", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(请求),
-    });
-    const 数据 = await 响应.json();
-    if (!响应.ok) throw new Error(数据.detail || "请求失败");
-    显示状态(`${数据.状态}　任务：${数据.任务编号}`, 数据.状态 === "完成" ? "成功" : "提示");
-    if (是否换一批 && !(数据.候选 || []).length) {
-      显示状态("本轮没有更多合适的名字，已保留当前结果，可再次尝试或调整条件。", "提示");
-      return;
-    }
-    当前任务编号 = 数据.任务编号;
-    document.querySelector("#模型补充").disabled = !(数据.候选 || []).length;
-    最近请求 = {...请求};
-    已展示名字 = [...已展示名字, ...(数据.候选 || []).map((项目) => 项目.姓名)];
-    显示八字(数据.八字);
-    if (是否换一批 && !(数据.候选 || []).length) {
-      显示状态("已展示当前条件下的全部候选，请调整方向或限制后继续。", "提示");
-      换一批按钮.hidden = true;
-      return;
-    }
-    显示候选(数据.候选 || []);
-  } catch (错误) {
-    显示状态(错误.message, "错误");
-  } finally {
-    提交按钮.disabled = false;
-    换一批按钮.disabled = false;
-  }
-}
-
-起名表单.addEventListener("submit", async (事件) => {
-  事件.preventDefault();
-  已展示名字 = [];
-  const 请求 = {
-    姓氏: document.querySelector("#姓氏").value.trim(),
-    名字长度: Number(document.querySelector("#名字长度").value),
-    必须包含: document.querySelector("#必须包含").value.trim(),
-    避用字: document.querySelector("#避用字").value.trim(),
-    随机种子: Math.floor(Math.random() * 2147483647),
-    排除名字: [],
-  };
-  await 执行起名(请求);
-});
-
-换一批按钮.addEventListener("click", async () => {
-  if (!最近请求) return;
-  await 执行起名({
-    ...最近请求,
-    随机种子: Math.floor(Math.random() * 2147483647),
-    排除名字: 已展示名字.slice(-5000),
-  });
-});
-
-结果列表.addEventListener("click", async (事件) => {
-  const 按钮 = 事件.target.closest(".收藏按钮");
-  if (!按钮 || !当前任务编号) return;
-  按钮.disabled = true;
-  try {
-    const 响应 = await 会话请求("/api/favorites", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        collection_id: 收藏夹编号,
-        run_id: 当前任务编号,
-        full_name: 按钮.dataset.name,
-      }),
-    });
-    const 数据 = await 响应.json();
-    if (!响应.ok) throw new Error(数据.detail || "收藏失败");
-    按钮.textContent = "已收藏";
-  } catch (错误) {
-    按钮.disabled = false;
-    显示状态(错误.message, "错误");
-  }
-});
-
-结果列表.addEventListener("click", async (事件) => {
-  const 按钮 = 事件.target.closest(".反馈按钮");
-  if (!按钮 || !当前任务编号) return;
-  const 操作区 = 按钮.closest(".反馈操作");
-  const 名字 = 操作区.dataset.name;
-  [...操作区.querySelectorAll(".反馈按钮")].forEach((项目) => 项目.disabled = true);
-  try {
-    const 响应 = await 会话请求("/api/feedback", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        collection_id: 收藏夹编号,
-        run_id: 当前任务编号,
-        full_name: 名字,
-        feedback_type: 按钮.dataset.feedback,
-      }),
-    });
-    const 数据 = await 响应.json();
-    if (!响应.ok) throw new Error(数据.detail || "反馈提交失败");
-    按钮.textContent = "已提交";
-    显示状态(`已记录“${按钮.dataset.feedback}”：${名字}`, "成功");
-  } catch (错误) {
-    [...操作区.querySelectorAll(".反馈按钮")].forEach((项目) => 项目.disabled = false);
-    显示状态(错误.message, "错误");
-  }
 });
 
 function 管理请求选项() {
@@ -569,4 +376,7 @@ async function 模型设置操作(保存) {
 }
 document.querySelector("#读取模型设置").addEventListener("click", () => 模型设置操作(false));
 document.querySelector("#保存模型设置").addEventListener("click", () => 模型设置操作(true));
+const {初始化滑卡} = await import("/static/滑卡.js");
+初始化滑卡({读取接口, 转义, 会话密钥, 收藏夹编号, 显示状态});
+void 读取收藏().catch(() => {});
 })().catch(错误 => { document.querySelector("#状态").textContent = `页面初始化失败：${错误.message}。请使用 HTTPS 或本机地址。`; });

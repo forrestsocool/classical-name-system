@@ -3,46 +3,68 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>古籍智能起名</title>
+  <title>拾名 · 古籍智能起名</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <main class="页面">
-    <section class="页头">
-      <p class="眉题">古籍 · 音形义 · 智能甄选</p>
-      <h1>为名字寻找一处古意</h1>
-      <p class="副题">从古籍中寻找名字，由模型审读寓意与音韵，呈现各有气质的选择。</p>
-    </section>
+    <header class="顶栏">
+      <a class="标志" href="/" aria-label="拾名首页"><span class="印记">名</span>拾名<span class="标志副文">在古籍里，遇见一个好名字</span></a>
+      <button id="编辑条件" class="条件入口" type="button"><span id="姓氏摘要">先告诉我你的姓氏</span><span aria-hidden="true"> ↗</span></button>
+    </header>
+    <nav class="主导航" aria-label="页面导航">
+      <button type="button" data-page="发现" class="选中" aria-current="page">发现名字</button>
+      <button type="button" data-page="收藏">心动收藏 <span id="收藏计数"></span></button>
+      <button type="button" data-page="更多">资料与设置</button>
+    </nav>
 
-    <section class="面板">
-      <form id="起名表单">
-        <div class="字段网格">
-          <label>姓氏<input id="姓氏" required maxlength="4" placeholder="例如：王"></label>
-          <label>名字字数
-            <select id="名字长度">
-              <option value="2" selected>双字名</option>
-              <option value="1">单字名</option>
-            </select>
-          </label>
-          <label>避用字<input id="避用字" maxlength="30" placeholder="可不填"></label>
-          <label>必须包含<input id="必须包含" maxlength="2" placeholder="可不填"></label>
+    <section id="发现页" class="发现布局">
+      <aside class="序言">
+        <p class="眉题">一字一意 · 慢慢相遇</p>
+        <h1>好名字，<br>值得一次<span>心动。</span></h1>
+        <p class="副题">读一段出处，想象一种人生。<br>把喜欢的留下，让灵感自然发生。</p>
+        <div class="操作说明"><p><span>←</span> 向左轻滑，看看下一个</p><p><span>♡</span> 向右轻滑，收藏这份心动</p></div>
+        <p class="序言脚注">名字有出处，喜欢有理由。</p>
+      </aside>
+      <div class="发现舞台">
+        <div class="舞台顶行"><span>今日的名字相遇</span><span id="浏览计数">从第一个名字开始</span></div>
+        <section id="结果列表" class="卡片舞台" aria-label="名字卡片">
+          <div class="卡片背面 第二层" aria-hidden="true"></div><div class="卡片背面 第一层" aria-hidden="true"></div>
+          <div id="卡片内容"></div>
+        </section>
+        <div class="手势操作" aria-label="选择名字">
+          <button id="撤回" class="圆按钮 撤回" type="button" aria-label="撤回上次跳过" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4 3 9l5 5M3 9h10a7 7 0 1 1 0 14" transform="translate(0 -2)"/></svg></button>
+          <button id="跳过" class="圆按钮 跳过" type="button" aria-label="跳过这个名字" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+          <button id="收藏" class="圆按钮 收藏" type="button" aria-label="收藏这个名字" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.3 4.7a5.5 5.5 0 0 0-7.8 0L12 5.2l-.5-.5a5.5 5.5 0 0 0-7.8 7.8L12 21l8.3-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg></button>
         </div>
+        <p class="手势提示">← 跳过 <span>也可以用键盘方向键</span> 收藏 →</p>
+        <div class="预载信息"><span id="预载状态">为下一次相遇留一点期待</span><button id="重试预载" type="button" hidden>重新准备</button></div>
+        <span id="卡片播报" class="仅阅读器" aria-live="polite" aria-atomic="true"></span>
+      </div>
+    </section>
 
-        <button type="submit">开始起名</button>
+    <div class="全局通知"><section id="状态" class="状态" role="status" aria-live="polite"></section><div id="收藏同步提示" class="同步提示" role="status" hidden><span id="同步文字"></span><button id="重试收藏" type="button">重试同步</button></div></div>
+    <dialog id="条件弹窗">
+      <form id="起名表单">
+        <button id="关闭条件" class="关闭弹窗" type="button" aria-label="关闭起名设置">×</button>
+        <p class="眉题">一段相遇，从姓氏开始</p><h2>你的宝宝姓什么？</h2>
+        <p class="字段提示">只需填写一次，会记在这台设备上。</p>
+        <div class="字段网格">
+          <label class="姓氏字段">姓氏<input id="姓氏" required maxlength="4" autocomplete="family-name" placeholder="例如：李，也支持复姓"></label>
+          <label>名字字数<select id="名字长度"><option value="2">双字名</option><option value="1">单字名</option></select></label>
+          <label>必须包含<input id="必须包含" maxlength="2" placeholder="可不填"></label>
+          <label>避用字<input id="避用字" maxlength="30" placeholder="可不填"></label>
+        </div>
+        <p id="条件错误" class="表单错误" role="alert"></p>
+        <button type="submit">开始遇见名字</button>
       </form>
-    </section>
+    </dialog>
 
-    <section id="状态" class="状态" aria-live="polite"></section>
-    <section id="八字结果" class="八字结果"></section>
-    <button id="换一批" class="换一批按钮" type="button" hidden>换一批</button>
-    <section id="结果列表" class="结果列表"></section>
+    <section id="收藏页" class="功能页" hidden>
+      <div class="栏目标题"><p class="眉题">把心动，留在这里</p><h2>我的收藏与比较</h2><p>喜欢的名字可以慢慢比较，不急着做决定。</p></div>
     <section class="面板">
-      <button id="模型补充" type="button" disabled hidden>补充名字释义</button>
-      <div id="模型结果" aria-live="polite"></div>
-    </section>
-    <section class="面板">
-      <details>
-        <summary>我的收藏与比较</summary>
+      <details open>
+        <summary>收藏列表</summary>
         <button id="加载收藏" type="button">查看收藏</button>
         <button id="比较收藏" type="button">比较选中名字（最多五个）</button>
         <div id="收藏列表"></div>
@@ -50,6 +72,9 @@
       </details>
     </section>
 
+    </section>
+    <section id="更多页" class="功能页" hidden>
+    <div class="栏目标题"><p class="眉题">每一个名字，都有来处</p><h2>资料与设置</h2></div>
     <section class="面板 历史面板">
       <details>
         <summary>任务历史</summary>
@@ -99,6 +124,8 @@
         <div id="审计问题列表" class="复核列表"></div>
       </details>
     </section>
+    </section>
+    <footer class="页脚">拾名 · 让名字，成为故事的开始</footer>
   </main>
   <script src="/static/app.js" defer></script>
 </body>
