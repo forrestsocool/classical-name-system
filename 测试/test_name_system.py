@@ -69,8 +69,15 @@ from 后端.起名服务 import (
 
 class 起名系统测试(unittest.TestCase):
     def setUp(self) -> None:
+        from 测试.模拟生成 import 生成桩
+        模型替换 = patch.object(服务模块, "智能生成", side_effect=生成桩)
+        模型替换.start()
+        self.addCleanup(模型替换.stop)
         临时目录 = tempfile.TemporaryDirectory(prefix="name-tests-")
         self.addCleanup(临时目录.cleanup)
+        配置替换 = patch.dict(os.environ, {"起名模型配置文件": str(Path(临时目录.name) / "不存在.json")})
+        配置替换.start()
+        self.addCleanup(配置替换.stop)
         测试库 = Path(临时目录.name) / "测试.sqlite3"
         with closing(sqlite3.connect(服务模块.数据库路径)) as 源, closing(sqlite3.connect(测试库)) as 目标:
             源.backup(目标)
@@ -325,7 +332,7 @@ class 起名系统测试(unittest.TestCase):
         )
         self.assertEqual(结果["状态"], "完成")
         self.assertGreaterEqual(len(结果["候选"]), 1)
-        self.assertIsNotNone(结果["八字"])
+        self.assertIsNone(结果["八字"])
         self.assertTrue(all(项目["原文"] for 项目 in 结果["候选"]))
         self.assertTrue(all("五行匹配" in 项目 for 项目 in 结果["候选"]))
         self.assertTrue(all(项目["拼音"] for 项目 in 结果["候选"]))
@@ -341,11 +348,9 @@ class 起名系统测试(unittest.TestCase):
         任务 = 获取起名任务(结果["任务编号"])
         self.assertEqual(任务["status"], "完成")
         self.assertEqual(len(任务["候选"]), len(结果["候选"]))
-        self.assertIsNotNone(任务["八字"])
+        self.assertIsNone(任务["八字"])
         self.assertNotIn("出生时间", 任务["请求"])
-        self.assertTrue(任务["请求"]["出生时间已处理"])
-        self.assertNotIn("输入时间", 任务["八字"])
-        self.assertTrue(任务["八字"]["出生时间已隐去"])
+        self.assertNotIn("出生时间已处理", 任务["请求"])
         列表 = 获取任务列表(数量=20)
         self.assertTrue(any(项目["id"] == 结果["任务编号"] for 项目 in 列表["任务"]))
         删除 = 删除起名任务(结果["任务编号"])

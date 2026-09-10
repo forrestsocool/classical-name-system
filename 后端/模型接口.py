@@ -3,6 +3,10 @@ from __future__ import annotations
 import json
 import os
 import re
+import socket
+import ipaddress
+from pathlib import Path
+from urllib.parse import urlsplit
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -33,7 +37,28 @@ class 模型配置(BaseModel):
     地址: str = "https://api.openai.com/v1/chat/completions"
     密钥: str = ""
     模型: str = ""
-    超时秒数: float = Field(default=30, ge=1, le=120)
+    超时秒数: float = Field(default=120, ge=1, le=180)
+
+
+def 配置文件():
+    return Path(os.getenv("起名模型配置文件", str(Path(__file__).resolve().parents[1] / "构建产物/运行数据/模型配置.json")))
+
+
+def 验证模型地址(地址):
+    url = urlsplit(地址)
+    if url.scheme != "https" or not url.hostname or url.username or url.password or url.query or url.fragment:
+        raise ValueError("模型地址必须为不含凭据和查询参数的HTTPS地址")
+    try:
+        地址集 = socket.getaddrinfo(url.hostname, url.port or 443, type=socket.SOCK_STREAM)
+        if not 地址集 or any(not ipaddress.ip_address(x[4][0]).is_global for x in 地址集):
+            raise ValueError("模型地址不能指向本地或内网")
+    except OSError:
+        raise ValueError("无法解析模型服务地址") from None
+
+
+class 禁止重定向(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise ValueError("模型接口不允许重定向")
 
 
 结构化模式 = {
@@ -72,6 +97,8 @@ class 模型配置(BaseModel):
 
 
 def 读取环境配置() -> 模型配置:
+    if 配置文件().exists():
+        return 模型配置.model_validate_json(配置文件().read_text(encoding="utf-8"))
     return 模型配置(
         地址=os.getenv("起名模型地址", "https://api.openai.com/v1/chat/completions"),
         密钥=os.getenv("起名模型密钥", ""),

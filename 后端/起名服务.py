@@ -19,12 +19,15 @@ from typing import Annotated
 from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, Field
 
 from .八字计算 import 计算八字
 from .缓存 import TTL缓存
 from .候选生成 import 生成基础候选
 from .名字校验 import 取字位置
+from .智能筛选 import 智能生成
+from .模型接口 import 模型配置, 配置文件, 验证模型地址
 from .模型接口 import (
     语料证据,
     调用兼容模型,
@@ -39,6 +42,12 @@ from .模型接口 import (
 模型并发 = BoundedSemaphore(2)
 
 应用 = FastAPI(title="古籍智能起名服务", version="0.1.0")
+
+
+@应用.exception_handler(RequestValidationError)
+async def 参数错误处理(请求, 异常):
+    # 配置校验失败时也不回显用户提交的密钥或请求正文。
+    return JSONResponse({"detail": "请求参数格式不正确，请检查填写内容"}, status_code=422)
 前端目录 = 根目录 / "前端"
 限流记录: dict[str, deque[float]] = defaultdict(deque)
 限流锁 = Lock()
@@ -233,7 +242,7 @@ class 起名请求(BaseModel):
     出生时间: datetime | None = None
     时区: str = "Asia/Shanghai"
     日界规则: Literal["子初", "午夜"] = "子初"
-    排除名字: list[str] = Field(default_factory=list, max_length=100)
+    排除名字: list[str] = Field(default_factory=list, max_length=5000)
 
 
 class 八字请求(BaseModel):
@@ -423,6 +432,43 @@ def 模型状态() -> dict:
     }
 
 
+@应用.get("/api/admin/model-config")
+def 读取模型设置(管理密钥: str | None = Header(default=None, alias="X-Admin-Key")):
+    校验管理权限(管理密钥)
+    配置 = 读取环境配置()
+    return {"地址": 配置.地址, "模型": 配置.模型, "已配置": 模型已配置(配置)}
+
+
+@应用.put("/api/admin/model-config")
+def 保存模型设置(请求: 模型配置, 管理密钥: str | None = Header(default=None, alias="X-Admin-Key")):
+    校验管理权限(管理密钥)
+    请求.地址 = 请求.地址.rstrip("/")
+    if not 请求.地址.endswith("/chat/completions"):
+        请求.地址 += "/chat/completions"
+    try:
+        验证模型地址(请求.地址)
+    except ValueError as 异常:
+        raise HTTPException(422, str(异常)) from None
+    旧配置 = 读取环境配置()
+    if not 请求.密钥:
+        if 请求.地址 != 旧配置.地址:
+            raise HTTPException(422, "更换服务地址时必须重新填写密钥")
+        请求.密钥 = 旧配置.密钥
+    if not 请求.密钥 or not 请求.模型.strip():
+        raise HTTPException(422, "请填写密钥和模型名称")
+    路径 = 配置文件()
+    路径.parent.mkdir(parents=True, exist_ok=True)
+    临时 = 路径.with_name(str(uuid.uuid4()) + ".tmp")
+    try:
+        with open(临时, "x", encoding="utf-8") as 文件:
+            os.chmod(临时, 0o600)
+            文件.write(请求.model_dump_json())
+        os.replace(临时, 路径)
+    finally:
+        临时.unlink(missing_ok=True)
+    return {"状态": "已保存", "已配置": True}
+
+
 @应用.get("/api/search")
 def 搜索古籍(
     关键词: Annotated[str, Query(min_length=1, max_length=40)],
@@ -602,7 +648,7 @@ def 获取汉字(char: str) -> dict:
 
 @应用.post("/api/name-runs")
 def 创建起名任务(请求: 起名请求) -> dict:
-    """第一版接口只使用已审核语料，未审核资料不会直接进入候选池。"""
+    """召回原文候选，经模型筛选后持久化展示。"""
     任务编号 = str(uuid.uuid4())
     随机种子 = 请求.随机种子
     if 随机种子 is None:
@@ -615,15 +661,13 @@ def 创建起名任务(请求: 起名请求) -> dict:
     if set(请求.必须包含) & set(请求.避用字):
         raise HTTPException(status_code=422, detail="固定字与避用字冲突")
     请求字典["随机种子"] = 随机种子
+    请求字典["方向"] = []
+    请求字典["五行偏好"] = []
     不支持五行 = set(请求字典["五行偏好"]) - {"金", "木", "水", "火", "土"}
     if 不支持五行:
         raise HTTPException(status_code=422, detail="五行偏好只能包含金、木、水、火、土")
     八字结果 = None
-    if 请求.出生时间 is not None:
-        try:
-            八字结果 = 计算八字(请求.出生时间, 请求.时区, 请求.日界规则)
-        except ValueError as 异常:
-            raise HTTPException(status_code=422, detail=str(异常)) from 异常
+    请求字典["出生时间"] = None
     保存请求 = 准备持久化请求(请求字典)
     保存八字 = 准备持久化八字(八字结果)
     with 连接数据库() as 连接:
@@ -644,7 +688,7 @@ def 创建起名任务(请求: 起名请求) -> dict:
         if 当前会话.get():
             连接.execute("INSERT INTO run_owners VALUES (?, ?)", (任务编号, hashlib.sha256(当前会话.get().encode()).hexdigest()))
         可生成数 = 连接.execute(
-            "SELECT COUNT(*) FROM passages WHERE can_generate = 1"
+            "SELECT COUNT(*) FROM passages WHERE status IN ('已核验','待核验')"
         ).fetchone()[0]
     if 可生成数 == 0:
         with 连接数据库() as 连接:
@@ -660,19 +704,21 @@ def 创建起名任务(请求: 起名请求) -> dict:
             "请求": 请求字典,
             "八字": 八字结果,
         }
+    if not 模型并发.acquire(blocking=False):
+        with 连接数据库() as 连接:
+            连接.execute("UPDATE name_runs SET status='服务繁忙' WHERE id=?", (任务编号,))
+        raise HTTPException(429, "模型服务正在忙，请稍后重试")
+    try:
+        with 连接数据库() as 连接:
+            候选 = 智能生成(连接, 请求字典)
+    except (RuntimeError, ValueError) as 异常:
+        with 连接数据库() as 连接:
+            连接.execute("UPDATE name_runs SET status='筛选失败' WHERE id=?", (任务编号,))
+        提示 = str(异常) if isinstance(异常, RuntimeError) else "模型配置不正确，请联系管理员检查"
+        raise HTTPException(503, 提示) from None
+    finally:
+        模型并发.release()
     with 连接数据库() as 连接:
-        候选 = 生成基础候选(
-            连接,
-            请求字典["姓氏"],
-            请求字典["名字长度"],
-            请求字典["方向"],
-            请求字典["必须包含"],
-            请求字典["避用字"],
-            请求字典["关键词"],
-            随机种子,
-            请求字典["五行偏好"],
-            排除名字=请求字典["排除名字"],
-        )
         连接.executemany(
             """
             INSERT INTO candidates(
@@ -731,7 +777,7 @@ def 获取起名任务(run_id: str) -> dict:
                        source_passage_id, source_text, source_offset,
                        direction, wuxing_json, pinyin, pinyin_tone,
                        origin_type, base_score
-                FROM candidates WHERE run_id = ? ORDER BY base_score DESC, id
+                FROM candidates WHERE run_id = ? ORDER BY id
                 """,
                 (run_id,),
             ).fetchall()

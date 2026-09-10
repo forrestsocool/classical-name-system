@@ -9,9 +9,9 @@
 <body>
   <main class="页面">
     <section class="页头">
-      <p class="眉题">古籍 · 音形义 · 八字辅助</p>
+      <p class="眉题">古籍 · 音形义 · 智能甄选</p>
       <h1>为名字寻找一处古意</h1>
-      <p class="副题">从已核验的古籍词组出发，结合个人偏好生成名字。</p>
+      <p class="副题">从古籍中寻找名字，由模型审读寓意与音韵，呈现各有气质的选择。</p>
     </section>
 
     <section class="面板">
@@ -28,37 +28,6 @@
           <label>必须包含<input id="必须包含" maxlength="2" placeholder="可不填"></label>
         </div>
 
-        <fieldset>
-          <legend>文化方向</legend>
-          <div id="方向列表" class="方向列表"><span>正在读取方向……</span></div>
-        </fieldset>
-
-        <fieldset>
-          <legend>五行偏好（可选）</legend>
-          <div class="方向列表">
-            <label class="方向项"><input type="checkbox" name="五行" value="金"><span>金</span></label>
-            <label class="方向项"><input type="checkbox" name="五行" value="木"><span>木</span></label>
-            <label class="方向项"><input type="checkbox" name="五行" value="水"><span>水</span></label>
-            <label class="方向项"><input type="checkbox" name="五行" value="火"><span>火</span></label>
-            <label class="方向项"><input type="checkbox" name="五行" value="土"><span>土</span></label>
-          </div>
-          <small class="字段提示">只有状态为“已核验”的汉字五行规则会参与排序。</small>
-        </fieldset>
-
-        <details>
-          <summary>八字辅助（可选）</summary>
-          <div class="字段网格">
-            <label>出生时间<input id="出生时间" type="datetime-local"></label>
-            <label>时区<input id="时区" value="Asia/Shanghai"></label>
-            <label>日界规则
-              <select id="日界规则">
-                <option value="子初" selected>子初换日</option>
-                <option value="午夜">午夜换日</option>
-              </select>
-            </label>
-          </div>
-        </details>
-
         <button type="submit">开始起名</button>
       </form>
     </section>
@@ -68,7 +37,7 @@
     <button id="换一批" class="换一批按钮" type="button" hidden>换一批</button>
     <section id="结果列表" class="结果列表"></section>
     <section class="面板">
-      <button id="模型补充" type="button" disabled>补充名字释义</button>
+      <button id="模型补充" type="button" disabled hidden>补充名字释义</button>
       <div id="模型结果" aria-live="polite"></div>
     </section>
     <section class="面板">
@@ -108,6 +77,16 @@
           <label>管理密钥<input id="管理密钥" type="password" autocomplete="off" placeholder="请输入管理密钥"></label>
           <label>复核人<input id="复核人" maxlength="80" placeholder="例如：管理员"></label>
         </div>
+        <details>
+          <summary>模型接口设置</summary>
+          <p>需要管理密钥。密钥保存后不回显，留空保留原密钥。</p>
+          <label>接口地址<input id="模型地址" type="url" placeholder="https://服务地址/v1"></label>
+          <label>模型名称<input id="模型名称" autocomplete="off"></label>
+          <label>接口密钥<input id="模型密钥" type="password" autocomplete="new-password"></label>
+          <button id="读取模型设置" type="button">读取设置</button>
+          <button id="保存模型设置" type="button">保存设置</button>
+          <p id="模型设置状态" aria-live="polite"></p>
+        </details>
         <div class="管理操作">
           <button id="加载复核" type="button">加载待核验片段</button>
           <button id="加载五行规则" type="button">加载待复核五行</button>

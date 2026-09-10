@@ -137,10 +137,14 @@ function 显示候选(候选) {
   结果列表.innerHTML = 候选.map((项目) => `
     <article class="名字卡片">
       <div class="名字行"><h2>${转义(项目.姓名)}</h2><span>${转义(项目.方向)}</span></div>
+      <p>${转义(项目.现代释义 || 项目.五行匹配?.现代释义 || "")}</p>
+      <div class="文化标签">${(项目.文化标签 || 项目.五行匹配?.文化标签 || []).map(标签 => `<span class="结果标签">${转义(标签)}</span>`).join("")}</div>
       <p class="词组">${转义(项目.名字)}　<span class="拼音">${转义(项目.拼音带调 || 项目.拼音)}</span></p>
       <p>${转义(项目.书名)} · ${转义(项目.篇章)} · ${转义(项目.取字方式)}</p>
       <blockquote>${转义(项目.原文)}</blockquote>
       <small>五行参考：${转义(Object.entries(项目.五行匹配?.已知字符 || {}).map(([字, 行]) => `${字}属${行}`).join("、") || "暂无已核验属性")}</small>
+      <div>${(项目.五行匹配?.标签 || []).map(标签 => `<span class="结果标签">${转义(标签)}</span>`).join("")}</div>
+      <small>${转义(项目.五行匹配?.说明 || "")}　出处：${转义(项目.出处核验状态 || 项目.五行匹配?.出处核验状态 || "待核验")}</small>
       <details><summary>查看出处位置</summary><small>片段编号：${转义(项目.来源片段编号)}　原文位置：${转义(项目.原文位置)}</small></details>
       <button class="收藏按钮" data-name="${转义(项目.姓名)}">收藏这个名字</button>
       <div class="反馈操作" data-name="${转义(项目.姓名)}">
@@ -161,7 +165,7 @@ async function 执行起名(请求) {
   换一批按钮.disabled = true;
   document.querySelector("#模型补充").disabled = true;
   document.querySelector("#模型结果").textContent = "";
-  显示状态("正在生成……");
+  显示状态("正在召回古籍并审读名字，通常需要几十秒，请稍候……");
   const 是否换一批 = Boolean(请求.排除名字?.length);
   if (!是否换一批) 结果列表.innerHTML = "";
   八字结果.innerHTML = "";
@@ -174,6 +178,10 @@ async function 执行起名(请求) {
     const 数据 = await 响应.json();
     if (!响应.ok) throw new Error(数据.detail || "请求失败");
     显示状态(`${数据.状态}　任务：${数据.任务编号}`, 数据.状态 === "完成" ? "成功" : "提示");
+    if (是否换一批 && !(数据.候选 || []).length) {
+      显示状态("本轮没有更多合适的名字，已保留当前结果，可再次尝试或调整条件。", "提示");
+      return;
+    }
     当前任务编号 = 数据.任务编号;
     document.querySelector("#模型补充").disabled = !(数据.候选 || []).length;
     最近请求 = {...请求};
@@ -196,22 +204,14 @@ async function 执行起名(请求) {
 起名表单.addEventListener("submit", async (事件) => {
   事件.preventDefault();
   已展示名字 = [];
-  const 出生时间 = document.querySelector("#出生时间").value;
   const 请求 = {
     姓氏: document.querySelector("#姓氏").value.trim(),
     名字长度: Number(document.querySelector("#名字长度").value),
-    方向: [...document.querySelectorAll("input[name=方向]:checked")].map((项) => 项.value),
     必须包含: document.querySelector("#必须包含").value.trim(),
     避用字: document.querySelector("#避用字").value.trim(),
-    五行偏好: [...document.querySelectorAll("input[name=五行]:checked")].map((项) => 项.value),
     随机种子: Math.floor(Math.random() * 2147483647),
     排除名字: [],
   };
-  if (出生时间) {
-    请求.出生时间 = 出生时间;
-    请求.时区 = document.querySelector("#时区").value.trim() || "Asia/Shanghai";
-    请求.日界规则 = document.querySelector("#日界规则").value;
-  }
   await 执行起名(请求);
 });
 
@@ -220,7 +220,7 @@ async function 执行起名(请求) {
   await 执行起名({
     ...最近请求,
     随机种子: Math.floor(Math.random() * 2147483647),
-    排除名字: 已展示名字.slice(-100),
+    排除名字: 已展示名字.slice(-5000),
   });
 });
 
@@ -550,5 +550,23 @@ async function 加载审计问题() {
   }
 });
 
-读取方向().catch((错误) => 显示状态(`方向读取失败：${错误.message}`, "错误"));
+async function 模型设置操作(保存) {
+  const 状态 = document.querySelector("#模型设置状态");
+  状态.textContent = "正在处理……";
+  try {
+    const 选项 = {method: 保存 ? "PUT" : "GET", headers: {...管理请求选项(), "Content-Type": "application/json"}};
+    if (保存) 选项.body = JSON.stringify({地址: document.querySelector("#模型地址").value.trim(), 模型: document.querySelector("#模型名称").value.trim(), 密钥: document.querySelector("#模型密钥").value});
+    const 响应 = await 会话请求("/api/admin/model-config", 选项);
+    const 数据 = await 响应.json();
+    if (!响应.ok) throw new Error(typeof 数据.detail === "string" ? 数据.detail : "配置格式不正确");
+    if (!保存) {
+      document.querySelector("#模型地址").value = 数据.地址;
+      document.querySelector("#模型名称").value = 数据.模型;
+    }
+    状态.textContent = 保存 ? "已保存，下一次起名生效" : (数据.已配置 ? "已配置密钥，不回显" : "尚未配置密钥");
+  } catch (错误) { 状态.textContent = 错误.message; }
+  finally { document.querySelector("#模型密钥").value = ""; }
+}
+document.querySelector("#读取模型设置").addEventListener("click", () => 模型设置操作(false));
+document.querySelector("#保存模型设置").addEventListener("click", () => 模型设置操作(true));
 })().catch(错误 => { document.querySelector("#状态").textContent = `页面初始化失败：${错误.message}。请使用 HTTPS 或本机地址。`; });

@@ -93,3 +93,4 @@ blockquote { margin: 14px 0; padding: 12px 14px; border-left: 3px solid #caa878;
 button:disabled { opacity: .6; cursor: wait; }
 #收藏列表, #比较结果, #模型结果 { display: grid; gap: 12px; margin-top: 12px; }
 #收藏列表 article, #比较结果 article, #模型结果 article { border: 1px solid #e4d9c5; padding: 14px; border-radius: 10px; overflow-wrap: anywhere; }
+.结果标签 { display: inline-block; margin: 4px 6px 4px 0; padding: 4px 9px; border-radius: 14px; background: #eee8dc; color: #65543e; font-size: 13px; }

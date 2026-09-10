@@ -14,10 +14,19 @@ def 主程序():
         错误 = []
         页面.on("pageerror", lambda 异常: 错误.append(str(异常)))
         页面.goto(参数.地址)
-        页面.locator('#方向列表 input').first.wait_for()
+        页面.locator('#姓氏').wait_for()
+        assert 页面.locator('#方向列表, #出生时间, input[name="五行"]').count() == 0
+        页面.set_default_timeout(150000)
         页面.locator('#姓氏').fill("李")
         页面.get_by_role("button", name="开始起名", exact=True).click()
         页面.locator('.名字卡片').first.wait_for()
+        第一批 = 页面.locator('.名字行 h2').all_inner_texts()
+        with 页面.expect_response(lambda r: '/api/name-runs' in r.url and r.request.method == 'POST'):
+            页面.locator('#换一批').click()
+        expect(页面.locator('#状态')).to_contain_text('完成')
+        第二批 = 页面.locator('.名字行 h2').all_inner_texts()
+        assert 第二批 and set(第一批).isdisjoint(第二批)
+        页面.locator('.结果标签').first.wait_for()
         页面.locator('.收藏按钮').first.click()
         expect(页面.locator('.收藏按钮').first).to_have_text("已收藏")
         页面.get_by_text("我的收藏与比较", exact=True).click()
@@ -35,7 +44,7 @@ def 主程序():
         页面.set_viewport_size({"width": 390, "height": 844})
         assert 页面.evaluate("document.documentElement.scrollWidth <= innerWidth"), "移动端横向溢出"
         assert not 错误, 错误
-        print(json.dumps({"状态": "通过", "操作": ["双字名", "收藏", "比较", "历史", "单字名", "移动端布局"], "网页异常": 错误}, ensure_ascii=False))
+        print(json.dumps({"状态": "通过", "操作": ["取消预选", "双字名", "换一批不重复", "解释标签", "收藏", "比较", "历史", "单字名", "移动端布局"], "网页异常": 错误}, ensure_ascii=False))
         浏览器.close()
 
 

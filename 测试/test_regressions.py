@@ -16,6 +16,12 @@ from 脚本.建立资料数据库 import 切分古籍, 建库, 默认资料目�
 
 
 class 回归测试(unittest.TestCase):
+    def setUp(self):
+        from 测试.模拟生成 import 生成桩
+        模型替换 = patch.object(服务, "智能生成", side_effect=生成桩)
+        模型替换.start()
+        self.addCleanup(模型替换.stop)
+
     def test换一批有补充候选(self):
         with TemporaryDirectory(prefix="name-swap-") as 目录:
             路径 = Path(目录) / "测试.sqlite3"
@@ -32,7 +38,7 @@ class 回归测试(unittest.TestCase):
                 服务.删除起名任务(第二批["任务编号"])
             服务.查询缓存.清空()
 
-    def test不同文化方向会改变候选(self):
+    def test旧文化方向不再影响生成(self):
         with TemporaryDirectory(prefix="name-direction-") as 目录:
             路径 = Path(目录) / "测试.sqlite3"
             with closing(sqlite3.connect(服务.数据库路径)) as 源, closing(sqlite3.connect(路径)) as 目标:
@@ -40,7 +46,7 @@ class 回归测试(unittest.TestCase):
             with patch.object(服务, "数据库路径", 路径):
                 温润 = 服务.创建起名任务(服务.起名请求(姓氏="李", 方向=["温润君子"], 随机种子=303))
                 智慧 = 服务.创建起名任务(服务.起名请求(姓氏="李", 方向=["智慧通达"], 随机种子=303))
-                self.assertNotEqual(
+                self.assertEqual(
                     [项目["名字"] for 项目 in 温润["候选"]],
                     [项目["名字"] for 项目 in 智慧["候选"]],
                 )
