@@ -17,8 +17,8 @@ class 智能流程测试(unittest.TestCase):
         with closing(sqlite3.connect(服务.数据库路径)) as c:
             c.row_factory = sqlite3.Row
             第一批 = 批量召回(c, 请求)
-            self.assertEqual(len(第一批), 500)
-            self.assertEqual(len({x["名字"] for x in 第一批}), 500)
+            self.assertEqual(len(第一批), 200)
+            self.assertEqual(len({x["名字"] for x in 第一批}), 200)
             for x in 第一批:
                 self.assertEqual(x["原文"][x["原文位置"]:x["原文位置"]+2], x["名字"])
             self.assertTrue({"父母","岂曰"}.isdisjoint({x["名字"] for x in 第一批}))
@@ -48,6 +48,21 @@ class 智能流程测试(unittest.TestCase):
         self.assertEqual(len(结果),3)
         self.assertLessEqual(sum("清" in x["名字"] for x in 结果),1)
         self.assertEqual(结果,多样性重排(池,9,3))
+
+    def test两百候选拆成四个五十批次(self):
+        from 后端 import 智能筛选 as 模块
+        召回 = [{"名字":f"名{i:03d}", "姓名":f"李名{i:03d}", "原文":"名"*80,
+            "原文位置":0, "书名":"测试", "篇章":"测试", "来源片段编号":i,
+            "出处核验状态":"待核验", "取字方式":"原文连取"} for i in range(200)]
+        批次 = []
+        def 假筛选(当前, 请求, 配置):
+            批次.append(len(当前))
+            return [{**当前[0], "基础分":90, "现代释义":"测试释义", "文化标签":[], "方向":""}]
+        with patch.object(模块, "读取环境配置", return_value=模型配置(密钥="test",模型="test")), \
+             patch.object(模块, "验证模型地址"), patch.object(模块, "模型筛选单批", side_effect=假筛选):
+            结果 = 模型筛选(召回, {})
+        self.assertEqual(sorted(批次), [50,50,50,50])
+        self.assertEqual(len(结果), 4)
 
     def test配置权限脱敏及地址保护(self):
         with tempfile.TemporaryDirectory() as d, patch.dict("os.environ",{"起名管理密钥":"admin-test","起名模型配置文件":str(Path(d)/"config.json")}), TestClient(服务.应用) as client:

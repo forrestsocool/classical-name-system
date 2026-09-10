@@ -4,11 +4,15 @@ import random
 import re
 import urllib.request
 import urllib.error
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pydantic import BaseModel, Field
 from .名字校验 import 满足约束
 from .候选生成 import 取得五行, 取得读音
 from .模型接口 import 读取环境配置, 模型已配置, 验证模型地址, 禁止重定向
 
+召回数量 = 200
+单批数量 = 50
+模型并发数量 = 4
 
 class 筛选项(BaseModel):
     编号: int
@@ -21,7 +25,7 @@ class 筛选结果(BaseModel):
     候选: list[筛选项] = Field(max_length=80)
 
 
-def 批量召回(连接, 请求, 数量=500):
+def 批量召回(连接, 请求, 数量=召回数量):
     随机 = random.Random(请求.get("随机种子"))
     行列表 = list(连接.execute("""
         SELECT p.id,p.text,p.section_title,p.status,b.name AS book
@@ -65,18 +69,15 @@ def 批量召回(连接, 请求, 数量=500):
     return 结果
 
 
-def 模型筛选(召回, 请求):
-    配置 = 读取环境配置()
-    if not 模型已配置(配置):
-        raise RuntimeError("请管理员先配置模型接口，再开始起名")
-    验证模型地址(配置.地址)
+def 模型筛选单批(召回, 请求, 配置):
+    """单个模型请求处理一批候选，返回经过本批校验的结果。"""
     资料 = []
     for i, 项 in enumerate(召回):
         起点 = max(0, 项["原文位置"]-35)
         资料.append({"编号": i, "姓名": 项["姓名"], "书名": 项["书名"],
                     "原文上下文": 项["原文"][起点:项["原文位置"]+65]})
     系统 = (
-        "你是严格的现代中文姓名审稿人。对输入的全部候选逐一判断，按适名质量降序选择最多80个，宁缺毋滥。"
+        "你是严格的现代中文姓名审稿人。只审查本批全部候选，最多保留50个，宁缺毋滥。"
         "拒绝虚词拼接、疑问句残片、称谓如父母、负面贬义、普通动宾残片、俗语、谐音尴尬、"
         "明显不像人名的词组。结合姓氏判断读音、语义、审美；不能仅因有古籍出处就接受。"
         "只推荐评分75以上的名字。兼顾不同用字、读音、意境和书籍，避免同字模板。"
@@ -87,7 +88,7 @@ def 模型筛选(召回, 请求):
     )
     请求体 = {"model": 配置.模型, "messages": [{"role":"system","content":系统},
         {"role":"user","content":json.dumps({"候选":资料},ensure_ascii=False)}],
-        "temperature":0.85, "max_tokens":12000, "response_format":{"type":"json_object"}}
+        "temperature":0.85, "max_tokens":8000, "response_format":{"type":"json_object"}}
     req = urllib.request.Request(配置.地址, data=json.dumps(请求体).encode(),
         headers={"Content-Type":"application/json","Authorization":"Bearer "+配置.密钥}, method="POST")
     try:
@@ -100,7 +101,7 @@ def 模型筛选(召回, 请求):
     except urllib.error.HTTPError as 异常:
         if 异常.code in (401, 403):
             raise RuntimeError("模型接口鉴权失败，请管理员更新接口密钥") from None
-        raise RuntimeError("模型服务暂时不可用，请稍后重试") from None
+        raise RuntimeError(f"模型服务返回HTTP{异常.code}，请稍后重试") from None
     except Exception:
         raise RuntimeError("模型筛选暂时失败，请稍后重试或由管理员检查接口配置") from None
     结果, 已有 = [], set()
@@ -111,6 +112,33 @@ def 模型筛选(召回, 请求):
         结果.append({**召回[项.编号], "基础分": 项.分数, "现代释义": 项.释义,
                      "文化标签": [x[:24] for x in 项.文化标签], "方向": " · ".join(项.文化标签)})
     return 结果
+
+
+def 模型筛选(召回, 请求):
+    配置 = 读取环境配置()
+    if not 模型已配置(配置):
+        raise RuntimeError("请管理员先配置模型接口，再开始起名")
+    验证模型地址(配置.地址)
+    分批 = [召回[i:i + 单批数量] for i in range(0, len(召回), 单批数量)]
+    结果, 错误 = [], []
+    with ThreadPoolExecutor(max_workers=模型并发数量, thread_name_prefix="模型筛选") as 执行器:
+        任务 = [执行器.submit(模型筛选单批, 批, 请求, 配置) for 批 in 分批]
+        for 任务项 in as_completed(任务):
+            try:
+                结果.extend(任务项.result())
+            except Exception as 异常:
+                错误.append(异常)
+    if not 结果 and 错误:
+        raise 错误[0]
+    # 已成功的批次仍可用于展示，避免单个上游请求失败导致整轮归零。
+    已有名字 = set()
+    清洁结果 = []
+    for 项 in 结果:
+        if "名字" not in 项 or 项["名字"] in 已有名字:
+            continue
+        已有名字.add(项["名字"])
+        清洁结果.append(项)
+    return 清洁结果
 
 
 def 多样性重排(候选, 种子=None, 数量=12):
