@@ -785,6 +785,7 @@ def 获取起名任务(run_id: str) -> dict:
         for 项目 in 候选:
             五行文本 = 项目.pop("wuxing_json")
             项目["五行匹配"] = json.loads(五行文本) if 五行文本 else None
+            项目["热门提示"] = (项目["五行匹配"] or {}).get("热门提示")
     结果 = dict(任务)
     结果["请求"] = json.loads(结果.pop("request_json"))
     八字文本 = 结果.pop("bazi_json")

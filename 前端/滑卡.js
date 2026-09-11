@@ -60,6 +60,8 @@ export function 初始化滑卡({读取接口, 转义, 会话密钥, 收藏夹�
     const {项目: 项, 任务编号} = 队列[0];
     const 释义 = 项.现代释义 || 项.五行匹配?.现代释义 || "细读原文，感受这个名字的意境。";
     const 标签 = 项.文化标签 || 项.五行匹配?.文化标签 || [];
+    const 热度 = 项.热门提示 || 项.五行匹配?.热门提示;
+    const 热度文案 = 热度?.命中 ? (热度.提示 || []).slice(0, 3) : [];
     const 出处状态 = 项.出处核验状态 || 项.五行匹配?.出处核验状态 || "待核验";
     const 原文 = 项.原文 || "";
     const 起点 = Math.max(0, (项.原文位置 || 0) - 24);
@@ -69,8 +71,9 @@ export function 初始化滑卡({读取接口, 转义, 会话密钥, 收藏夹�
       <div class="卡片眉题"><span>一份来自古籍的心意</span><span class="小印章" aria-hidden="true">名</span></div>
       <div class="名字主区"><p class="拼音">${转义(项.拼音带调 || 项.拼音)}</p><div class="名字行 ${项.姓名.length > 4 ? "长姓名" : ""}"><h2>${转义(项.姓名)}</h2></div><div class="文化标签">${标签.slice(0, 4).map(x => `<span class="结果标签">${转义(x)}</span>`).join("")}</div></div>
       <p class="名字释义">${转义(释义)}</p>
+      ${热度文案.length ? `<div class="热门提醒"><span class="热门提醒标题">热门提醒</span><ul>${热度文案.map(x => `<li>${转义(x)}</li>`).join("")}</ul></div>` : ""}
       <div class="出处摘录"><span class="出处小题">名字的来处</span><blockquote>${转义(摘录)}</blockquote><p>${转义(项.书名)} · ${转义(项.篇章)}</p></div>
-      <details class="卡片详情"><summary>细读典故与五行参考 <span aria-hidden="true">＋</span></summary><div class="详情正文"><blockquote>${转义(原文)}</blockquote><p>出处${转义(出处状态)} · ${转义(项.取字方式)}</p><p>五行参考：${转义(Object.entries(项.五行匹配?.已知字符 || {}).map(([字, 行]) => `${字}属${行}`).join("、") || "暂无已核验属性")}</p>${(项.五行匹配?.标签 || []).map(x => `<span class="结果标签">${转义(x)}</span>`).join("")}<small>${转义(项.五行匹配?.说明 || "五行仅作传统取名参考。")}</small></div></details>
+      <details class="卡片详情"><summary>细读典故、热度与五行参考 <span aria-hidden="true">＋</span></summary><div class="详情正文"><blockquote>${转义(原文)}</blockquote><p>出处${转义(出处状态)} · ${转义(项.取字方式)}</p>${热度?.命中 ? `<p>热门资料：${转义((热度.提示 || []).join("；"))}</p>` : ""}<p>五行参考：${转义(Object.entries(项.五行匹配?.已知字符 || {}).map(([字, 行]) => `${字}属${行}`).join("、") || "暂无已核验属性")}</p>${(项.五行匹配?.标签 || []).map(x => `<span class="结果标签">${转义(x)}</span>`).join("")}<small>${转义(项.五行匹配?.说明 || "五行仅作传统取名参考。")}</small></div></details>
     </article>`;
     $("#卡片播报").textContent = `${项.姓名}。${标签.join("，")}。`;
     绑定手势(内容.firstElementChild);

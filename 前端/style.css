@@ -240,3 +240,8 @@ button, a, summary, input, select { -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+.热门提醒 { margin: 0 0 16px; padding: 10px 14px; border: 1px solid #ead8c8; border-radius: 10px; background: #fff7ef; color: #8b6b51; text-align: left; font-size: 11px; line-height: 1.7; }
+.热门提醒标题 { display: block; margin-bottom: 2px; color: #a15f4c; font-size: 10px; letter-spacing: .12em; }
+.热门提醒 ul { margin: 0; padding-left: 16px; }
+.热门提醒 li { margin: 1px 0; }

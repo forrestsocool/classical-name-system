@@ -16,6 +16,7 @@ def 一批(请求, 编号, 起点=0):
          "文化标签": ["温润谦和", "清朗自然"], "书名": "诗经", "篇章": "测试篇章",
          "原文": "惠风和畅，清和有致。", "取字方式": "原文连取", "原文位置": 5,
          "来源片段编号": 1, "出处核验状态": "待核验", "五行匹配": {"已知字符": {}, "说明": "五行仅作传统取名参考。"}}
+        | {"热门提示": {"命中": x == "清和", "提示": ["名字中的“和”入选2021年新生儿热门字第12位"]}}
         for x in 名字组[起点:起点+12]]}
 
 
@@ -25,7 +26,12 @@ def 主程序():
     参数器.add_argument("--截图目录")
     参数 = 参数器.parse_args()
     with sync_playwright() as 驱动:
-        浏览器 = 驱动.chromium.launch(channel="msedge", headless=True)
+        # 使用本机已安装的 Chrome，避免测试环境中的 Edge 与 Playwright
+        # 版本不兼容导致浏览器刚启动就退出。
+        浏览器 = 驱动.chromium.launch(
+            executable_path=r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            headless=True,
+        )
         环境 = 浏览器.new_context(viewport={"width": 1365, "height": 1024}, reduced_motion="reduce")
         页面 = 环境.new_page()
         错误 = []
@@ -54,6 +60,7 @@ def 主程序():
         页面.locator("#姓氏").fill("李")
         页面.get_by_role("button", name="开始遇见名字", exact=True).click()
         expect(页面.locator(".名字行 h2")).to_have_text("李清和")
+        expect(页面.locator(".热门提醒")).to_contain_text("热门提醒")
         expect(页面.locator("#预载状态")).to_contain_text("下一组正在准备")
         assert len(生成请求) == 2
         assert len(生成请求[1]["排除名字"]) == 12
