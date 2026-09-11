@@ -48,7 +48,8 @@ class 队列测试(unittest.TestCase):
         self.填充()
         第一 = self.拉取()
         分布 = Counter(x["项目"]["书名"] for x in 第一["卡片"])
-        self.assertEqual(len(分布), 9)
+        self.assertGreaterEqual(len(分布), 9)
+        self.assertLessEqual(len(分布), 11)
         self.assertLessEqual(max(分布.values()), 2)
         with self.q.连接() as c:
             self.assertEqual(c.execute("SELECT COUNT(*) FROM feed_exposures").fetchone()[0], 0)

@@ -103,7 +103,7 @@ class 起名系统测试(unittest.TestCase):
     def test数据库健康状态(self) -> None:
         结果 = 健康检查()
         self.assertEqual(结果["状态"], "正常")
-        self.assertEqual(结果["古籍数"], 9)
+        self.assertEqual(结果["古籍数"], 11)
         self.assertGreater(结果["片段数"], 8000)
         self.assertGreaterEqual(结果["可生成片段数"], 10)
         就绪 = 就绪检查()
@@ -117,6 +117,14 @@ class 起名系统测试(unittest.TestCase):
         详情 = 获取片段(结果["结果"][0]["id"])
         self.assertIn("温故", 详情["text"])
         self.assertEqual(len(详情["sha256"]), 64)
+
+        结果老子 = 搜索古籍("上善若水")
+        self.assertGreaterEqual(结果老子["数量"], 1)
+        self.assertTrue(any(项目["book"] == "道德经" for 项目 in 结果老子["结果"]))
+
+        结果年号 = 搜索古籍("贞观", 书名="东亚年号")
+        self.assertGreaterEqual(结果年号["数量"], 1)
+        self.assertTrue(any(项目["book"] == "东亚年号" for 项目 in 结果年号["结果"]))
 
     def test方向接口(self) -> None:
         结果 = 获取方向()
