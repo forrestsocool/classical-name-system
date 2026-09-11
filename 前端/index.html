@@ -2,21 +2,21 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f5f3eb">
   <title>拾名 · 古籍智能起名</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <main class="页面">
     <header class="顶栏">
-      <a class="标志" href="/" aria-label="拾名首页"><span class="印记">名</span>拾名<span class="标志副文">在古籍里，遇见一个好名字</span></a>
-      <button id="编辑条件" class="条件入口" type="button"><span id="姓氏摘要">先告诉我你的姓氏</span><span aria-hidden="true"> ↗</span></button>
-    </header>
+      <a class="标志" href="/" aria-label="拾名首页"><span class="印记">名</span><span class="标志文字">拾名</span></a>
     <nav class="主导航" aria-label="页面导航">
-      <button type="button" data-page="发现" class="选中" aria-current="page">发现名字</button>
-      <button type="button" data-page="收藏">心动收藏 <span id="收藏计数"></span></button>
-      <button type="button" data-page="更多">资料与设置</button>
+      <button type="button" data-page="发现" class="选中" aria-current="page" aria-label="发现名字">发现</button>
+      <button type="button" data-page="收藏" aria-label="心动收藏">收藏 <span id="收藏计数"></span></button>
+      <button type="button" data-page="更多" aria-label="资料与设置">设置</button>
     </nav>
+    </header>
 
     <section id="发现页" class="发现布局">
       <aside class="序言">
@@ -27,7 +27,7 @@
         <p class="序言脚注">名字有出处，喜欢有理由。</p>
       </aside>
       <div class="发现舞台">
-        <div class="舞台顶行"><span>今日的名字相遇</span><span id="浏览计数">从第一个名字开始</span></div>
+        <div class="舞台顶行"><button id="编辑条件" class="条件入口" type="button" aria-label="修改姓氏和起名条件"><span id="姓氏摘要">填写姓氏</span><span aria-hidden="true"> ↗</span></button><span id="浏览计数">一字一意，慢慢相遇</span></div>
         <section id="结果列表" class="卡片舞台" aria-label="名字卡片">
           <div class="卡片背面 第二层" aria-hidden="true"></div><div class="卡片背面 第一层" aria-hidden="true"></div>
           <div id="卡片内容"></div>
@@ -58,6 +58,10 @@
         <p id="条件错误" class="表单错误" role="alert"></p>
         <button type="submit">开始遇见名字</button>
       </form>
+    </dialog>
+    <dialog id="名字详情" aria-label="名字详细资料">
+      <button id="关闭详情" class="关闭弹窗" type="button" aria-label="关闭名字详情">×</button>
+      <div id="详情内容"></div>
     </dialog>
 
     <section id="收藏页" class="功能页" hidden>
@@ -117,15 +121,17 @@
           <button id="加载五行规则" type="button">加载待复核五行</button>
           <button id="加载审计问题" type="button">加载待处理问题</button>
           <button id="加载统计" type="button">加载质量统计</button>
+          <button id="加载队列统计" type="button">查看来源与库存</button>
         </div>
         <div id="质量统计" class="质量统计"></div>
+        <div id="队列统计" class="质量统计" aria-live="polite"></div>
         <div id="复核列表" class="复核列表"></div>
         <div id="五行规则列表" class="复核列表"></div>
         <div id="审计问题列表" class="复核列表"></div>
       </details>
     </section>
-    </section>
     <footer class="页脚">拾名 · 让名字，成为故事的开始</footer>
+    </section>
   </main>
   <script src="/static/app.js" defer></script>
 </body>

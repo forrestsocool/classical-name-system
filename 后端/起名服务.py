@@ -9,6 +9,7 @@ import time
 import uuid
 import hashlib
 from contextvars import ContextVar
+from contextlib import asynccontextmanager
 from collections import defaultdict, deque
 from datetime import datetime, timezone
 from pathlib import Path
@@ -27,6 +28,7 @@ from .缓存 import TTL缓存
 from .候选生成 import 生成基础候选
 from .名字校验 import 取字位置
 from .智能筛选 import 智能生成
+from .候选队列 import 候选队列
 from .模型接口 import 模型配置, 配置文件, 验证模型地址
 from .模型接口 import (
     语料证据,
@@ -41,7 +43,29 @@ from .模型接口 import (
 当前会话 = ContextVar("当前会话", default=None)
 模型并发 = BoundedSemaphore(2)
 
-应用 = FastAPI(title="古籍智能起名服务", version="0.1.0")
+队列实例 = None
+队列实例锁 = Lock()
+
+
+def 获取候选队列():
+    global 队列实例
+    with 队列实例锁:
+        if 队列实例 is None:
+            队列实例 = 候选队列(数据库路径, 自动生产=os.getenv("起名后台生产", "1") != "0")
+        return 队列实例
+
+
+@asynccontextmanager
+async def 服务生命周期(app):
+    yield
+    global 队列实例
+    if 队列实例 is not None:
+        import asyncio
+        await asyncio.to_thread(队列实例.关闭)
+        队列实例 = None
+
+
+应用 = FastAPI(title="古籍智能起名服务", version="0.2.0", lifespan=服务生命周期)
 
 
 @应用.exception_handler(RequestValidationError)
@@ -96,6 +120,7 @@ def 规范监控路径(路径: str) -> str:
         if re.fullmatch(模式, 路径):
             return 替换
     固定路径 = {"/", "/metrics", "/api/health", "/api/ready", "/api/search", "/api/directions", "/api/eras", "/api/bazi", "/api/model/status", "/api/name-runs", "/api/favorites", "/api/favorites/compare", "/api/feedback", "/api/admin/review-queue", "/api/admin/element-queue", "/api/admin/audit-queue", "/api/admin/metrics"}
+    固定路径.update({"/api/feed/pull", "/api/feed/sync", "/api/admin/feed-metrics"})
     return 路径 if 路径 in 固定路径 else "/其他"
 
 
@@ -157,9 +182,9 @@ def 每分钟请求上限() -> int:
         return 60
 
 
-def 请求是否超限(来源: str, 当前时间: float) -> bool:
+def 请求是否超限(来源: str, 当前时间: float, 配额: int | None = None) -> bool:
     截止时间 = 当前时间 - 60
-    上限 = 每分钟请求上限()
+    上限 = 配额 if 配额 is not None else 每分钟请求上限()
     with 限流锁:
         if len(限流记录) >= 4096:
             for 键 in list(限流记录):
@@ -183,7 +208,7 @@ async def 请求保护(请求, 调用下一个):
     会话令牌 = None
     try:
         路径 = 请求.url.path
-        if any(路径.startswith(前缀) for 前缀 in ("/api/name-runs", "/api/favorites", "/api/feedback")):
+        if any(路径.startswith(前缀) for 前缀 in ("/api/name-runs", "/api/favorites", "/api/feedback", "/api/feed")):
             密钥 = 请求.headers.get("X-Session-Key", "")
             if not re.fullmatch(r"web-[a-f0-9]{32}", 密钥):
                 状态码 = 401
@@ -198,7 +223,12 @@ async def 请求保护(请求, 调用下一个):
                     return JSONResponse({"detail": "起名任务不存在"}, status_code=404)
         if 请求.url.path.startswith("/api/"):
             来源 = 请求.client.host if 请求.client else "未知来源"
-            if 请求是否超限(来源, time.monotonic()):
+            # 轻量消费与模型入口分别限流，正常快速滑卡不会用光旧的每分钟60次额度。
+            if 路径.startswith("/api/feed"):
+                超限 = 请求是否超限(来源+":feed", time.monotonic(), 240)
+            else:
+                超限 = 请求是否超限(来源, time.monotonic())
+            if 超限:
                 响应 = JSONResponse(
                     {"detail": "请求过于频繁，请稍后再试"},
                     status_code=429,
@@ -644,6 +674,50 @@ def 获取汉字(char: str) -> dict:
     结果["五行规则"] = 规则
     查询缓存.写入(缓存键, 结果)
     return 结果
+
+
+class 队列拉取请求(BaseModel):
+    指纹: str = Field(pattern=r"^[a-f0-9]{64}$")
+    请求编号: str = Field(pattern=r"^[a-f0-9-]{32,36}$")
+    条件: 起名请求
+    数量: int = Field(default=8, ge=1, le=12)
+
+
+class 队列同步请求(BaseModel):
+    指纹: str = Field(pattern=r"^[a-f0-9]{64}$")
+    队列编号: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    已展示: list[str] = Field(default_factory=list, max_length=48)
+    续租: list[str] = Field(default_factory=list, max_length=36)
+    释放: list[str] = Field(default_factory=list, max_length=36)
+
+
+@应用.post("/api/feed/pull")
+def 拉取名字卡片(请求: 队列拉取请求):
+    条件 = 请求.条件
+    if not re.fullmatch(r"[\u3400-\u4dbf\u4e00-\u9fff]{1,4}", 条件.姓氏):
+        raise HTTPException(422, "姓氏必须为一至四个汉字")
+    if len(条件.必须包含) > 条件.名字长度 or set(条件.必须包含) & set(条件.避用字):
+        raise HTTPException(422, "固定字数量超过名字长度，或与避用字冲突")
+    if 条件.必须包含 and not re.fullmatch(r"[\u3400-\u4dbf\u4e00-\u9fff]+", 条件.必须包含):
+        raise HTTPException(422, "固定字必须是汉字")
+    规范条件 = {键: getattr(条件, 键) for 键 in ("姓氏", "名字长度", "必须包含", "避用字", "关键词")}
+    规范条件["避用字"] = "".join(sorted(set(条件.避用字)))
+    规范条件["必须包含"] = "".join(sorted(条件.必须包含))
+    try:
+        return 获取候选队列().拉取(当前会话.get(), 请求.指纹, 规范条件, 请求.请求编号, 请求.数量)
+    except ValueError as 异常:
+        raise HTTPException(429, str(异常)) from None
+
+
+@应用.post("/api/feed/sync")
+def 同步卡片曝光(请求: 队列同步请求):
+    return 获取候选队列().确认(当前会话.get(), 请求.指纹, 请求.已展示, 请求.续租, 请求.释放, 请求.队列编号)
+
+
+@应用.get("/api/admin/feed-metrics")
+def 队列质量统计(x_admin_key: str | None = Header(default=None)):
+    校验管理权限(x_admin_key)
+    return 获取候选队列().统计()
 
 
 @应用.post("/api/name-runs")

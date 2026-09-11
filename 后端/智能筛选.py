@@ -5,6 +5,8 @@ import re
 import urllib.request
 import urllib.error
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections import defaultdict
+from threading import BoundedSemaphore
 from pydantic import BaseModel, Field
 from .名字校验 import 满足约束
 from .候选生成 import 取得五行, 取得读音
@@ -12,8 +14,9 @@ from .姓名热度 import 匹配姓名热度
 from .模型接口 import 读取环境配置, 模型已配置, 验证模型地址, 禁止重定向
 
 召回数量 = 200
-单批数量 = 50
-模型并发数量 = 4
+单批数量 = 25
+模型并发数量 = 8
+模型请求槽 = BoundedSemaphore(8)
 
 class 筛选项(BaseModel):
     编号: int
@@ -28,22 +31,38 @@ class 筛选结果(BaseModel):
 
 def 批量召回(连接, 请求, 数量=召回数量):
     随机 = random.Random(请求.get("随机种子"))
+    来源 = 请求.get("来源书名")
     行列表 = list(连接.execute("""
         SELECT p.id,p.text,p.section_title,p.status,b.name AS book
         FROM passages p JOIN books b ON b.id=p.book_id
-        WHERE p.status IN ('已核验','待核验') ORDER BY p.id
-    """))
-    随机.shuffle(行列表)
+        WHERE p.status IN ('已核验','待核验') AND (? IS NULL OR b.name = ?) ORDER BY p.id
+    """, (来源, 来源)))
+    # 先按书轮换，再按片段轮换；长篇古籍不会占满召回池。
+    分书 = defaultdict(list)
+    for 行 in 行列表:
+        分书[行["book"]].append(行)
+    书序 = list(分书)
+    随机.shuffle(书序)
+    for 行组 in 分书.values():
+        随机.shuffle(行组)
+    行列表 = []
+    while any(分书.values()):
+        for 书 in 书序:
+            if 分书[书]:
+                行列表.append(分书[书].pop())
     结果, 已有 = [], set()
     长度 = 请求.get("名字长度", 2)
     # 按片段轮流提取，避免单篇长文占据整个候选池。
     队列 = []
+    排除名字 = set(请求.get("排除名字", []))
+    校验请求 = {**请求, "排除名字": []}
     for 行 in 行列表:
         当前 = []
         for 匹配 in re.finditer(r"[\u4e00-\u9fff]+", 行["text"]):
             for i in range(len(匹配[0]) - 长度 + 1):
                 名字 = 匹配[0][i:i+长度]
-                if 名字 in {"父母", "岂曰", "淑女", "丈夫"} or not 满足约束(名字, 请求):
+                if (名字 in {"父母", "岂曰", "淑女", "丈夫"} or 名字 in 排除名字
+                    or 请求["姓氏"] + 名字 in 排除名字 or not 满足约束(名字, 校验请求)):
                     continue
                 当前.append((名字, 匹配.start()+i))
         随机.shuffle(当前)
@@ -78,9 +97,12 @@ def 模型筛选单批(召回, 请求, 配置):
         资料.append({"编号": i, "姓名": 项["姓名"], "书名": 项["书名"],
                     "原文上下文": 项["原文"][起点:项["原文位置"]+65]})
     系统 = (
-        "你是严格的现代中文姓名审稿人。只审查本批全部候选，最多保留50个，宁缺毋滥。"
+        "你是严格的现代中文姓名审稿人。逐一审查本批候选，保留全部合格项，宁缺毋滥。"
         "拒绝虚词拼接、疑问句残片、称谓如父母、负面贬义、普通动宾残片、俗语、谐音尴尬、"
         "明显不像人名的词组。结合姓氏判断读音、语义、审美；不能仅因有古籍出处就接受。"
+        "姓名必须独立自然、寓意完整；原文连在一起不等于适合取名。严格拒绝官职名、"
+        "问答残片、未完成搭配，例如父母、岂曰、司常、玉从、目盼；不得为来源均衡放宽标准。"
+        "同等质量下不因书籍知名度或熟悉程度改变评分。释义简洁，控制在80字以内。"
         "只推荐评分75以上的名字。兼顾不同用字、读音、意境和书籍，避免同字模板。"
         "只返回召回编号，禁止创造或修改名字。释义应解释姓名寓意与真实原文语境，"
         "现代寄意与古文原意要分清。文化标签从完整含义自由归纳，不套固定方向关键词。"
@@ -88,13 +110,14 @@ def 模型筛选单批(召回, 请求, 配置):
         '只输出JSON：{"候选":[{"编号":0,"分数":90,"释义":"……","文化标签":["温润谦和"]}]}。'
     )
     请求体 = {"model": 配置.模型, "messages": [{"role":"system","content":系统},
-        {"role":"user","content":json.dumps({"候选":资料},ensure_ascii=False)}],
+        {"role":"user","content":json.dumps({"候选":资料, "取名偏好资料": 请求.get("关键词", "")},ensure_ascii=False)}],
         "temperature":0.85, "max_tokens":8000, "response_format":{"type":"json_object"}}
     req = urllib.request.Request(配置.地址, data=json.dumps(请求体).encode(),
         headers={"Content-Type":"application/json","Authorization":"Bearer "+配置.密钥}, method="POST")
     try:
-        with urllib.request.build_opener(禁止重定向()).open(req, timeout=配置.超时秒数) as r:
-            数据 = json.loads(r.read(2_000_000))
+        with 模型请求槽:
+            with urllib.request.build_opener(禁止重定向()).open(req, timeout=配置.超时秒数) as r:
+                数据 = json.loads(r.read(2_000_000))
         内容 = 数据["choices"][0]["message"]["content"].strip()
         if 内容.startswith("```"):
             内容 = re.sub(r"^```(?:json)?\s*|\s*```$", "", 内容)
@@ -157,7 +180,10 @@ def 多样性重排(候选, 种子=None, 数量=12):
             惩罚 += 2 * len(set(x.get("文化标签",[])) & set(y.get("文化标签",[])))
         return x["基础分"] + x["扰动"] - 惩罚
     while 剩余 and len(结果) < 数量:
-        最佳 = max(剩余, key=评分)
+        次数 = {书: sum(y["书名"] == 书 for y in 结果) for 书 in {x["书名"] for x in 剩余}}
+        最少 = min(次数.values())
+        可选 = [x for x in 剩余 if 次数[x["书名"]] == 最少]
+        最佳 = max(可选, key=评分)
         剩余.remove(最佳)
         结果.append(最佳)
     for 项 in 结果:
@@ -165,11 +191,7 @@ def 多样性重排(候选, 种子=None, 数量=12):
     return 结果
 
 
-def 智能生成(连接, 请求):
-    召回 = 批量召回(连接, 请求)
-    if not 召回:
-        return []
-    候选 = 模型筛选(召回, 请求)
+def 补充解释(连接, 候选, 召回数):
     for 项 in 候选:
         项["拼音"], 项["拼音带调"] = 取得读音(连接, 项["名字"])
         已知, 未知 = 取得五行(连接, 项["名字"])
@@ -179,6 +201,14 @@ def 智能生成(连接, 请求):
         项["五行匹配"] = {"偏好": [], "已知字符": 已知, "未知字符": 未知,
             "标签": 标签, "说明": "依据已核验汉字五行资料，仅作传统取名参考；未测算宝宝八字。",
             "现代释义": 项["现代释义"], "文化标签": 项["文化标签"],
-            "出处核验状态": 项["出处核验状态"], "召回数量": len(召回),
+            "出处核验状态": 项["出处核验状态"], "召回数量": 召回数,
             "热门提示": 热度}
+    return 候选
+
+
+def 智能生成(连接, 请求):
+    召回 = 批量召回(连接, 请求)
+    if not 召回:
+        return []
+    候选 = 补充解释(连接, 模型筛选(召回, 请求), len(召回))
     return 多样性重排(候选, 请求.get("随机种子"))

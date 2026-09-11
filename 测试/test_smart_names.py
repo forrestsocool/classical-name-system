@@ -49,7 +49,7 @@ class 智能流程测试(unittest.TestCase):
         self.assertLessEqual(sum("清" in x["名字"] for x in 结果),1)
         self.assertEqual(结果,多样性重排(池,9,3))
 
-    def test两百候选拆成四个五十批次(self):
+    def test两百候选拆成八个二十五批次(self):
         from 后端 import 智能筛选 as 模块
         召回 = [{"名字":f"名{i:03d}", "姓名":f"李名{i:03d}", "原文":"名"*80,
             "原文位置":0, "书名":"测试", "篇章":"测试", "来源片段编号":i,
@@ -61,8 +61,8 @@ class 智能流程测试(unittest.TestCase):
         with patch.object(模块, "读取环境配置", return_value=模型配置(密钥="test",模型="test")), \
              patch.object(模块, "验证模型地址"), patch.object(模块, "模型筛选单批", side_effect=假筛选):
             结果 = 模型筛选(召回, {})
-        self.assertEqual(sorted(批次), [50,50,50,50])
-        self.assertEqual(len(结果), 4)
+        self.assertEqual(sorted(批次), [25]*8)
+        self.assertEqual(len(结果), 8)
 
     def test配置权限脱敏及地址保护(self):
         with tempfile.TemporaryDirectory() as d, patch.dict("os.environ",{"起名管理密钥":"admin-test","起名模型配置文件":str(Path(d)/"config.json")}), TestClient(服务.应用) as client:

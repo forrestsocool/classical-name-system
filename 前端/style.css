@@ -1,247 +1,120 @@
-:root {
-  color-scheme: light;
-  font-family: "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
-  color: #27352f;
-  background: #f5f0e6;
+:root { color-scheme: light; --墨:#284b40; --浅墨:#778577; --纸:#f5f3eb; --朱:#ac6b5a; font-family:"Microsoft YaHei","Noto Sans CJK SC",sans-serif; color:var(--墨); background:var(--纸); }
+* { box-sizing:border-box; }
+[hidden] { display:none!important; }
+html,body { margin:0; height:100%; overscroll-behavior:none; }
+body { background:radial-gradient(ellipse at 76% 38%,#e6ede3,transparent 65%),var(--纸); touch-action:manipulation; }
+button,input,select,textarea { font:inherit; }
+button { border:0; border-radius:10px; padding:12px 16px; background:#426b5a; color:white; cursor:pointer; min-height:44px; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+button:disabled { opacity:.38; cursor:default; }
+button:focus-visible,a:focus-visible,summary:focus-visible,.滑动卡:focus-visible { outline:3px solid #ad7650; outline-offset:3px; }
+input,select,textarea { width:100%; border:1px solid #d6d9cb; border-radius:9px; background:#fffdf8; padding:12px; color:var(--墨); font-size:16px; min-height:46px; }
+label { display:grid; gap:8px; font-size:14px; color:#5d6c60; }
+h1,h2 { font-family:"SimSun","Songti SC",serif; font-weight:500; }
+.页面 { width:min(1140px,100%); margin:auto; padding:0 28px; height:100dvh; height:100svh; display:grid; grid-template-rows:auto minmax(0,1fr); overflow:hidden; }
+@supports(height:100dvh) { .页面 { height:100dvh; } }
+.顶栏 { display:flex; align-items:center; justify-content:space-between; padding:max(8px,env(safe-area-inset-top)) 0 8px; border-bottom:1px solid #284b4014; gap:20px; }
+.标志 { display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--墨); font-family:"KaiTi",serif; font-size:25px; }
+.印记 { display:grid; place-items:center; width:34px; height:34px; border-radius:8px 2px; background:var(--墨); color:#fffdf4; font-size:23px; }
+.主导航 { display:flex; align-items:center; gap:6px; }
+.主导航 button { color:#788574; background:transparent; border-radius:24px; padding:10px 22px; font-size:14px; }
+.主导航 .选中 { background:#e3e9dd; color:var(--墨); }
+#收藏计数:not(:empty) { font-size:10px; background:#d8e2d0; padding:2px 5px; border-radius:9px; }
+.发现布局 { min-height:0; display:grid; grid-template-columns:1fr minmax(0,460px); gap:55px; padding:10px 18px max(8px,env(safe-area-inset-bottom)); align-items:center; }
+.序言 { padding:0 0 40px 18px; }
+.眉题 { font-size:11px; letter-spacing:.14em; color:#8b997e; }
+.序言 h1 { font-size:clamp(38px,4.7vw,58px); line-height:1.5; margin:25px 0; }
+.序言 h1 span { color:#809573; }
+.副题 { color:#81917f; font-size:14px; line-height:2; }
+.操作说明 { margin-top:32px; font-size:12px; color:#7c8d79; }
+.操作说明 span { display:inline-block; width:30px; font-size:19px; }
+.序言脚注 { margin-top:44px; font-size:11px; color:#99a28c; letter-spacing:.14em; }
+.发现舞台 { height:100%; max-height:800px; min-height:0; display:grid; grid-template-rows:44px minmax(0,1fr) 84px 20px 24px; gap:3px; text-align:center; }
+.舞台顶行 { display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:11px; color:#89947f; }
+.条件入口 { background:transparent; color:#617659; padding:8px 0; font-size:12px; text-align:left; }
+.卡片舞台 { min-height:0; position:relative; isolation:isolate; text-align:left; }
+#卡片内容 { position:relative; height:100%; }
+.卡片背面 { position:absolute; inset:8px 9px -5px; background:#e4ebdd; border:1px solid #d8e1d0; border-radius:24px; z-index:-1; }
+.第二层 { inset:16px 18px -10px; background:#dce5d4; }
+.名字卡片,.等待卡 { position:absolute; inset:0; border-radius:24px; border:1px solid #e1e4d7; background:#fffefa; padding:clamp(16px,3vh,27px) 26px 0; box-shadow:0 14px 34px #264b3910; overflow:hidden; }
+.名字卡片 { display:grid; grid-template-rows:24px minmax(95px,1fr) auto minmax(60px,.8fr) 46px; gap:10px; }
+.滑动卡 { z-index:2; touch-action:none; user-select:none; -webkit-user-select:none; cursor:grab; transform:translate3d(var(--位移,0px),0,0) rotate(var(--倾斜,0deg)); transition:transform 260ms cubic-bezier(.22,.7,.25,1); will-change:transform; }
+.下一张 { z-index:1; transform:scale(.98) translateY(7px); pointer-events:none; }
+.拖动中 { transition:none; cursor:grabbing; }
+.离场 { z-index:5; pointer-events:none; transition:transform 280ms ease-out; }
+.滑动印章 { position:absolute; top:48px; font-size:24px; border:3px solid; border-radius:6px; padding:7px 12px; transform:rotate(-13deg); background:#fffef4ec; z-index:3; pointer-events:none; }
+.收藏印章 { left:22px; color:#467b5d; opacity:var(--收藏透明度,0); }
+.跳过印章 { right:22px; color:var(--朱); opacity:var(--跳过透明度,0); transform:rotate(13deg); }
+.向右离场 .收藏印章,.向左离场 .跳过印章 { opacity:1; }
+.卡片眉题 { display:flex; align-items:center; justify-content:space-between; font-size:12px; color:#8a977d; letter-spacing:.14em; }
+.小印章 { border:1px solid #bb9a7b; border-radius:2px; padding:2px 4px; color:#af8a6a; font-family:"KaiTi",serif; }
+.名字主区 { display:flex; flex-direction:column; justify-content:center; text-align:center; min-height:0; }
+.拼音 { color:#969d84; font-size:12px; letter-spacing:.12em; margin:0 0 8px; }
+.名字行 h2 { font-size:clamp(38px,7vh,60px); line-height:1.4; letter-spacing:.13em; padding-left:.13em; margin:0; }
+.名字行.长姓名 h2 { font-size:clamp(27px,5vh,42px); letter-spacing:.06em; }
+.文化标签 { margin-top:9px; overflow:hidden; max-height:32px; }
+.结果标签 { display:inline-block; background:#f0f3e9; color:#74836a; border:1px solid #e9edde; border-radius:15px; padding:4px 8px; font-size:11px; margin:2px 3px; }
+.名字释义 { margin:0; font-family:"SimSun",serif; color:#607059; font-size:15px; line-height:1.85; text-align:center; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; }
+.出处摘录 { background:#f5f5ed; border:1px solid #ecefe1; border-radius:12px; padding:12px 14px; overflow:hidden; display:flex; flex-direction:column; justify-content:center; }
+blockquote { margin:12px 0; padding:12px 16px; border-left:2px solid #c2ad85; background:#f5f5ed; line-height:1.9; overflow-wrap:anywhere; }
+.出处摘录 blockquote { font-family:"SimSun",serif; margin:0 0 8px; padding:0; border:0; background:none; font-size:15px; line-height:1.7; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.出处摘录 p { margin:0; color:#929c85; font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.打开详情 { background:transparent; color:#839278; width:100%; border-radius:0; border-top:1px solid #eceee3; text-align:left; display:flex; justify-content:space-between; font-size:11px; padding:10px 0; touch-action:none; }
+.等待卡 { display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:10px; padding:24px; }
+.等待卡 h2 { font-size:40px; line-height:1.5; margin:10px; }
+.等待卡 p:not(.眉题) { font-size:12px; color:#96a08b; line-height:1.8; max-width:230px; }
+.卡片花纹 { color:#b3bd9d; font-size:45px; }
+.手势操作 { display:flex; align-items:center; justify-content:center; gap:25px; }
+.圆按钮 { display:grid; place-items:center; width:60px; height:60px; padding:0; border-radius:50%; background:#fffefa; box-shadow:0 6px 18px #284b3910; border:1px solid #e1e7d8; }
+.圆按钮 svg { width:25px; height:25px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+.撤回 { width:44px; height:44px; color:#ac9f7b; }
+.跳过 { color:#ae7964; }
+.收藏 { width:68px; height:68px; background:#426b5a; color:#fffdf3; border:0; }
+.手势提示 { margin:0; color:#829278; font-size:10px; display:flex; justify-content:center; gap:16px; }
+.手势提示 span { color:#a0aa93; }
+.预载信息 { display:flex; align-items:center; justify-content:center; gap:8px; font-size:10px; color:#939e86; min-height:22px; }
+.预载信息 button { min-height:22px; padding:3px 6px; font-size:10px; background:transparent; color:#8f7355; }
+.准备中::before { content:""; display:inline-block; width:5px; height:5px; border-radius:50%; background:#92a57e; margin-right:6px; animation:呼吸 2s infinite; }
+@keyframes 呼吸 { 50% { opacity:.3; } }
+.全局通知 { position:fixed; bottom:max(12px,env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); z-index:10; width:max-content; max-width:calc(100% - 24px); pointer-events:none; }
+.状态:empty { display:none; }
+.状态,.同步提示 { background:#fffdf4f5; border:1px solid #dfe5d4; border-radius:10px; font-size:12px; padding:10px 14px; box-shadow:0 5px 20px #284b3918; pointer-events:auto; }
+.错误,.表单错误 { color:#a45a46; }.同步提示 button { min-height:32px; padding:5px 8px; margin-left:8px; }
+.仅阅读器 { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+dialog { color:var(--墨); border:1px solid #e0e4d6; border-radius:22px; background:#fffefa; width:min(480px,calc(100% - 24px)); max-height:85dvh; padding:30px; overscroll-behavior:contain; box-shadow:0 20px 80px #132f3630; }
+dialog::backdrop { background:#1b322e70; backdrop-filter:blur(4px); }
+dialog h2 { font-size:30px; }.关闭弹窗 { position:sticky; float:right; top:0; width:44px; height:44px; border-radius:50%; padding:0; font-size:25px; background:#f1f3e9; color:#77846c; z-index:2; }
+.字段网格 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:20px 0; }.姓氏字段 { grid-column:1/-1; }
+.字段提示 { font-size:12px; color:#909b83; line-height:1.8; }.表单错误 { font-size:12px; line-height:1.7; }
+#起名表单>button[type=submit] { width:100%; margin-top:6px; }
+#名字详情 { touch-action:pan-y pinch-zoom; line-height:1.9; }#详情内容 { clear:both; overflow-wrap:anywhere; }
+details { margin:14px 0; }summary { cursor:pointer; padding:12px 0; min-height:44px; color:#6b7e60; }small { color:#89957c; line-height:1.8; }
+.功能页 { min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:25px 10px max(28px,env(safe-area-inset-bottom)); }
+.栏目标题 { text-align:center; margin-bottom:20px; }.栏目标题 h2 { font-size:28px; }.栏目标题 p:not(.眉题) { font-size:13px; color:#88957e; }
+.页脚 { text-align:center; color:#7a896d; font-size:11px; margin:24px 0; }
+.面板 { max-width:800px; margin:16px auto; padding:20px; border:1px solid #e0e5d6; border-radius:16px; background:#fffef9; }.面板 button { margin:4px 3px 4px 0; font-size:13px; }
+.管理操作,.复核按钮组 { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }.面板 input[type=checkbox] { width:18px; min-height:18px; margin-right:8px; }
+#收藏列表,#比较结果,.历史列表,.年号列表,.复核列表 { display:grid; gap:12px; margin-top:12px; }
+#收藏列表 article,#比较结果 article,.历史卡片,.年号卡片,.复核卡片 { border:1px solid #e0e4d6; padding:14px; border-radius:12px; overflow-wrap:anywhere; }
+#收藏列表 label { display:flex; align-items:center; }.历史卡片,.年号卡片 { display:grid; gap:7px; }.复核卡片 p { line-height:1.9; }.历史删除按钮 { background:#a46554; width:fit-content; }
+@media(hover:hover) { button:not(:disabled):hover { filter:brightness(.96); } }
+@media(max-width:800px) {
+  .页面 { padding:0 max(14px,env(safe-area-inset-left)) 0 max(14px,env(safe-area-inset-right)); }
+  .顶栏 { gap:8px; }.标志文字 { display:none; }.主导航 { gap:0; }.主导航 button { padding:10px 17px; font-size:13px; }
+  .序言 { display:none; }.发现布局 { grid-template-columns:minmax(0,460px); justify-content:center; padding:2px 0 max(7px,env(safe-area-inset-bottom)); gap:0; }
+  .发现舞台 { grid-template-rows:44px minmax(0,1fr) 82px 17px 22px; }.手势提示 span { display:none; }
+  .功能页 { padding-left:0; padding-right:0; }.面板 { padding:15px; }
+  #名字详情 { margin:auto auto 0; width:100%; max-height:88dvh; border-radius:24px 24px 0 0; padding-bottom:max(22px,env(safe-area-inset-bottom)); }
 }
-
-* { box-sizing: border-box; }
-body { margin: 0; background: radial-gradient(circle at top, #fbf8f0, #f1eadc); }
-.页面 { width: min(980px, calc(100% - 32px)); margin: 0 auto; padding: 48px 0 72px; }
-.页头 { text-align: center; margin-bottom: 28px; }
-.眉题 { color: #8d6c45; letter-spacing: .16em; font-size: 13px; }
-h1 { margin: 12px 0; font-family: "STKaiti", "KaiTi", serif; font-size: clamp(30px, 6vw, 54px); font-weight: 500; }
-.副题 { color: #68736b; }
-.面板, .八字卡片, .名字卡片, .空结果 { background: rgba(255, 253, 247, .88); border: 1px solid #e4d9c5; border-radius: 16px; box-shadow: 0 10px 30px rgba(93, 75, 49, .06); }
-.面板 { padding: 24px; }
-.字段网格 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-label { display: grid; gap: 7px; color: #59655d; font-size: 14px; }
-input, select { width: 100%; border: 1px solid #d6c9b5; border-radius: 9px; background: #fffdf8; padding: 11px 12px; color: #27352f; font: inherit; }
-fieldset { margin: 22px 0; border: 1px solid #e4d9c5; border-radius: 12px; padding: 16px; }
-legend { padding: 0 8px; color: #8d6c45; }
-.方向列表 { display: flex; flex-wrap: wrap; gap: 10px; }
-.方向项 { display: flex; grid-template-columns: auto auto; align-items: center; gap: 7px; border: 1px solid #ded2bf; border-radius: 99px; padding: 8px 12px; cursor: pointer; }
-.方向项 input { width: auto; }
-.字段提示 { display: block; margin-top: 10px; color: #8a8b83; }
-details { margin: 12px 0 22px; color: #59655d; }
-summary { cursor: pointer; padding: 8px 0; }
-button { width: 100%; border: 0; border-radius: 10px; padding: 13px 16px; background: #426b5a; color: white; font: inherit; cursor: pointer; }
-button:hover { background: #315747; }
-.收藏按钮 { margin-top: 14px; padding: 9px 12px; background: #8d6c45; }
-.收藏按钮:hover { background: #705332; }
-.收藏按钮:disabled { opacity: .7; cursor: default; }
-.反馈操作 { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
-.反馈按钮 { width: auto; padding: 7px 9px; background: #eee7d9; color: #59655d; font-size: 12px; }
-.反馈按钮:hover { background: #ddd1bd; }
-.反馈按钮:disabled { opacity: .65; cursor: default; }
-.管理面板 { margin-top: 24px; }
-.历史面板 { margin-top: 24px; }
-.历史面板 > details > button { width: auto; margin: 12px 0; background: #426b5a; }
-.历史列表 { display: grid; gap: 10px; }
-.历史卡片 { display: grid; gap: 6px; border: 1px solid #e4d9c5; border-radius: 10px; padding: 12px; background: #fffdf8; }
-.历史卡片 small { color: #7b817a; overflow-wrap: anywhere; }
-.历史删除按钮 { width: auto; padding: 7px 10px; background: #a14d42; }
-.历史删除按钮:disabled { opacity: .65; cursor: default; }
-.年号面板 { margin-top: 24px; }
-.年号面板 > details > button { width: auto; margin: 12px 0; background: #426b5a; }
-.年号列表 { display: grid; gap: 10px; }
-.年号卡片 { display: grid; gap: 6px; border: 1px solid #e4d9c5; border-radius: 10px; padding: 12px; background: #fffdf8; }
-.年号卡片 span, .年号卡片 small { color: #7b817a; }
-.管理面板 summary { color: #8d6c45; }
-.管理操作 { display: flex; gap: 10px; margin: 16px 0; }
-.管理操作 button { width: auto; background: #426b5a; }
-.质量统计 { min-height: 24px; color: #68736b; margin-bottom: 12px; }
-.复核列表 { display: grid; gap: 12px; }
-.复核卡片 { border: 1px solid #e4d9c5; border-radius: 10px; padding: 14px; background: #fffdf8; }
-.复核卡片 p { line-height: 1.8; margin: 8px 0; }
-.复核卡片 small { color: #7b817a; }
-.复核按钮组 { display: flex; gap: 8px; margin-top: 10px; }
-.复核按钮 { width: auto; padding: 8px 12px; background: #426b5a; }
-.复核按钮[data-state="不采用"] { background: #a14d42; }
-.复核按钮:disabled { opacity: .65; cursor: default; }
-.五行复核按钮 { width: auto; padding: 8px 12px; background: #426b5a; }
-.五行复核按钮[data-state="不采用"] { background: #a14d42; }
-.五行复核按钮:disabled { opacity: .65; cursor: default; }
-.审计复核按钮 { width: auto; padding: 8px 12px; background: #426b5a; }
-.审计复核按钮[data-state="忽略"] { background: #8d6c45; }
-.审计复核按钮:disabled { opacity: .65; cursor: default; }
-.状态 { min-height: 28px; padding: 18px 4px 8px; color: #68736b; }
-.状态.成功 { color: #2f6a4f; }
-.状态.错误 { color: #a14d42; }
-.状态.提示 { color: #8d6c45; }
-.换一批按钮 { width: auto; margin: 4px 0 18px; background: #8d6c45; }
-.换一批按钮:hover { background: #705332; }
-.八字结果 { margin-bottom: 18px; }
-.八字卡片 { display: grid; gap: 8px; padding: 16px 18px; }
-.八字卡片 strong { font-size: 20px; letter-spacing: .12em; }
-.八字卡片 small, .名字卡片 small { color: #7b817a; line-height: 1.7; }
-.结果列表 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.名字卡片 { padding: 20px; }
-.名字行 { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.名字行 h2 { margin: 0; font-family: "STKaiti", "KaiTi", serif; font-size: 30px; font-weight: 500; }
-.名字行 span { color: #8d6c45; font-size: 13px; }
-.词组 { color: #426b5a; font-size: 17px; margin: 8px 0; }
-.拼音 { color: #8d6c45; font-size: 13px; letter-spacing: .03em; }
-blockquote { margin: 14px 0; padding: 12px 14px; border-left: 3px solid #caa878; background: #fbf6eb; line-height: 1.8; }
-.空结果 { padding: 22px; color: #68736b; }
-@media (max-width: 700px) {
-  .管理操作, .复核按钮组 { flex-wrap: wrap; }
-  .页面 { width: min(100% - 20px, 620px); padding-top: 28px; }
-  .字段网格, .结果列表 { grid-template-columns: 1fr; }
-  .面板 { padding: 16px; }
+@media(max-height:680px) {
+  .发现舞台 { grid-template-rows:38px minmax(0,1fr) 67px 0px 20px; gap:2px; }.手势提示 { display:none; }
+  .名字卡片 { padding:14px 20px 0; grid-template-rows:20px minmax(76px,1fr) auto minmax(48px,.6fr) 44px; gap:6px; }
+  .名字行 h2 { font-size:40px; }.拼音 { margin-bottom:2px; font-size:11px; }.文化标签 { margin-top:2px; max-height:26px; }.结果标签 { font-size:10px; padding:3px 6px; }
+  .名字释义 { font-size:13px; -webkit-line-clamp:2; }.出处摘录 { padding:8px 12px; }.出处摘录 blockquote { font-size:13px; -webkit-line-clamp:2; margin-bottom:3px; }
+  .圆按钮 { width:50px; height:50px; }.撤回 { width:44px; height:44px; }.收藏 { width:56px; height:56px; }
 }
-button:disabled { opacity: .6; cursor: wait; }
-#收藏列表, #比较结果, #模型结果 { display: grid; gap: 12px; margin-top: 12px; }
-#收藏列表 article, #比较结果 article, #模型结果 article { border: 1px solid #e4d9c5; padding: 14px; border-radius: 10px; overflow-wrap: anywhere; }
-.结果标签 { display: inline-block; margin: 4px 6px 4px 0; padding: 4px 9px; border-radius: 14px; background: #eee8dc; color: #65543e; font-size: 13px; }
-
-/* 连续滑卡：纸色、墨绿与少量朱砂色。 */
-:root { --墨: #284b40; --浅墨: #687a70; --纸: #f5f3eb; --朱: #ac6b5a; }
-[hidden] { display: none !important; }
-body { background: radial-gradient(ellipse at 76% 38%, #e6ede3 0, transparent 54%), var(--纸); color: var(--墨); }
-.页面 { width: min(1160px, calc(100% - 64px)); padding: 26px 0 16px; }
-.顶栏 { display: flex; justify-content: space-between; align-items: center; gap: 18px; border-bottom: 1px solid #294c4019; padding-bottom: 22px; }
-.标志 { display: inline-flex; align-items: center; gap: 12px; font-family: "STKaiti", "KaiTi", serif; font-size: 27px; font-weight: 600; color: var(--墨); text-decoration: none; }
-.印记 { display: grid; place-items: center; border: 1px solid var(--墨); background: var(--墨); color: #fffdf4; border-radius: 8px 2px 8px 2px; width: 35px; height: 35px; font-size: 23px; font-weight: 400; }
-.标志副文 { margin-left: 18px; font-family: "Microsoft YaHei", sans-serif; font-size: 12px; font-weight: 400; color: #879086; letter-spacing: .08em; }
-.条件入口 { width: auto; background: #ffffff7a; color: var(--墨); font-size: 13px; border: 1px solid #d7dfd4; border-radius: 30px; padding: 10px 17px; }
-.条件入口:hover { background: #e7ece3; }
-.主导航 { display: flex; width: fit-content; gap: 26px; margin: 20px auto 0; }
-.主导航 button { width: auto; border-radius: 0; background: transparent; padding: 12px 3px; color: #8a9188; font-size: 14px; border-bottom: 2px solid transparent; }
-.主导航 button.选中 { color: var(--墨); border-color: var(--墨); }
-#收藏计数:not(:empty) { border-radius: 10px; background: #e0e8db; padding: 1px 6px; margin-left: 3px; font-size: 11px; }
-.发现布局 { display: grid; grid-template-columns: 1fr 470px; align-items: center; column-gap: 70px; padding: 28px 45px 8px 30px; }
-.序言 { padding-bottom: 60px; }
-.眉题 { font-size: 11px; letter-spacing: .2em; color: #87947c; }
-.序言 h1 { font-family: "SimSun", "Songti SC", serif; font-size: clamp(38px, 4.7vw, 58px); line-height: 1.45; letter-spacing: .06em; margin: 22px 0; }
-.序言 h1 span { display: inline; color: #7b936f; }
-.副题 { color: #849086; font-size: 14px; line-height: 2.1; }
-.操作说明 { margin-top: 36px; font-size: 12px; color: #6e8076; }
-.操作说明 p { display: flex; align-items: center; gap: 12px; margin: 12px 0; }
-.操作说明 span { display: inline-grid; place-items: center; width: 26px; height: 26px; border: 1px solid #d5ddcf; border-radius: 50%; font-size: 18px; }
-.序言脚注 { color: #a0a89b; letter-spacing: .16em; font-size: 11px; margin-top: 58px; }
-.发现舞台 { min-width: 0; text-align: center; }
-.舞台顶行 { display: flex; justify-content: space-between; font-size: 11px; letter-spacing: .08em; color: #82917d; margin: 0 6px 17px; }
-.卡片舞台 { position: relative; isolation: isolate; text-align: left; }
-.卡片背面 { position: absolute; inset: 10px 6px -6px; z-index: -1; border: 1px solid #d7dfd2; border-radius: 24px; background: #eef1e7; transform: rotate(-2deg); }
-.第二层 { inset: 17px 14px -11px; transform: rotate(3deg); background: #e4eadc; }
-.名字卡片, .等待卡 { min-height: 535px; border-radius: 23px; background: #fffefa; border: 1px solid #e2e4d9; padding: 25px 30px 12px; box-shadow: 0 18px 45px #264b3a10; }
-.滑动卡 { position: relative; touch-action: pan-y; transform: translateX(var(--位移, 0px)) rotate(var(--倾斜, 0deg)); transition: transform 180ms ease, opacity 180ms ease; cursor: grab; -webkit-user-select: none; user-select: none; }
-.拖动中 { transition: none; cursor: grabbing; }
-.离场 { opacity: 0; transition: transform 180ms ease-in, opacity 180ms ease-in; }
-.滑动印章 { position: absolute; top: 58px; z-index: 2; font-size: 23px; border: 3px solid; border-radius: 7px; padding: 6px 12px; transform: rotate(-12deg); pointer-events: none; background: #fffdf4dd; }
-.收藏印章 { left: 24px; color: #467b5d; opacity: var(--收藏透明度, 0); }
-.跳过印章 { right: 24px; color: var(--朱); opacity: var(--跳过透明度, 0); transform: rotate(12deg); }
-.向右离场 .收藏印章, .向左离场 .跳过印章 { opacity: 1; }
-.卡片眉题 { display: flex; justify-content: space-between; align-items: center; font-size: 10px; letter-spacing: .15em; color: #99a08d; }
-.小印章 { border: 1px solid #b08670; color: #b08670; font-family: "KaiTi", serif; padding: 3px 4px; font-size: 15px; border-radius: 2px; }
-.名字主区 { text-align: center; padding: 20px 0 10px; }
-.名字主区 .拼音 { font-size: 12px; letter-spacing: .13em; color: #9a9c86; min-height: 15px; margin: 7px 0 15px; }
-.名字行 { justify-content: center; }
-.名字行 h2 { font-family: "SimSun", "Songti SC", serif; font-size: 56px; letter-spacing: .14em; line-height: 1.4; padding-left: .14em; }
-.文化标签 { margin-top: 16px; min-height: 30px; }
-.结果标签 { color: #687a60; background: #f0f3e9; font-size: 11px; padding: 4px 9px; border: 1px solid #e9eddf; }
-.名字释义 { font-family: "SimSun", "Songti SC", serif; color: #58695b; font-size: 15px; line-height: 1.95; text-align: center; min-height: 56px; max-height: 115px; overflow-y: auto; margin: 12px 0 24px; scrollbar-width: thin; }
-.出处摘录 { background: #f5f5ed; border: 1px solid #edefe5; border-radius: 12px; padding: 14px 17px; }
-.出处小题 { color: #9b9c82; font-size: 10px; letter-spacing: .1em; }
-.出处摘录 blockquote { font-family: "SimSun", "Songti SC", serif; font-size: 15px; line-height: 1.7; border: 0; background: none; padding: 0; margin: 9px 0; color: #556553; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.出处摘录 > p { font-size: 10px; color: #9d9f8a; margin: 6px 0 0; }
-.卡片详情 { margin: 14px 0 0; border-top: 1px solid #ecede2; font-size: 11px; }
-.卡片详情 summary { list-style: none; padding: 12px 0 5px; color: #8f9a88; display: flex; justify-content: space-between; }
-.卡片详情 summary::-webkit-details-marker { display: none; }
-.详情正文 { max-height: 245px; overflow-y: auto; line-height: 1.8; user-select: text; scrollbar-width: thin; }
-.详情正文 small { display: block; }
-.手势操作 { display: flex; align-items: center; justify-content: center; gap: 27px; margin-top: 31px; }
-.圆按钮 { display: grid; place-items: center; border-radius: 50%; padding: 0; width: 62px; height: 62px; flex: 0 0 auto; box-shadow: 0 7px 16px #284c3910; }
-.圆按钮 svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.撤回 { width: 41px; height: 41px; color: #a39271; background: #fffdf6; border: 1px solid #e2dece; }
-.撤回 svg { width: 19px; height: 19px; }
-.跳过 { color: #b58474; background: #fbefeb; border: 1px solid #ebd8ce; }
-.收藏 { color: #fffdf4; background: #416851; border: 1px solid #345641; }
-.收藏:hover { background: #31523f; }
-.跳过:hover, .撤回:hover { background: #f1e0d5; }
-.手势操作 button:disabled { cursor: default; opacity: .35; }
-.手势提示 { font-size: 10px; color: #8c9988; margin: 14px 0 20px; }
-.手势提示 span { margin: 0 20px; color: #a5ada0; }
-.预载信息 { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 11px; line-height: 1.7; color: #889780; min-height: 22px; }
-.预载信息 button, .同步提示 button { width: auto; padding: 3px 6px; color: var(--墨); background: transparent; text-decoration: underline; font-size: 11px; flex-shrink: 0; }
-.准备中::before { content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 50%; margin-right: 7px; background: #8da079; animation: 呼吸 1.8s ease-in-out infinite; }
-.状态 { min-height: 0; margin-top: 7px; padding: 0; font-size: 12px; }
-.全局通知 { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 5; max-width: calc(100% - 28px); width: max-content; text-align: center; }
-.全局通知 .状态:not(:empty) { padding: 10px 18px; border: 1px solid #dce5d7; border-radius: 30px; background: #fffdf5f5; box-shadow: 0 5px 20px #284c3915; margin-bottom: 8px; }
-.名字行.长姓名 h2 { font-size: 36px; }
-.同步提示 { font-size: 12px; padding: 8px; color: #977446; background: #f9edd3; border-radius: 8px; }
-.等待卡 { text-align: center; padding-top: 70px; }
-.卡片花纹 { font-size: 58px; color: #a9b496; }
-.等待卡 h2 { font-family: "SimSun", "Songti SC", serif; font-size: 29px; font-weight: normal; line-height: 1.9; color: #76906e; }
-.等待卡 p:last-of-type { font-size: 12px; color: #9aa28e; line-height: 1.9; margin: 28px 20px; }
-.等待卡 button { width: auto; margin-top: 12px; border-radius: 30px; font-size: 13px; }
-.等待线 { height: 2px; width: 48px; background: #cdd6bf; margin: 24px auto; }
-.呼吸 .等待线 { animation: 呼吸 2s ease-in-out infinite; }
-.功能页 { width: min(800px, 100%); margin: 40px auto; }
-.栏目标题 { margin: 30px 0; }
-.栏目标题 h2 { font-family: "SimSun", serif; font-size: 30px; font-weight: normal; }
-.栏目标题 > p:last-child { font-size: 13px; color: #8a9782; }
-.功能页 .面板 { margin-bottom: 14px; }
-.功能页 label:has(input[type="checkbox"]) { display: flex; align-items: center; }
-input[type="checkbox"] { width: auto; }
-.页脚 { text-align: center; margin: 24px 0 0; color: #a4ac9b; font-size: 10px; letter-spacing: .16em; }
-dialog { border: 1px solid #dce1d2; border-radius: 24px; padding: 30px; background: #fffdf7; color: var(--墨); width: min(450px, calc(100% - 32px)); max-height: calc(100dvh - 36px); overflow-y: auto; box-shadow: 0 25px 100px #19362430; }
-dialog::backdrop { background: #233d3455; backdrop-filter: blur(5px); }
-dialog h2 { font-family: "SimSun", serif; font-weight: 400; font-size: 25px; margin-top: 24px; }
-dialog .字段网格 { margin-top: 26px; }
-.姓氏字段 { grid-column: 1 / -1; }
-dialog .关闭弹窗 { position: absolute; right: 18px; top: 13px; color: #8b9784; background: transparent; width: 30px; padding: 0; font-size: 27px; }
-dialog .字段提示 { font-size: 12px; line-height: 1.8; }
-.表单错误 { font-size: 12px; color: #a65044; line-height: 1.6; }
-button, a, summary, input, select { -webkit-tap-highlight-color: transparent; }
-:focus-visible { outline: 2px solid #7d9970; outline-offset: 4px; }
-.仅阅读器 { position: absolute; height: 1px; width: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-@keyframes 呼吸 { 50% { opacity: .3; } }
-@media (max-width: 900px) {
-  .页面 { width: min(100% - 34px, 720px); padding-top: 18px; }
-  .标志副文 { display: none; }
-  .发现布局 { grid-template-columns: 1fr; padding: 12px 0 0; gap: 0; }
-  .序言 { text-align: center; padding: 0; }
-  .序言 .眉题, .序言 .副题, .操作说明, .序言脚注 { display: none; }
-  .序言 h1 { font-size: 26px; line-height: 1.3; margin: 10px 0 24px; }
-  .序言 h1 br { display: none; }
-  .发现舞台 { width: min(450px, 100% - 12px); margin: auto; }
-  .页脚 { margin-top: 20px; }
+@media(max-height:470px) {
+  .序言 { display:none; }.发现布局 { height:100%; grid-template-columns:minmax(0,460px); justify-content:center; padding-top:0; }
+  .发现舞台 { grid-template-rows:30px minmax(0,1fr) 56px; }.预载信息 { display:none; }.名字卡片 { grid-template-columns:1fr 1fr; grid-template-rows:20px minmax(0,1fr) 44px; gap:4px 18px; padding:10px 16px 0; }
+  .卡片眉题 { grid-column:1/-1; }.名字主区 { grid-column:1; grid-row:2/4; }.名字释义 { grid-column:2; grid-row:2; align-self:center; }.出处摘录 { display:none; }.打开详情 { grid-column:2; grid-row:3; }.名字行 h2 { font-size:34px; }
 }
-@media (max-width: 500px) {
-  .顶栏 { padding-bottom: 14px; }
-  .标志 { font-size: 24px; gap: 8px; }
-  .印记 { width: 28px; height: 29px; font-size: 20px; }
-  .条件入口 { font-size: 11px; padding: 8px 11px; }
-  .主导航 { margin-top: 5px; gap: 25px; }
-  .主导航 button { font-size: 12px; padding: 12px 2px; }
-  .序言 h1 { font-size: 22px; margin: 4px 0 20px; }
-  .舞台顶行 { font-size: 9px; margin-bottom: 13px; }
-  .名字卡片, .等待卡 { min-height: 455px; padding: 18px 22px 12px; }
-  .名字主区 { padding-top: 10px; }
-  .名字行 h2 { font-size: 45px; }
-  .文化标签 { margin-top: 10px; }
-  .名字释义 { font-size: 14px; line-height: 1.9; max-height: 80px; margin: 8px 0 16px; }
-  .出处摘录 { padding: 11px 12px; }
-  .出处摘录 blockquote { font-size: 13px; }
-  .卡片详情 { margin-top: 11px; }
-  .等待卡 { padding-top: 38px; }
-  .手势操作 { margin-top: 25px; gap: 24px; }
-  .圆按钮 { width: 55px; height: 55px; }
-  .撤回 { width: 36px; height: 36px; }
-  .手势提示 { margin-bottom: 13px; }
-  .手势提示 span { margin: 0 12px; }
-  .预载信息 { font-size: 10px; }
-  .字段网格 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  dialog { padding: 25px; }
-  .管理操作 { flex-wrap: wrap; }
-}
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
-}
-
-.热门提醒 { margin: 0 0 16px; padding: 10px 14px; border: 1px solid #ead8c8; border-radius: 10px; background: #fff7ef; color: #8b6b51; text-align: left; font-size: 11px; line-height: 1.7; }
-.热门提醒标题 { display: block; margin-bottom: 2px; color: #a15f4c; font-size: 10px; letter-spacing: .12em; }
-.热门提醒 ul { margin: 0; padding-left: 16px; }
-.热门提醒 li { margin: 1px 0; }
+@media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }

@@ -377,6 +377,14 @@ async function 模型设置操作(保存) {
 document.querySelector("#读取模型设置").addEventListener("click", () => 模型设置操作(false));
 document.querySelector("#保存模型设置").addEventListener("click", () => 模型设置操作(true));
 const {初始化滑卡} = await import("/static/滑卡.js");
-初始化滑卡({读取接口, 转义, 会话密钥, 收藏夹编号, 显示状态});
+document.querySelector("#加载队列统计").addEventListener("click", async () => {
+  const 容器 = document.querySelector("#队列统计");
+  try {
+    const 数据 = await 读取接口("/api/admin/feed-metrics", {headers: 管理请求选项()});
+    容器.innerHTML = `<p>库存 ${数据.库存} · 队列 ${数据.队列数} · 生产中 ${数据.生产中} · 今日批次 ${数据.今日已派批次}/${数据.每日批次上限}</p>` + 数据.来源.map(x => `<p>${转义(x.书名)}：审稿 ${x.批次} 批 · 合格 ${x.合格数} 个 · 连续失败 ${x.连续失败数}</p>`).join("");
+    容器.innerHTML += (数据.异常分类 || []).map(x => `<p>${转义(x.书名)}：${转义(x.分类)}</p>`).join("");
+  } catch (e) { 容器.textContent = e.message; }
+});
+await 初始化滑卡({读取接口, 转义, 会话密钥, 收藏夹编号, 显示状态});
 void 读取收藏().catch(() => {});
 })().catch(错误 => { document.querySelector("#状态").textContent = `页面初始化失败：${错误.message}。请使用 HTTPS 或本机地址。`; });

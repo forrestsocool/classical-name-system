@@ -1,176 +1,135 @@
-"""滑卡交互回归：拦截模型和收藏接口，不调用真实模型、不修改数据库。"""
+"""真实浏览器手势回归：全部业务接口拦截，不调用模型、不改变运行数据库。"""
 import argparse
 import json
+import time
 from pathlib import Path
 from playwright.sync_api import sync_playwright, expect
 
-名字组 = ["清和", "知远", "望舒", "怀瑾", "景行", "安宁", "修竹", "云舟", "乐山", "书宁", "允文", "若溪",
-         "承泽", "思齐", "予安", "照临", "时雨", "景初", "闻溪", "静川", "嘉言", "明舒", "松月", "星野"]
+名字组 = ["清和","知远","望舒","怀瑾","景行","安宁","修竹","云舟","乐山","书宁","允文","若溪",
+         "承泽","思齐","予安","照临","时雨","景初","闻溪","静川","嘉言","明舒","松月","星野"]
+书目 = ["周易","周礼","孟子","尚书","庄子","楚辞","礼记","论语","诗经"]
+当前 = ".滑动卡:not(.离场)"
 
 
-def 一批(请求, 编号, 起点=0):
-    长度 = 请求.get("名字长度", 2)
-    return {"任务编号": f"run-{编号}", "状态": "完成", "候选": [
-        {"姓名": 请求["姓氏"] + x[:长度], "名字": x[:长度], "拼音带调": "qing1 he2",
-         "现代释义": "清澄而温和，愿心中有清风，待人有暖意。此处为页面验收用的示例释义。",
-         "文化标签": ["温润谦和", "清朗自然"], "书名": "诗经", "篇章": "测试篇章",
-         "原文": "惠风和畅，清和有致。", "取字方式": "原文连取", "原文位置": 5,
-         "来源片段编号": 1, "出处核验状态": "待核验", "五行匹配": {"已知字符": {}, "说明": "五行仅作传统取名参考。"}}
-        | {"热门提示": {"命中": x == "清和", "提示": ["名字中的“和”入选2021年新生儿热门字第12位"]}}
-        for x in 名字组[起点:起点+12]]}
+def 一批(条件, 编号, 起点):
+    卡片 = []
+    for i, 名 in enumerate(名字组[起点:起点+8]):
+        项 = {"姓名":条件["姓氏"]+名,"名字":名,"拼音带调":"qīng hé","书名":书目[(起点+i)%9],"篇章":"测试篇章",
+             "现代释义":"清澄而温和，愿心中有清风，待人有暖意。此处仅为页面验收示例。","文化标签":["温润谦和","清朗自然"],
+             "原文":"惠风和畅，清和有致。"*8,"原文位置":5,"取字方式":"原文连取","出处核验状态":"待核验",
+             "五行匹配":{"已知字符":{},"说明":"五行仅作传统取名参考。"},
+             "热门提示":{"命中":True,"提示":["仅供测试的热门提醒，不是真实榜单数据"]}}
+        卡片.append({"项目":项,"任务编号":f"run-{编号}","投递编号":f"{编号}-{i}","到期时间":(time.time()+300)*1000})
+    return {"队列编号":"a"*64,"卡片":卡片,"重试秒数":4,"提示":"正在从不同古籍挑选名字"}
 
 
 def 主程序():
-    参数器 = argparse.ArgumentParser()
-    参数器.add_argument("--地址", default="http://127.0.0.1:8000")
-    参数器.add_argument("--截图目录")
-    参数 = 参数器.parse_args()
-    with sync_playwright() as 驱动:
-        # 使用本机已安装的 Chrome，避免测试环境中的 Edge 与 Playwright
-        # 版本不兼容导致浏览器刚启动就退出。
-        浏览器 = 驱动.chromium.launch(
-            executable_path=r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-            headless=True,
-        )
-        环境 = 浏览器.new_context(viewport={"width": 1365, "height": 1024}, reduced_motion="reduce")
-        页面 = 环境.new_page()
-        错误 = []
-        页面.on("pageerror", lambda e: 错误.append(str(e)))
-        生成请求, 待响应, 收藏请求, 收藏 = [], [], [], []
-        def 路由(route):
-            req = route.request
-            path = req.url
-            if path.endswith("/api/name-runs") and req.method == "POST":
-                数据 = req.post_data_json
-                生成请求.append(数据)
-                if len(生成请求) == 2: 待响应.append(route)
-                elif len(生成请求) == 1: route.fulfill(json=一批(数据, 1))
-                else: route.fulfill(status=503, json={"detail": "测试：下一批暂时不可用"})
-            elif "/api/favorites" in path and req.method == "POST":
-                收藏请求.append(req.post_data_json)
-                if len(收藏请求) == 1: route.fulfill(status=503, json={"detail": "测试：收藏连接中断"})
-                else:
-                    收藏.append({"id": len(收藏), "full_name": req.post_data_json["full_name"], "book": "诗经", "section_title": "测试篇章"})
-                    route.fulfill(json={"状态": "已收藏"})
-            elif "/api/favorites" in path: route.fulfill(json={"结果": 收藏})
-            else: route.fulfill(json={"任务": [], "结果": []})
-        页面.route("**/api/**", 路由)
-        页面.goto(参数.地址)
-        expect(页面.locator("#条件弹窗")).to_be_visible()
-        页面.locator("#姓氏").fill("李")
-        页面.get_by_role("button", name="开始遇见名字", exact=True).click()
-        expect(页面.locator(".名字行 h2")).to_have_text("李清和")
-        expect(页面.locator(".热门提醒")).to_contain_text("热门提醒")
-        expect(页面.locator("#预载状态")).to_contain_text("下一组正在准备")
-        assert len(生成请求) == 2
-        assert len(生成请求[1]["排除名字"]) == 12
-        页面.locator("#跳过").click()
-        expect(页面.locator(".名字行 h2")).to_have_text("李知远")
-        页面.locator("#撤回").click()
-        expect(页面.locator(".名字行 h2")).to_have_text("李清和")
-        页面.keyboard.press("ArrowRight")
-        expect(页面.locator(".名字行 h2")).to_have_text("李知远")
-        expect(页面.locator("#同步文字")).to_contain_text("暂未同步")
-        assert 收藏请求[0]["run_id"] == "run-1" and 收藏请求[0]["full_name"] == "李清和"
-        页面.locator("#重试收藏").click()
-        expect(页面.locator("#收藏同步提示")).to_be_hidden()
-        assert 收藏请求[1] == 收藏请求[0]
-        待响应.pop().fulfill(json=一批(生成请求[1], 2, 12))
-        expect(页面.locator("#预载状态")).to_contain_text("23 个名字")
-        expect(页面.locator(".名字行 h2")).to_have_text("李知远")
-        卡 = 页面.locator(".滑动卡").bounding_box()
-        x, y = 卡["x"] + 卡["width"] / 2, 卡["y"] + 145
-        页面.mouse.move(x, y); 页面.mouse.down(); 页面.mouse.move(x-145, y+4, steps=8); 页面.mouse.up()
-        expect(页面.locator(".名字行 h2")).to_have_text("李望舒")
-        页面.mouse.move(x, y); 页面.mouse.down(); 页面.mouse.move(x+3, y+120, steps=8); 页面.mouse.up()
-        expect(页面.locator(".名字行 h2")).to_have_text("李望舒")
-        页面.reload()
-        expect(页面.locator("#条件弹窗")).to_be_hidden()
-        expect(页面.locator("#姓氏摘要")).to_contain_text("李姓")
-        expect(页面.locator(".名字行 h2")).to_have_text("李望舒")
-        assert len(生成请求) == 2, "刷新不应丢弃已经准备好的卡片"
-        if 参数.截图目录:
-            目录 = Path(参数.截图目录); 目录.mkdir(parents=True, exist_ok=True)
-            页面.screenshot(path=str(目录 / "滑卡-桌面.png"), full_page=True)
-        页面.set_viewport_size({"width": 390, "height": 844})
-        assert 页面.evaluate("document.documentElement.scrollWidth <= innerWidth"), "移动端横向溢出"
-        if 参数.截图目录: 页面.screenshot(path=str(目录 / "滑卡-手机.png"), full_page=True)
-        for _ in range(10): 页面.locator("#跳过").click()
-        expect(页面.locator(".名字行 h2")).to_have_text("李承泽")
-        页面.locator("#收藏").click()
-        expect(页面.locator(".名字行 h2")).to_have_text("李思齐")
-        expect(页面.locator("#收藏同步提示")).to_be_hidden()
-        assert 收藏请求[-1]["run_id"] == "run-2"
-        expect(页面.locator("#预载状态")).to_contain_text("暂时不可用")
-        assert len(生成请求) == 3, "失败后不应自动无限重试"
-        页面.get_by_role("button", name="心动收藏").click()
-        expect(页面.locator("#收藏列表")).to_contain_text("李清和")
-        expect(页面.locator("#收藏列表")).to_contain_text("李承泽")
-        环境.close()
+    p = argparse.ArgumentParser()
+    p.add_argument("--地址",default="http://127.0.0.1:8000")
+    p.add_argument("--截图目录")
+    args = p.parse_args()
+    目录 = Path(args.截图目录) if args.截图目录 else None
+    if 目录: 目录.mkdir(parents=True,exist_ok=True)
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(executable_path=r"C:\Program Files\Google\Chrome\Application\chrome.exe",headless=True)
+        错误, 已确认, 请求, 收藏请求, 收藏 = [], [], [], [], []
+        def 安装(page, 挂起首批=False):
+            状态 = {"起点":0,"挂起":[],"批次":0}
+            page.on("pageerror",lambda e:错误.append(str(e)))
+            def 路由(route):
+                req = route.request
+                if req.url.endswith("/api/feed/pull"):
+                    body = req.post_data_json; 请求.append(body); 状态["批次"] += 1
+                    if 挂起首批 and 状态["批次"] == 1:
+                        状态["挂起"].append(route); return
+                    data = 一批(body["条件"],状态["批次"],状态["起点"])
+                    状态["起点"] += len(data["卡片"]); route.fulfill(json=data)
+                elif req.url.endswith("/api/feed/sync"):
+                    data = req.post_data_json; 已确认.extend(data["已展示"])
+                    route.fulfill(json={"状态":"已同步","有效租约":data["续租"]})
+                elif "/api/favorites" in req.url and req.method == "POST":
+                    收藏请求.append(req.post_data_json)
+                    if len(收藏请求) == 1: route.fulfill(status=503,json={"detail":"测试断网"})
+                    else:
+                        收藏.append({"id":len(收藏)+1,"full_name":req.post_data_json["full_name"],"book":"诗经","section_title":"测试篇章"})
+                        route.fulfill(json={"状态":"已收藏"})
+                else: route.fulfill(json={"结果":收藏,"任务":[]})
+            page.route("**/api/**",路由)
+            page.goto(args.地址)
+            return 状态
+        def 开始(page, 姓):
+            page.locator("#姓氏").fill(姓); page.get_by_role("button",name="开始遇见名字",exact=True).click()
+        def 名字(page): return page.locator(当前+" .名字行 h2")
+        def 关闭环境(context):
+            # Playwright撤销路由后，关闭页面触发的可见性事件也不能漏到真实接口。
+            for tab in context.pages:
+                tab.evaluate("() => { globalThis.fetch = () => Promise.reject(new Error('测试已结束')); }")
+            context.close()
 
-        环境 = 浏览器.new_context(reduced_motion="reduce")
-        页面 = 环境.new_page()
-        页面.on("pageerror", lambda e: 错误.append(str(e)))
-        挂起, 请求表 = [], []
-        def 切换路由(route):
-            if route.request.method == "POST":
-                req = route.request.post_data_json; 请求表.append(req)
-                if len(请求表) == 1: 挂起.append(route)
-                elif len(请求表) == 2: route.fulfill(json=一批(req, 2))
-                else: route.fulfill(status=503, json={"detail": "测试暂停预载"})
-            else: route.fulfill(json={"结果": []})
-        页面.route("**/api/**", 切换路由)
-        页面.goto(参数.地址)
-        页面.locator("#姓氏").fill("李")
-        页面.get_by_role("button", name="开始遇见名字", exact=True).click()
-        expect(页面.locator("#预载状态")).to_contain_text("正在细读")
-        页面.locator("#编辑条件").click()
-        页面.locator("#姓氏").fill("张")
-        页面.get_by_role("button", name="开始遇见名字", exact=True).click()
-        assert len(请求表) == 1
-        挂起.pop().fulfill(json=一批(请求表[0], 1))
-        expect(页面.locator(".名字行 h2")).to_have_text("张清和")
-        队列 = 页面.evaluate("JSON.parse(localStorage.getItem('起名滑卡v1:' + localStorage.getItem('起名收藏夹'))).队列")
-        assert all(x["项目"]["姓名"].startswith("张") for x in 队列)
-        环境.close()
-        # 使用真实触摸事件验证手机左右滑，而不是只改变桌面视口大小。
-        环境 = 浏览器.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, reduced_motion="reduce")
-        页面 = 环境.new_page()
-        页面.on("pageerror", lambda e: 错误.append(str(e)))
-        手机收藏, 手机生成 = [], []
-        def 手机路由(route):
-            if route.request.url.endswith("/api/name-runs"):
-                手机生成.append(route.request.post_data_json)
-                route.fulfill(json=一批(手机生成[-1], len(手机生成), 0 if len(手机生成) == 1 else 12))
-            elif route.request.method == "POST":
-                手机收藏.append(route.request.post_data_json)
-                route.fulfill(json={"状态": "已收藏"})
-            else: route.fulfill(json={"结果": []})
-        页面.route("**/api/**", 手机路由)
-        页面.goto(参数.地址)
-        页面.locator("#姓氏").fill("欧阳")
-        页面.get_by_role("button", name="开始遇见名字", exact=True).click()
-        expect(页面.locator(".名字行 h2")).to_have_text("欧阳清和")
-        expect(页面.locator("#预载状态")).to_contain_text("24 个名字")
-        通道 = 环境.new_cdp_session(页面)
-        def 触摸滑动(偏移):
-            框 = 页面.locator(".滑动卡").bounding_box()
-            x, y = 框["x"] + 框["width"] / 2, 框["y"] + 145
-            通道.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": x, "y": y}]})
-            for 步 in range(1, 9):
-                通道.send("Input.dispatchTouchEvent", {"type": "touchMove", "touchPoints": [{"x": x + 偏移 * 步 / 8, "y": y}]})
-            通道.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
-        触摸滑动(-135)
-        expect(页面.locator(".名字行 h2")).to_have_text("欧阳知远")
-        触摸滑动(135)
-        expect(页面.locator(".名字行 h2")).to_have_text("欧阳望舒")
-        expect(页面.locator("#收藏同步提示")).to_be_hidden()
-        assert 手机收藏[0]["full_name"] == "欧阳知远"
-        assert 页面.evaluate("document.documentElement.scrollWidth <= innerWidth")
-        assert not 错误, 错误
-        环境.close(); 浏览器.close()
-        print(json.dumps({"状态": "通过", "模式": "模拟接口，不调用真实模型", "检查": ["滑动与键盘", "撤回跳过", "后台预加载", "跨批收藏归属", "收藏失败保留及重试", "刷新续看", "记住姓氏", "旧条件响应隔离", "预载失败保留卡片", "移动端布局"], "网页异常": 错误}, ensure_ascii=False))
+        context = browser.new_context(viewport={"width":1365,"height":900})
+        page = context.new_page(); 安装(page); 开始(page,"李")
+        expect(名字(page)).to_have_text("李清和")
+        assert page.locator(".热门提醒").count()==0
+        page.locator(当前+" .打开详情").click()
+        expect(page.locator("#名字详情")).to_be_visible()
+        assert not page.locator(".热门详情").evaluate("e=>e.open")
+        page.locator(".热门详情 summary").click()
+        expect(page.locator(".热门详情")).to_contain_text("仅供测试的热门提醒")
+        page.locator("#关闭详情").click()
+        # 同一帧连续触发六次，不应被离场动画锁吞掉。
+        page.evaluate("() => { for(let i=0;i<6;i++) document.querySelector('#跳过').click(); }")
+        expect(名字(page)).to_have_text("李修竹")
+        page.locator("#撤回").click(); expect(名字(page)).to_have_text("李安宁")
+        page.keyboard.press("ArrowRight"); expect(名字(page)).to_have_text("李修竹")
+        expect(page.locator("#收藏同步提示")).to_be_visible()
+        page.locator("#重试收藏").click(); expect(page.locator("#收藏同步提示")).to_be_hidden()
+        assert 收藏请求[0]==收藏请求[1] and 收藏请求[0]["run_id"]=="run-1"
+        page.wait_for_timeout(2100)
+        assert len(set(已确认)) < 24, "未展示的预加载卡不应曝光"
+        page.reload(); expect(名字(page)).to_have_text("李修竹"); expect(page.locator("#条件弹窗")).to_be_hidden()
+        if 目录: page.screenshot(path=str(目录/"滑卡-桌面.png"))
+        page.get_by_role("button",name="心动收藏").click(); expect(page.locator("#收藏列表")).to_contain_text("李安宁")
+        关闭环境(context)
+
+        context = browser.new_context(viewport={"width":390,"height":844},is_mobile=True,has_touch=True)
+        page = context.new_page(); 安装(page); 开始(page,"欧阳"); expect(名字(page)).to_have_text("欧阳清和")
+        cdp = context.new_cdp_session(page)
+        def 触摸(dx,dy=0,取消=False):
+            box = page.locator(当前).bounding_box(); x,y = box["x"]+box["width"]/2,box["y"]+box["height"]*.4
+            cdp.send("Input.dispatchTouchEvent",{"type":"touchStart","touchPoints":[{"x":x,"y":y}]})
+            for i in range(1,9): cdp.send("Input.dispatchTouchEvent",{"type":"touchMove","touchPoints":[{"x":x+dx*i/8,"y":y+dy*i/8}]})
+            cdp.send("Input.dispatchTouchEvent",{"type":"touchCancel" if 取消 else "touchEnd","touchPoints":[]})
+        触摸(-130,45); expect(名字(page)).to_have_text("欧阳知远")
+        触摸(130,20); expect(名字(page)).to_have_text("欧阳望舒")
+        触摸(5,100); expect(名字(page)).to_have_text("欧阳望舒")
+        触摸(-100,0,True); expect(名字(page)).to_have_text("欧阳望舒")
+        # 卡片内双指手势不会触发页面放大，也不会误作喜欢。
+        box = page.locator(当前).bounding_box(); x,y = box["x"]+100,box["y"]+120
+        cdp.send("Input.dispatchTouchEvent",{"type":"touchStart","touchPoints":[{"x":x,"y":y,"id":1},{"x":x+50,"y":y,"id":2}]})
+        cdp.send("Input.dispatchTouchEvent",{"type":"touchMove","touchPoints":[{"x":x-30,"y":y,"id":1},{"x":x+100,"y":y,"id":2}]})
+        cdp.send("Input.dispatchTouchEvent",{"type":"touchEnd","touchPoints":[]})
+        assert page.evaluate("visualViewport.scale") == 1
+        expect(名字(page)).to_have_text("欧阳望舒")
+        if 目录: page.screenshot(path=str(目录/"滑卡-手机.png"))
+        for w,h in [(320,568),(375,667),(390,844),(844,390)]:
+            page.set_viewport_size({"width":w,"height":h})
+            assert page.evaluate("document.documentElement.scrollWidth<=innerWidth && document.documentElement.scrollHeight<=innerHeight"), (w,h,"页面溢出")
+            for s in ["#收藏","#跳过",当前+" .打开详情"]:
+                b=page.locator(s).bounding_box(); assert b and b["y"]>=0 and b["y"]+b["height"]<=h+1,(w,h,s,b)
+            assert page.locator("#姓氏").evaluate("e=>parseFloat(getComputedStyle(e).fontSize)")>=16
+        关闭环境(context)
+
+        context = browser.new_context(); page=context.new_page(); state=安装(page,True); 开始(page,"李")
+        page.locator("#编辑条件").click(); 开始(page,"张")
+        expect(名字(page)).to_have_text("张清和")
+        assert state["批次"]>=2, "新条件不能等旧请求结束"
+        for route in state["挂起"]:
+            try: route.fulfill(json=一批({"姓氏":"李"},1,0))
+            except Exception: pass
+        expect(名字(page)).to_have_text("张清和")
+        assert not 错误,错误
+        关闭环境(context); browser.close()
+        print(json.dumps({"状态":"通过","模式":"模拟接口，不消耗模型额度","检查":["同帧六次连滑","触摸斜滑与取消","双指误缩放防护","四种手机尺寸","详情折叠","收藏失败重试和任务归属","刷新续看","实际曝光确认","旧请求立即取消"],"网页异常":错误},ensure_ascii=False))
 
 
-if __name__ == "__main__":
-    主程序()
+if __name__=="__main__": 主程序()
