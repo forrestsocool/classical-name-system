@@ -22,6 +22,9 @@ class 队列测试(unittest.TestCase):
         self.路径 = Path(self.目录.name)/"queue.db"
         with closing(sqlite3.connect(服务.数据库路径)) as src, closing(sqlite3.connect(self.路径)) as dst:
             src.backup(dst)
+        with sqlite3.connect(self.路径) as c:
+            for 表 in ("feed_materials", "feed_sources", "feed_attempts", "feed_subscribers", "feed_leases", "feed_receipts", "feed_deliveries", "feed_exposures", "feed_blooms", "feed_errors", "feed_pools", "feed_budget"):
+                c.execute(f"DELETE FROM {表}")
         self.q = 候选队列(self.路径, 自动生产=False)
         self.会话, self.指纹 = "web-"+"a"*32, "b"*64
         self.条件 = {"姓氏":"李", "名字长度":2, "必须包含":"", "避用字":"", "关键词":""}
@@ -139,9 +142,9 @@ class 队列测试(unittest.TestCase):
         with patch("后端.候选队列.读取环境配置", side_effect=RuntimeError("测试秘密不应进入接口")):
             self.q.生产(池,"诗经",self.条件)
         with self.q.连接() as c:
-            self.assertEqual(c.execute("SELECT COUNT(*) FROM feed_materials").fetchone()[0],0)
-            self.assertGreater(c.execute("SELECT retry FROM feed_sources").fetchone()[0],time.time())
-            self.assertNotIn("秘密",c.execute("SELECT category FROM feed_errors").fetchone()[0])
+            self.assertEqual(c.execute("SELECT COUNT(*) FROM feed_materials WHERE pool=?",(池,)).fetchone()[0],0)
+            self.assertGreater(c.execute("SELECT retry FROM feed_sources WHERE pool=?",(池,)).fetchone()[0],time.time())
+            self.assertNotIn("秘密",c.execute("SELECT category FROM feed_errors WHERE pool=?",(池,)).fetchone()[0])
 
     def test生产单批即入库且库存足够暂停(self):
         from 后端.模型接口 import 模型配置
