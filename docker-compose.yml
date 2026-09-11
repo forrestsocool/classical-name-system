@@ -11,6 +11,7 @@ services:
       - .env
     environment:
       - 起名数据库路径=/app/构建产物/起名系统.sqlite3
+      - 起名管理密钥文件=/app/构建产物/运行数据/管理密钥.txt
       - 起名队列库存=${NAME_QUEUE_STOCK:-72}
       - 起名每日生产批次=${NAME_DAILY_BATCHES:-480}
       - 起名临时队列秒数=${NAME_PRIVATE_TTL:-300}

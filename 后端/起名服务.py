@@ -392,6 +392,12 @@ def 记录模型指标(
 
 def 校验管理权限(管理密钥: str | None) -> None:
     配置密钥 = os.getenv("起名管理密钥", "")
+    密钥文件 = os.getenv("起名管理密钥文件", "")
+    if 密钥文件:
+        try:
+            配置密钥 = Path(密钥文件).read_text(encoding="utf-8").strip()
+        except OSError:
+            配置密钥 = ""
     if not 配置密钥:
         raise HTTPException(status_code=503, detail="管理接口尚未配置密钥")
     if not 配置密钥.isascii():
