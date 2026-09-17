@@ -35,7 +35,7 @@ def 批量召回(连接, 请求, 数量=召回数量):
     行列表 = list(连接.execute("""
         SELECT p.id,p.text,p.section_title,p.status,b.name AS book
         FROM passages p JOIN books b ON b.id=p.book_id
-        WHERE p.status IN ('已核验','待核验') AND (? IS NULL OR b.name = ?) ORDER BY p.id
+        WHERE p.can_generate = 1 AND (? IS NULL OR b.name = ?) ORDER BY p.id
     """, (来源, 来源)))
     # 先按书轮换，再按片段轮换；长篇古籍不会占满召回池。
     分书 = defaultdict(list)

@@ -768,19 +768,19 @@ def 创建起名任务(请求: 起名请求) -> dict:
         if 当前会话.get():
             连接.execute("INSERT INTO run_owners VALUES (?, ?)", (任务编号, hashlib.sha256(当前会话.get().encode()).hexdigest()))
         可生成数 = 连接.execute(
-            "SELECT COUNT(*) FROM passages WHERE status IN ('已核验','待核验')"
+            "SELECT COUNT(*) FROM passages WHERE can_generate = 1"
         ).fetchone()[0]
     if 可生成数 == 0:
         with 连接数据库() as 连接:
             连接.execute(
-                "UPDATE name_runs SET status = '等待资料复核' WHERE id = ?",
+                "UPDATE name_runs SET status = '无可用出处' WHERE id = ?",
                 (任务编号,),
             )
         return {
-            "状态": "等待资料复核",
+            "状态": "无可用出处",
             "任务编号": 任务编号,
             "候选": [],
-            "原因": "当前古籍片段尚未完成人工核验，系统不会用未核验文本生成名字。",
+            "原因": "资料库当前没有可用于生成的出处片段。",
             "请求": 请求字典,
             "八字": 八字结果,
         }

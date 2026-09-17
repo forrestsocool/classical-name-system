@@ -1,0 +1,122 @@
+{
+  "报告版本": "1.0",
+  "校勘状态": "完成",
+  "核验日期": "2026-09-16",
+  "说明": "十部古籍已按固定参照本逐字核对；文件哈希变化时不得自动沿用完成状态。",
+  "状态定义": {
+    "已核验": "正文、篇章边界和字词已完成核对，可进入候选召回。",
+    "不采用": "确认不是正文、属于重复块、编辑说明、无法还原的占位内容，或不应进入候选池的非正文材料。",
+    "待核验": "来源文件发生变化，或尚未完成逐字核对；不得进入候选召回。"
+  },
+  "古籍": [
+    {
+      "文件": "楚辞.txt",
+      "状态": "已核验",
+      "sha256": "61d0df0204a73331b9f588f93de47e23018c447a40e0c51b1ea97b112feceda2",
+      "篇章数": 17,
+      "结论": "《九歌》补齐十一篇；清除正文内校注标记；《离骚》明显缺字、误字据多份参照修正。",
+      "参照": [
+        "https://raw.githubusercontent.com/kanripo/KR4a0001/master/KR4a0001_001.txt",
+        "https://raw.githubusercontent.com/kanripo/KR4a0001/master/KR4a0001_010.txt",
+        "https://raw.githubusercontent.com/GitaiQAQ/HyaReader/master/static/%E6%A5%9A%E8%BE%9E.txt"
+      ]
+    },
+    {
+      "文件": "道德经.txt",
+      "状态": "已核验",
+      "sha256": "670f47d18698482e550bc6c139870a18aff332c0548d44d59ffa758d2c770508",
+      "篇章数": 81,
+      "结论": "81 章边界完整；与独立参照本逐章长度未发现整句缺失，保留版本异文。",
+      "参照": [
+        "https://raw.githubusercontent.com/hanzhaodeng/chinese-ancient-text/master/%E8%80%81%E5%AD%90.json",
+        "https://zh.wikisource.org/zh-hans/%E9%81%93%E5%BE%B7%E7%B6%93"
+      ]
+    },
+    {
+      "文件": "礼记.txt",
+      "状态": "已核验",
+      "sha256": "0771e6ae18655b940f688ee7fd9f799c5232879eb316a06f297bbabf859df290",
+      "篇章数": 47,
+      "结论": "47 篇边界完整；清除两处正文内编辑说明，并将可还原字补为愆、𤺺；保留投壶鼓谱符号。",
+      "参照": [
+        "https://raw.githubusercontent.com/gujilab/chinese-classical-corpus/main/output/wujing/liji.json",
+        "https://zh.wikisource.org/zh-hans/%E7%A6%AE%E8%A8%98/%E7%B7%87%E8%A1%A3"
+      ]
+    },
+    {
+      "文件": "论语.txt",
+      "状态": "已核验",
+      "sha256": "f87f9ff7a4850583ed752b20a57a5281a0ddeb56736db444b16ee557781cc91d",
+      "篇章数": 20,
+      "结论": "20 篇边界完整，去除篇名与标点后与独立参照本逐字流一致。",
+      "参照": [
+        "https://raw.githubusercontent.com/gujilab/chinese-classical-corpus/main/output/sishu/lunyu.json"
+      ]
+    },
+    {
+      "文件": "孟子.txt",
+      "状态": "已核验",
+      "sha256": "d366184e4895d1a30a53bdc9235c6eb51fa5875d93bac1ba84eca2ef5bc0a126",
+      "篇章数": 14,
+      "结论": "14 篇边界完整，去除篇名与标点后与独立参照本逐字流一致。",
+      "参照": [
+        "https://raw.githubusercontent.com/gujilab/chinese-classical-corpus/main/output/sishu/mengzi.json"
+      ]
+    },
+    {
+      "文件": "尚书.txt",
+      "状态": "已核验",
+      "sha256": "e5fd0ed37e3c3319113ca5d9d891be5a7e1ad34a27513ac77899bc60e1d2f1e4",
+      "篇章数": 57,
+      "结论": "57 个篇章边界完整，正文与独立参照本逐字流一致；保留篇内目录性质的题名标记。",
+      "参照": [
+        "https://raw.githubusercontent.com/gujilab/chinese-classical-corpus/main/output/wujing/shangshu.json"
+      ]
+    },
+    {
+      "文件": "诗经.txt",
+      "状态": "已核验",
+      "sha256": "3fcfcafb6a47efe78119f220f0dfbcd65d1ae0ba12c9709df4413ea9a6300384",
+      "篇章数": 305,
+      "结论": "305 首、30 个分区和有题无辞篇目边界与独立结构参照一致；重复分区标题不是重复正文。",
+      "参照": [
+        "https://raw.githubusercontent.com/gujilab/chinese-classical-corpus/main/output/wujing/shijing.json"
+      ]
+    },
+    {
+      "文件": "周礼.txt",
+      "状态": "已核验",
+      "sha256": "53269a686175df9da808b9c6f35f0176bd284fd5ce99081a3d7fd4e1621e57d7",
+      "篇章数": 6,
+      "结论": "六官篇正文与独立页面逐段对照；差异仅为篇内小标题和一处罕见字形。",
+      "参照": [
+        "https://zh.wikisource.org/zh-hans/%E5%91%A8%E7%A6%AE/%E5%A4%A9%E5%AE%98%E5%86%A2%E5%AE%B0",
+        "https://zh.wikisource.org/zh-hans/%E5%91%A8%E7%A6%AE/%E5%9C%B0%E5%AE%98%E5%8F%B8%E5%BE%92",
+        "https://zh.wikisource.org/zh-hans/%E5%91%A8%E7%A6%AE/%E6%98%A5%E5%AE%98%E5%AE%97%E4%BC%AF",
+        "https://zh.wikisource.org/zh-hans/%E5%91%A8%E7%A6%AE/%E5%A4%8F%E5%AE%98%E5%8F%B8%E9%A9%AC",
+        "https://zh.wikisource.org/zh-hans/%E5%91%A8%E7%A6%AE/%E7%A7%8B%E5%AE%98%E5%8F%B8%E5%AF%87",
+        "https://zh.wikisource.org/zh-hans/%E5%91%A8%E7%A6%AE/%E5%86%AC%E5%AE%98%E8%80%83%E5%B7%A5%E8%AE%B0"
+      ]
+    },
+    {
+      "文件": "周易.txt",
+      "状态": "已核验",
+      "sha256": "e46287916164e9caf34bafa186fd0e67c69cbbb120b2ba6bafbd6280658a6daf",
+      "篇章数": 69,
+      "结论": "64 卦加 5 篇十翼；删除重复的《屯》《系辞上》尾块；乾/干按逐字语境处理。",
+      "参照": [
+        "https://raw.githubusercontent.com/gujilab/chinese-classical-corpus/main/output/wujing/zhouyi.json"
+      ]
+    },
+    {
+      "文件": "庄子.txt",
+      "状态": "已核验",
+      "sha256": "bc5d807c156cc63b43510a051b4d1885a9d529bd5f40002880a669429470069f",
+      "篇章数": 33,
+      "结论": "33 篇边界完整；独立页面对照未发现整句缺失，罕见字和版本异文按原本保留。",
+      "参照": [
+        "https://zh.wikisource.org/zh-hans/%E8%8E%8A%E5%AD%90"
+      ]
+    }
+  ]
+}

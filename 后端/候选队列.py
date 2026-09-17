@@ -164,7 +164,7 @@ class 候选队列:
             位行 = c.execute("SELECT bits FROM feed_blooms WHERE owner=?", (所有者,)).fetchone()
             布隆 = 布隆过滤器(位行[0] if 位行 else None)
             材料 = c.execute("""SELECT m.name,m.book,m.payload FROM feed_materials m JOIN passages p
-                ON p.id=json_extract(m.payload,'$.来源片段编号') WHERE m.pool=? AND p.status IN ('已核验','待核验')""", (池号,)).fetchall()
+                ON p.id=json_extract(m.payload,'$.来源片段编号') WHERE m.pool=? AND p.can_generate = 1""", (池号,)).fetchall()
             可选 = []
             for x in 材料:
                 if x["name"] in 已租名:
@@ -279,7 +279,7 @@ class 候选队列:
             已用 = c.execute("SELECT batches FROM feed_budget WHERE day=?", (今日,)).fetchone()[0]
             空位 = min(空位, self.每日上限-已用)
             池列表 = c.execute("SELECT * FROM feed_pools WHERE touched>? ORDER BY touched", (现在-self.活跃秒数,)).fetchall()
-            书目 = [x[0] for x in c.execute("SELECT DISTINCT b.name FROM books b JOIN passages p ON p.book_id=b.id WHERE p.status IN ('已核验','待核验') ORDER BY b.name")]
+            书目 = [x[0] for x in c.execute("SELECT DISTINCT b.name FROM books b JOIN passages p ON p.book_id=b.id WHERE p.can_generate = 1 ORDER BY b.name")]
             # 跨队列逐轮各派一批，不让首个用户包办全部并发。
             for _ in range(8):
                 for 池 in 池列表:

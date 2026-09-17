@@ -18,6 +18,7 @@ from pypinyin import Style, pinyin
 报告文件 = 根目录 / "构建产物" / "参考资料审计报告.json"
 配置目录 = 根目录 / "资料配置"
 初始核验文件 = 配置目录 / "初始核验片段.json"
+古籍校勘结论文件 = 配置目录 / "古籍校勘结论.json"
 初始词组文件 = 配置目录 / "初始典故词组.json"
 初始五行文件 = 配置目录 / "初始汉字五行.json"
 
@@ -441,11 +442,6 @@ def 读入古籍(连接: sqlite3.Connection, 资料目录: Path) -> int:
                 for 项目 in 片段
             ],
         )
-        if 路径.stem == "周易" and "干" in 正文:
-            连接.execute(
-                "INSERT INTO audit_issues(source_id, issue_type, detail) VALUES (?, ?, ?)",
-                (来源编号, "字形核验", "文本包含“干”，需要逐处核对是否应为“乾”"),
-            )
         数量 += len(片段)
     return 数量
 
@@ -494,6 +490,66 @@ def 应用初始核验配置(连接: sqlite3.Connection) -> int:
         )
         已核验数 += 1
     return 已核验数
+
+
+def 应用古籍校勘结论(连接: sqlite3.Connection, 资料目录: Path) -> int:
+    """只有来源哈希与校勘记录一致时，才把整部古籍切换为最终状态。"""
+    if not 古籍校勘结论文件.exists():
+        return 0
+    配置 = json.loads(古籍校勘结论文件.read_text(encoding="utf-8"))
+    if 配置.get("校勘状态") != "完成":
+        return 0
+    已处理数 = 0
+    for 项目 in 配置.get("古籍", []):
+        文件名 = 项目["文件"]
+        路径 = 资料目录 / "古籍全文" / 文件名
+        来源 = 连接.execute(
+            "SELECT id FROM sources WHERE file_name = ? AND source_type = '古籍'",
+            (文件名,),
+        ).fetchone()
+        if 来源 is None or not 路径.exists():
+            连接.execute(
+                "INSERT INTO audit_issues(issue_type, detail) VALUES (?, ?)",
+                ("校勘配置", f"未找到古籍来源：{文件名}"),
+            )
+            continue
+        实际哈希 = hashlib.sha256(路径.read_bytes()).hexdigest()
+        if 实际哈希 != 项目.get("sha256"):
+            连接.execute(
+                "INSERT INTO audit_issues(source_id, issue_type, detail) VALUES (?, ?, ?)",
+                (
+                    来源[0],
+                    "校勘哈希不一致",
+                    f"{文件名} 已发生变化，未沿用校勘完成状态",
+                ),
+            )
+            continue
+        状态 = 项目.get("状态", "待核验")
+        if 状态 not in {"已核验", "不采用", "待核验"}:
+            raise ValueError(f"古籍校勘状态不合法：{文件名} / {状态}")
+        可生成 = 1 if 状态 == "已核验" else 0
+        结果 = 连接.execute(
+            """
+            UPDATE passages
+            SET status = ?, can_generate = ?, reviewed_at = ?,
+                reviewer = ?, review_note = ?
+            WHERE source_id = ?
+            """,
+            (
+                状态,
+                可生成,
+                配置.get("核验日期", "校勘完成"),
+                "古籍校勘记录",
+                项目.get("结论", "已按校勘配置完成核对"),
+                来源[0],
+            ),
+        )
+        连接.execute(
+            "UPDATE sources SET status = ? WHERE id = ?",
+            (状态, 来源[0]),
+        )
+        已处理数 += 结果.rowcount
+    return 已处理数
 
 
 def 读入典故词组(连接: sqlite3.Connection) -> int:
@@ -760,6 +816,7 @@ def 建库(资料目录: Path, 数据库路径: Path) -> dict:
         清空可重建表(连接)
         古籍片段数 = 读入古籍(连接, 资料目录)
         初始核验数 = 应用初始核验配置(连接)
+        校勘核验数 = 应用古籍校勘结论(连接, 资料目录)
         词组数 = 读入典故词组(连接)
         汉字数 = 读入汉字(连接)
         五行规则数 = 读入五行规则(连接)
@@ -784,7 +841,13 @@ def 建库(资料目录: Path, 数据库路径: Path) -> dict:
             "待处理问题数": 连接.execute(
                 "SELECT COUNT(*) FROM audit_issues WHERE status = '待处理'"
             ).fetchone()[0],
-            "已核验片段数": 初始核验数,
+            "已核验片段数": 连接.execute(
+                "SELECT COUNT(*) FROM passages WHERE status = '已核验'"
+            ).fetchone()[0],
+            "校勘配置处理片段数": 校勘核验数,
+            "待核验片段数": 连接.execute(
+                "SELECT COUNT(*) FROM passages WHERE status = '待核验'"
+            ).fetchone()[0],
             "已核验词组数": 词组数,
             "汉字数": 汉字数,
             "五行规则数": 五行规则数,

@@ -479,6 +479,11 @@ class 起名系统测试(unittest.TestCase):
         self.assertTrue(结果["reviewed_at"])
 
     def test审计问题复核流程(self) -> None:
+        with 服务模块.连接数据库() as 连接:
+            连接.execute(
+                "INSERT INTO audit_issues(issue_type, detail) VALUES (?, ?)",
+                ("测试问题", "仅用于验证管理复核流程"),
+            )
         with patch.dict(os.environ, {"起名管理密钥": "admin-test-key-2026"}):
             队列 = 获取审计问题队列(
                 状态="待处理", 数量=1, 管理密钥="admin-test-key-2026"

@@ -12,6 +12,32 @@ from 后端.模型接口 import 模型配置, 验证模型地址
 
 
 class 智能流程测试(unittest.TestCase):
+    def test召回不会使用待核验片段(self):
+        with tempfile.TemporaryDirectory() as d:
+            数据库 = Path(d) / "测试.sqlite3"
+            with closing(sqlite3.connect(服务.数据库路径)) as 源, closing(sqlite3.connect(数据库)) as 目标:
+                源.backup(目标)
+            with closing(sqlite3.connect(数据库)) as 连接:
+                连接.row_factory = sqlite3.Row
+                片段 = 连接.execute(
+                    """
+                    SELECT p.id
+                    FROM passages p JOIN books b ON b.id = p.book_id
+                    WHERE b.name = '论语' AND p.can_generate = 1
+                    ORDER BY p.id LIMIT 1
+                    """
+                ).fetchone()
+                连接.execute(
+                    "UPDATE passages SET status = '待核验', can_generate = 0 WHERE id = ?",
+                    (片段["id"],),
+                )
+                连接.commit()
+                召回 = 批量召回(
+                    连接,
+                    {"姓氏": "李", "名字长度": 2, "随机种子": 77, "来源书名": "论语"},
+                )
+            self.assertTrue(all(项目["来源片段编号"] != 片段["id"] for 项目 in 召回))
+
     def test召回规模出处与排除(self):
         请求 = {"姓氏":"李", "名字长度":2, "随机种子":77, "必须包含":"", "排除名字":[]}
         with closing(sqlite3.connect(服务.数据库路径)) as c:
