@@ -9,6 +9,18 @@ jobs:
   test:
     name: 自动测试
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 3s --health-retries 20
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -21,15 +33,23 @@ jobs:
       - name: 安装依赖
         run: python -m pip install -r 测试/requirements.txt
 
+      - name: 设置 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: 运行 Python 测试
         env:
           起名管理密钥: ci-test-admin-key-2026
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
         run: python -m unittest discover -s 测试 -p "test*.py" -v
 
       - name: 检查前端语法
         run: |
           node --check 前端/app.js
           node --check 前端/滑卡.js
+          find 小程序 云函数 管理前端 -name '*.js' -not -path '*/node_modules/*' -exec node --check {} \;
+          node --test 测试/wechat.test.js
 
       - name: 确认测试没有污染资料库
         run: git diff --exit-code -- 构建产物/起名系统.sqlite3

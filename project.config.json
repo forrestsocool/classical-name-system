@@ -1,0 +1,9 @@
+{
+  "description": "古籍起名微信小程序",
+  "miniprogramRoot": "小程序/",
+  "cloudfunctionRoot": "云函数/",
+  "compileType": "miniprogram",
+  "appid": "wxbffadd0448eb82bf",
+  "projectname": "classical-names",
+  "setting": {"es6": true, "minified": true, "urlCheck": true}
+}

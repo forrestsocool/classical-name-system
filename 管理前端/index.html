@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>古籍起名 · 管理</title><link rel="stylesheet" href="/admin/static/style.css"></head>
+<body><header><div><small>CLASSICAL NAMES / CONSOLE</small><h1>古籍起名管理</h1></div><span>资料 · 生产 · 质量</span></header>
+<main>
+<form id="login" class="panel"><label>管理密钥<input id="adminKey" type="password" autocomplete="off" required placeholder="输入管理密钥"></label><button>连接后台</button><button type="button" id="logout">退出</button><p>密钥仅在当前页面内存中使用，刷新后重新输入。</p></form>
+<p id="message" role="status"></p>
+<div id="console" hidden>
+<section class="panel"><div class="heading"><h2>运行概况</h2><button id="refresh">刷新</button></div><div id="metrics" class="stats"></div><p id="worker"></p><details><summary>来源生产进度</summary><div id="sources" class="table-wrap"></div></details></section>
+<div class="columns">
+<section class="panel"><h2>生产档案</h2><p>档案会持续轮换生产，固定字和避用字由用户在库存中筛选。</p><form id="profile"><label>姓氏<input name="surname" maxlength="2" required></label><label>名字字数<select name="name_length"><option value="2">双字名</option><option value="1">单字名</option></select></label><button>添加并启用</button></form><div id="profiles" class="table-wrap"></div></section>
+<section class="panel"><h2>模型接口</h2><form id="model"><label>HTTPS 接口<input name="地址" type="url" required></label><label>模型名称<input name="模型" required></label><label>密钥<input name="密钥" type="password" autocomplete="new-password" placeholder="留空保留现有密钥"></label><label>超时秒数<input name="超时秒数" type="number" min="1" max="180" value="120"></label><button>保存配置</button></form><p id="modelStatus"></p></section>
+</div>
+<section class="panel"><h2>资料复核</h2><form id="reviewFilter"><label>资料类型<select id="reviewKind"><option value="passages">古籍片段</option><option value="elements">汉字五行</option><option value="issues">审计问题</option></select></label><label>状态<select id="reviewStatus"></select></label><label>复核人<input id="reviewer" required maxlength="80"></label><button>读取资料</button></form><div id="reviews"></div></section>
+<section class="panel"><h2>最近反馈</h2><div id="feedback" class="table-wrap"></div></section>
+</div></main><script src="/admin/static/app.js"></script></body></html>

@@ -1,0 +1,8 @@
+<view class="page"><view class="eyebrow">把心动的名字，慢慢留下</view><view class="title">我的收藏</view><view class="muted">选中 2—4 个名字，一起比较。</view>
+<view class="row"><button class="button secondary" loading="{{busy}}" disabled="{{busy}}" bindtap="reload">刷新收藏</button><button class="button" disabled="{{busy || selectedCount < 2}}" bindtap="compare">比较 {{selectedCount || ''}}</button></view>
+<view class="muted error" wx:if="{{error}}">{{error}}</view>
+<view class="empty" wx:if="{{!cards.length && !busy}}">还没有收藏的名字<view class="muted">去发现页，留下你的第一份心动。</view></view>
+<view class="panel" wx:for="{{cards}}" wx:key="id"><view class="card-top"><view class="favorite-name" data-id="{{item.id}}" bindtap="detail">{{item.item.姓名}}</view><view class="check" data-id="{{item.id}}" bindtap="select">{{item.selected ? '☑ 已选择' : '□ 选择'}}</view></view><view class="muted">{{item.item.现代释义}}</view><view class="source">《{{item.item.书名}}》 · {{item.item.篇章}}</view><view class="row"><button class="button secondary" data-id="{{item.id}}" bindtap="detail">查看出处</button><button class="button secondary" data-id="{{item.id}}" disabled="{{busy}}" bindtap="remove">取消收藏</button></view></view>
+<button class="button secondary" wx:if="{{nextCursor}}" disabled="{{busy}}" bindtap="more">更多收藏</button>
+<view class="panel" wx:if="{{comparison.length}}"><view class="section-title">名字比较</view><view class="comparison" wx:for="{{comparison}}" wx:key="id"><view class="favorite-name">{{item.item.姓名}}</view><view class="pinyin">{{item.item.拼音带调}}</view><view class="meaning">{{item.item.现代释义}}</view><view class="source">《{{item.item.书名}}》 · {{item.item.篇章}}</view><text class="tag" wx:for="{{item.item.文化标签}}" wx:for-item="tag" wx:key="*this">{{tag}}</text></view></view>
+</view>

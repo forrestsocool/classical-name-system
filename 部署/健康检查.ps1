@@ -7,7 +7,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "无法连接服务：$地址"
 }
 $结果 = $文本 | ConvertFrom-Json
-if ($结果.状态 -ne "就绪") {
+if ($结果.status -ne "ready") {
     throw "服务未就绪"
 }
 

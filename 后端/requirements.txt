@@ -4,3 +4,4 @@ pydantic==2.10.6
 tzdata==2025.2
 lunar-python==1.4.8
 pypinyin==0.55.0
+psycopg[binary]==3.2.13

@@ -1,0 +1,21 @@
+<view class="page">
+  <view class="eyebrow">一 字 一 意 · 一 名 一 生</view><view class="title">在古籍里，遇见好名字</view><view class="muted">循着文字的来处，寻找心中的名字。</view>
+  <view class="panel" wx:if="{{editing}}">
+    <view class="row"><view><view class="label">宝宝姓氏</view><input class="input" value="{{surname}}" maxlength="2" placeholder="如：李、欧阳" data-field="surname" bindinput="input" /></view><view><view class="label">名字字数</view><picker range="{{lengthLabels}}" value="{{lengthIndex}}" bindchange="lengthChange"><view class="input">{{lengthLabels[lengthIndex]}} ▾</view></picker></view></view>
+    <view class="row"><view><view class="label">固定字 · 选填</view><input class="input" value="{{required}}" maxlength="2" placeholder="希望包含的字" data-field="required" bindinput="input" /></view><view><view class="label">避用字 · 选填</view><input class="input" value="{{excluded}}" maxlength="32" placeholder="不想使用的字" data-field="excluded" bindinput="input" /></view></view>
+    <button class="button" loading="{{busy}}" disabled="{{busy}}" bindtap="start">开始寻名</button>
+  </view>
+  <view wx:else>
+    <view class="link" bindtap="edit">{{surname}}姓 · {{nameLength}}字名{{required ? ' · 含' + required : ''}}　修改条件</view>
+    <view class="panel" wx:if="{{current}}" bindtouchstart="touchStart" bindtouchend="touchEnd" bindtouchcancel="touchCancel">
+      <view class="card-top"><text class="label">来自《{{current.item.书名}}》</text><text class="label">{{remaining}} 个待看</text></view>
+      <view class="name">{{current.item.姓名}}</view><view class="pinyin">{{current.item.拼音带调}}</view>
+      <view class="meaning">{{current.item.现代释义}}</view><view><text class="tag" wx:for="{{current.item.文化标签}}" wx:key="*this">{{item}}</text></view>
+      <view class="source">《{{current.item.书名}}》 · {{current.item.篇章}}</view><view class="link" catchtap="detail">读原文，了解名字的来处 →</view>
+    </view>
+    <view class="empty" wx:else><view>{{busy ? '正在翻阅名字…' : '好名字，值得慢慢遇见'}}</view><view class="muted">{{hint}}</view><button class="button secondary" disabled="{{busy || cooldown > 0}}" bindtap="load">{{cooldown > 0 ? cooldown + '秒后再看' : '再看一看'}}</button></view>
+    <view class="row" wx:if="{{current}}"><button class="button secondary" disabled="{{busy}}" bindtap="skip">再看一个</button><button class="button" disabled="{{busy}}" loading="{{saving}}" bindtap="favorite">♡ 收藏这个</button></view>
+    <view class="note" wx:if="{{current}}">左滑换一个 · 右滑收藏。名字释义由模型辅助整理，出处可自行核对。</view>
+  </view>
+  <view class="muted error" wx:if="{{error}}">{{error}}</view>
+</view>

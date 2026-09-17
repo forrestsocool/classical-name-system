@@ -24,7 +24,11 @@ class 请求结果:
 
 def 请求地址(地址: str, 方法: str = "GET", 数据: dict | None = None) -> 请求结果:
     正文 = None
-    请求头 = {"Accept": "application/json", "X-Session-Key": 压测会话}
+    请求头 = {
+        "Accept": "application/json",
+        "X-Session-Key": 压测会话,
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+    }
     if 数据 is not None:
         正文 = json.dumps(数据, ensure_ascii=False).encode("utf-8")
         请求头["Content-Type"] = "application/json"

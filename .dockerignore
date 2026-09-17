@@ -9,3 +9,8 @@ __pycache__
 构建产物/数据库备份
 构建产物/运行数据
 .env
+.local
+node_modules
+构建产物/*.sqlite3-wal
+构建产物/*.sqlite3-shm
+构建产物/起名系统-校勘完成.sqlite3

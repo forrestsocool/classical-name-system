@@ -1,0 +1,18 @@
+{
+  "$schema": "https://static.cloudbase.net/cli/cloudbaserc.schema.json",
+  "envId": "wxapp-backend-test-d5c9k701c7cf2",
+  "functionRoot": "云函数",
+  "functions": [
+    {
+      "name": "nameGateway",
+      "timeout": 20,
+      "runtime": "Nodejs18.15",
+      "handler": "index.main",
+      "envVariables": {
+        "WECHAT_APP_ID": "wxbffadd0448eb82bf",
+        "CORE_API_URL": "https://name.sensen.li",
+        "GATEWAY_SECRET": "f15d0058275c6efa497f2c1fe9b560504dfa96da28149e143972209c9fb77376"
+      }
+    }
+  ]
+}

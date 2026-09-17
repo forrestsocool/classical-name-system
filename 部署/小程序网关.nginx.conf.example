@@ -1,0 +1,23 @@
+# Replace hostname, certificate files, and administrator network before enabling.
+server {
+    listen 443 ssl;
+    server_name core.example.com;
+    ssl_certificate /etc/letsencrypt/live/core.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/core.example.com/privkey.pem;
+    client_max_body_size 16k;
+
+    location = /internal/v1/dispatch {
+        limit_except POST { deny all; }
+        proxy_pass http://127.0.0.1:8000;
+        proxy_read_timeout 12s;
+        proxy_set_header Host $host;
+    }
+
+    # Access through an SSH tunnel / VPN, or add your exact management CIDR.
+    location / {
+        allow 127.0.0.1;
+        deny all;
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+    }
+}

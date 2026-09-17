@@ -1,19 +1,63 @@
+x-runtime: &runtime
+  build: .
+  image: classical-name-system:wechat
+  env_file: .env
+  environment:
+    DATABASE_URL: postgresql://names:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/names
+    起名模型配置文件: /app/构建产物/运行数据/模型配置.json
+  volumes:
+    - ./构建产物/运行数据:/app/构建产物/运行数据
+
 services:
-  classical-name-system:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: classical-name-system
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: names
+      POSTGRES_USER: names
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U names -d names"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    <<: *runtime
+    profiles: ["tools"]
+    command: ["python", "脚本/迁移PostgreSQL.py", "--源", "/migration/起名系统.sqlite3"]
+    volumes:
+      - ./构建产物:/migration
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+
+  api:
+    <<: *runtime
     restart: unless-stopped
     ports:
       - "127.0.0.1:8000:8000"
-    env_file:
-      - .env
-    environment:
-      - 起名数据库路径=/app/构建产物/起名系统.sqlite3
-      - 起名管理密钥文件=/app/构建产物/运行数据/管理密钥.txt
-      - 起名队列库存=${NAME_QUEUE_STOCK:-72}
-      - 起名每日生产批次=${NAME_DAILY_BATCHES:-480}
-      - 起名临时队列秒数=${NAME_PRIVATE_TTL:-300}
-    volumes:
-      - ./构建产物:/app/构建产物
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  producer:
+    <<: *runtime
+    restart: unless-stopped
+    stop_grace_period: 210s
+    command: ["python", "-m", "后端.持续生产"]
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "脚本/检查生产进程.py"]
+      interval: 60s
+      timeout: 10s
+      start_period: 60s
+
+volumes:
+  postgres-data:

@@ -1,0 +1,5 @@
+<view class="page" wx:if="{{card}}"><view class="eyebrow">名字的来处</view><view class="panel"><view class="name">{{card.item.姓名}}</view><view class="pinyin">{{card.item.拼音带调}}</view><view class="meaning">{{card.item.现代释义}}</view><text class="tag" wx:for="{{card.item.文化标签}}" wx:key="*this">{{item}}</text></view>
+<view class="panel"><view class="section-title">《{{card.item.书名}}》 · {{card.item.篇章}}</view><view class="quote">{{card.item.原文}}</view><view class="note">取字方式：{{card.item.取字方式}}。释义包含现代寄意，不能替代古文原意。</view></view>
+<view class="panel"><view class="section-title">五行参考</view><view class="muted" wx:for="{{elements}}" wx:key="char">{{item.char}} · {{item.element}}</view><view class="muted" wx:if="{{unknown}}">资料不足：{{unknown}}</view><view class="note">仅为传统取名参考，不据此判断宝宝八字或应补五行。</view><view class="spacer"></view><view class="section-title">姓名热度参考</view><view class="muted">{{popularity}}</view></view>
+<button class="button" disabled="{{busy}}" bindtap="favorite">♡ 收藏这个名字</button><view class="link" bindtap="feedback">反馈出处或释义问题</view><view class="muted error" wx:if="{{error}}">{{error}}</view></view>
+<view class="empty" wx:else>请从发现或收藏页打开一个名字。</view>

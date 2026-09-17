@@ -1,0 +1,7 @@
+{
+  "pages": ["pages/discover/index", "pages/favorites/index", "pages/detail/index"],
+  "window": {"navigationBarTitleText": "拾名", "navigationBarBackgroundColor": "#f6f3eb", "navigationBarTextStyle": "black", "backgroundColor": "#f6f3eb"},
+  "tabBar": {"color": "#7b8277", "selectedColor": "#2d5948", "backgroundColor": "#f6f3eb", "borderStyle": "white", "list": [{"pagePath": "pages/discover/index", "text": "发现名字"}, {"pagePath": "pages/favorites/index", "text": "我的收藏"}]},
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

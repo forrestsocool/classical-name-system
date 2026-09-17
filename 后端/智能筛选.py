@@ -32,11 +32,14 @@ class 筛选结果(BaseModel):
 def 批量召回(连接, 请求, 数量=召回数量):
     随机 = random.Random(请求.get("随机种子"))
     来源 = 请求.get("来源书名")
-    行列表 = list(连接.execute("""
+    查询 = """
         SELECT p.id,p.text,p.section_title,p.status,b.name AS book
         FROM passages p JOIN books b ON b.id=p.book_id
-        WHERE p.can_generate = 1 AND (? IS NULL OR b.name = ?) ORDER BY p.id
-    """, (来源, 来源)))
+        WHERE p.can_generate = 1
+    """
+    if 来源 is not None:
+        查询 += " AND b.name = ?"
+    行列表 = list(连接.execute(查询 + " ORDER BY p.id", (来源,) if 来源 is not None else ()))
     # 先按书轮换，再按片段轮换；长篇古籍不会占满召回池。
     分书 = defaultdict(list)
     for 行 in 行列表:

@@ -6,3 +6,8 @@ __pycache__/
 *.sqlite3-journal
 构建产物/运行数据/
 构建产物/数据库备份/
+.local/
+node_modules/
+构建产物/起名系统-校勘完成.sqlite3
+project.private.config.json
+
