@@ -35,7 +35,7 @@ docker compose run --rm migrate
 docker compose up -d api producer
 ```
 
-管理后台：`http://127.0.0.1:8000/admin`。正式小程序使用真实 AppID、`小程序/config.js` 的云环境 ID，并通过 `wx.cloud.callFunction` 调用 `nameGateway`；云函数再签名访问自有服务器。当前仓库默认保留测试号体验配置：开发者工具对沙箱 AppID 的 CloudBase 绑定检查返回 `-601059`，所以 `mode: test-http` 仅供模拟器体验；正式 AppID 上线前必须切回 `mode: cloud` 并恢复域名校验。
+管理后台：`http://127.0.0.1:8000/admin`。小程序使用正式 AppID `wx3d9171fa1ecde642` 和已关联的云环境 `cloud1-d8gsdbw0983b1cb3c`，只通过 `wx.cloud.callFunction` 调用 `nameGateway`；云函数再签名访问自有服务器。客户端已移除测试 HTTP 直连，开发者工具启用域名校验。AppSecret 不参与这条原生云开发身份链路，也不需要写入小程序或服务器配置。实际部署与体验版状态见上方体验文档。
 
 `https://<envId>.api.tcloudbasegateway.com/v1/ai/cloudbase` 是 CloudBase AI 模型的 Base URL，不是业务云函数入口；环境 API Key 只允许放在服务器或云函数环境变量中。
 

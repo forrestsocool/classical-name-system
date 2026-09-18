@@ -3,7 +3,7 @@
   "miniprogramRoot": "小程序/",
   "cloudfunctionRoot": "云函数/",
   "compileType": "miniprogram",
-  "appid": "wxbffadd0448eb82bf",
+  "appid": "wx3d9171fa1ecde642",
   "projectname": "classical-names",
-  "setting": {"es6": true, "minified": true, "urlCheck": false}
+  "setting": {"es6": true, "minified": true, "urlCheck": true}
 }

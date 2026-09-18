@@ -2,7 +2,7 @@ const config = require('./config');
 App({
   onLaunch() {
     this.selectedCard = null;
-    if (config.mode === 'cloud' && wx.cloud && config.envId) wx.cloud.init({env:config.envId});
+    if (wx.cloud && config.envId) wx.cloud.init({env:config.envId});
   },
   async session() {
     if (!this.sessionPromise) {
