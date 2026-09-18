@@ -5,5 +5,5 @@
   "compileType": "miniprogram",
   "appid": "wxbffadd0448eb82bf",
   "projectname": "classical-names",
-  "setting": {"es6": true, "minified": true, "urlCheck": true}
+  "setting": {"es6": true, "minified": true, "urlCheck": false}
 }

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import psycopg
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -11,6 +11,7 @@ from starlette.concurrency import run_in_threadpool
 from .数据库 import 连接数据库
 from .网关鉴权 import 校验签名, 用户身份, 登记与限流
 from .小程序业务 import 严格参数, 动作
+from .测试直连 import 已启用, 测试分发, 测试分发请求, 测试登录请求, 换取开放身份, 签发令牌
 from .管理接口 import 路由 as 管理路由, 管理权限
 
 应用 = FastAPI(title="古籍起名管理与小程序内部服务", version="1.0.0", docs_url=None, redoc_url=None, openapi_url=None)
@@ -108,3 +109,21 @@ async def 内部接入(request: Request):
         if len(body) > 16384:
             raise HTTPException(413, "请求过大")
     return await run_in_threadpool(分发, dict(request.headers), bytes(body))
+
+
+@应用.post("/api/test/session", include_in_schema=False)
+async def 测试号登录(body: 测试登录请求):
+    if not 已启用():
+        raise HTTPException(404, "测试接入未启用")
+    appid, openid = await run_in_threadpool(换取开放身份, body.code)
+    return {"token": 签发令牌(appid, openid), "user_id": 用户身份(appid, openid)}
+
+
+@应用.post("/api/test/dispatch", include_in_schema=False)
+async def 测试号分发(body: 测试分发请求, authorization: str = Header(default="")):
+    if not 已启用():
+        raise HTTPException(404, "测试接入未启用")
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        raise HTTPException(401, "测试会话无效或已过期")
+    return {"ok": True, "data": await run_in_threadpool(测试分发, token, body)}

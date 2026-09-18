@@ -11,7 +11,7 @@
       "envVariables": {
         "WECHAT_APP_ID": "wxbffadd0448eb82bf",
         "CORE_API_URL": "https://name.sensen.li",
-        "GATEWAY_SECRET": "f15d0058275c6efa497f2c1fe9b560504dfa96da28149e143972209c9fb77376"
+        "GATEWAY_SECRET": "{{env.GATEWAY_SECRET}}"
       }
     }
   ]

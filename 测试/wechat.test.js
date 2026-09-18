@@ -6,6 +6,7 @@ const path=require('node:path');
 const vm=require('node:vm');
 const crypto=require('node:crypto');
 const {createHandler,signedHeaders}=require('../云函数/nameGateway/gateway');
+const view=require('../小程序/utils/view');
 const env={CORE_API_URL:'https://core.example.com',GATEWAY_SECRET:'test-gateway-secret-2026-32-characters',WECHAT_APP_ID:'wx1234567890abcdef'};
 const context={APPID:env.WECHAT_APP_ID,OPENID:'trusted-user'};
 
@@ -47,7 +48,7 @@ test('signature changes with body and timestamp',()=>{
 function pageHarness(call,user='user-A',saved={}){
   let page;const storage=new Map(Object.entries(saved));const app={session:async()=>user};
   const wx={getStorageSync:key=>storage.get(key),setStorageSync:(key,value)=>storage.set(key,JSON.parse(JSON.stringify(value))),showToast(){},navigateTo(){}};
-  const sandbox={Page:p=>{page=p;},getApp:()=>app,wx,require:()=>({call,requestId:()=>crypto.randomUUID(),storageKey:u=>'cache:'+u}),setInterval:()=>1,clearInterval(){},console};
+  const sandbox={Page:p=>{page=p;},getApp:()=>app,wx,require:modulePath=>modulePath.includes('/utils/view')?view:{call,requestId:()=>crypto.randomUUID(),storageKey:u=>'cache:'+u},setInterval:()=>1,clearInterval(){},console};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../小程序/pages/discover/index.js'),'utf8'),sandbox);
   page.data=JSON.parse(JSON.stringify(page.data));page.setData=patch=>Object.assign(page.data,patch);
   return{page,storage};

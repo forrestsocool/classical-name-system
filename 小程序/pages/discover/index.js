@@ -1,10 +1,11 @@
 const {call,requestId,storageKey}=require('../../utils/api');
+const {normalizeCards}=require('../../utils/view');
 Page({
   data:{editing:true,surname:'',required:'',excluded:'',nameLength:2,lengthIndex:1,lengthLabels:['单字名','双字名'],busy:false,saving:false,current:null,remaining:0,error:'',hint:'暂时没有符合条件的新名字，可以稍后再看或放宽条件。',cooldown:0},
   async onLoad(){
     this.cards=[];this.pending=null;
     try{this.user=await getApp().session();const saved=wx.getStorageSync(storageKey(this.user));
-      if(saved && saved.conditions){const c=saved.conditions;this.setData({surname:c.surname,nameLength:c.name_length,lengthIndex:c.name_length-1,required:c.required||'',excluded:c.excluded||'',editing:false});this.cards=Array.isArray(saved.cards)?saved.cards:[];this.pending=saved.pending||null;this.showCard();}
+      if(saved && saved.conditions){const c=saved.conditions;this.setData({surname:c.surname,nameLength:c.name_length,lengthIndex:c.name_length-1,required:c.required||'',excluded:c.excluded||'',editing:false});this.cards=normalizeCards(saved.cards);this.pending=saved.pending||null;this.showCard();}
     }catch(e){this.setData({error:e.message});}
   },
   onUnload(){clearInterval(this.timer);},
@@ -26,7 +27,7 @@ Page({
     if(this.data.busy||this.data.cooldown>0)return;this.setData({busy:true,error:''});
     try{this.user=await getApp().session();this.activeConditions=this.conditions();
       if(!this.pending)this.pending={...this.activeConditions,request_id:requestId()};this.persist();
-      const result=await call('feed.pull',this.pending);this.cards=result.cards;this.pending=null;this.persist();this.showCard();
+      const result=await call('feed.pull',this.pending);this.cards=normalizeCards(result.cards);this.pending=null;this.persist();this.showCard();
       if(!this.cards.length){this.setData({hint:result.message,cooldown:result.retry_after||15});clearInterval(this.timer);this.timer=setInterval(()=>{const n=Math.max(0,this.data.cooldown-1);this.setData({cooldown:n});if(!n)clearInterval(this.timer);},1000);}
     }catch(e){if(e.status===422||e.status===409){this.pending=null;this.persist();}this.setData({error:e.message});}finally{this.setData({busy:false});}
   },
