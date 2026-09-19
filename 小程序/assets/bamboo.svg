@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 156 330" fill="none">
+  <defs>
+    <linearGradient id="ink" x1="73" y1="18" x2="139" y2="311" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#a0b59a" stop-opacity=".62"/>
+      <stop offset=".52" stop-color="#a9bca1" stop-opacity=".57"/>
+      <stop offset="1" stop-color="#b9c8ad" stop-opacity=".4"/>
+    </linearGradient>
+  </defs>
+  <!-- Slender, tapering branches enter at the corner and bend with the leaves. -->
+  <g stroke="#a9ba9e" stroke-linecap="round">
+    <path d="M138-8C128 31 127 66 131 103C137 158 119 218 111 280" stroke-opacity=".59" stroke-width="1.65"/>
+    <path d="M136 0C120 25 101 35 86 57C74 75 64 96 58 121" stroke-opacity=".65" stroke-width="1.3"/>
+    <path d="M121 24C104 21 87 23 66 29" stroke-opacity=".54" stroke-width="1.1"/>
+    <path d="M98 41C92 58 89 76 88 91M78 71C70 82 59 87 47 96" stroke-opacity=".55" stroke-width=".85"/>
+    <path d="M130 78C144 97 151 115 156 131M132 108C119 126 108 139 98 158" stroke-opacity=".51" stroke-width="1.1"/>
+    <path d="M128 164C119 178 103 191 95 214M120 203C131 223 138 244 140 260M116 231C111 248 104 266 101 284" stroke-opacity=".54" stroke-width="1.1"/>
+  </g>
+  <!-- Each blade starts at a branch node, widens once, then ends in a long point. -->
+  <g fill="url(#ink)">
+    <path d="M113 23C100 20 77 27 56 41C82 35 105 32 113 23Z"/>
+    <path d="M90 24C80 18 60 23 43 33C62 32 81 30 90 24Z" opacity=".72"/>
+    <path d="M126 17C120 29 111 47 99 65C115 54 125 36 126 17Z"/>
+    <path d="M112 31C103 40 96 63 98 91C105 73 114 51 112 31Z"/>
+    <path d="M94 45C81 50 66 66 50 91C74 77 89 61 94 45Z"/>
+    <path d="M88 61C78 75 76 104 81 130C88 105 93 81 88 61Z"/>
+    <path d="M73 80C57 88 35 113 20 143C43 120 64 103 73 80Z"/>
+    <path d="M63 102C52 112 42 142 35 170C49 151 63 123 63 102Z"/>
+    <path d="M67 97C61 113 62 141 66 155C71 134 73 114 67 97Z"/>
+    <path d="M130 32C127 47 133 67 142 81C139 59 134 42 130 32Z" opacity=".77"/>
+    <path d="M131 80C137 85 148 92 156 113C143 102 134 91 131 80Z" opacity=".7"/>
+    <path d="M139 93C136 109 139 129 146 147C146 127 145 106 139 93Z"/>
+    <path d="M127 114C115 121 103 140 93 160C109 148 123 130 127 114Z"/>
+    <path d="M121 129C114 144 113 163 118 184C124 164 126 146 121 129Z"/>
+    <path d="M110 141C96 150 85 169 75 191C93 175 104 158 110 141Z" opacity=".77"/>
+    <path d="M131 140C137 151 145 168 150 189C138 176 132 158 131 140Z" opacity=".7"/>
+    <path d="M124 174C111 181 94 198 83 220C100 207 118 191 124 174Z"/>
+    <path d="M117 190C107 202 99 225 95 249C108 227 117 210 117 190Z"/>
+    <path d="M121 201C130 209 139 229 143 248C131 235 125 216 121 201Z"/>
+    <path d="M114 225C99 235 86 256 77 280C94 263 108 244 114 225Z"/>
+    <path d="M112 237C104 254 102 287 103 317C112 290 117 258 112 237Z"/>
+    <path d="M115 238C125 249 132 270 135 288C125 274 117 255 115 238Z" opacity=".67"/>
+  </g>
+</svg>

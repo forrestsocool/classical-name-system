@@ -1,6 +1,6 @@
 <view class="discover-page" style="padding-top:{{statusBarHeight}}px">
   <view class="hero">
-    <image class="hero-landscape" src="/assets/landscape.svg" mode="aspectFill" />
+    <image class="hero-landscape" src="/assets/landscape.svg" mode="aspectFit" />
     <view class="brand-row">
       <view class="brand-name">好名千寻</view>
       <view class="brand-seal">隽<text>名</text></view>
@@ -42,8 +42,8 @@
       bindtouchcancel="touchCancel"
       catchtap="detail"
     >
-      <image class="card-landscape" src="/assets/card-landscape.svg" mode="aspectFill" />
-      <view class="bamboo"><view class="stem"></view><view class="leaf leaf-a"></view><view class="leaf leaf-b"></view><view class="leaf leaf-c"></view></view>
+      <image class="card-landscape" src="/assets/card-landscape.svg" mode="aspectFit" />
+      <image class="bamboo" src="/assets/bamboo.svg" mode="aspectFit" />
       <view class="decision decision-skip" style="opacity:{{skipOpacity}}">不喜欢</view>
       <view class="decision decision-like" style="opacity:{{likeOpacity}}">收藏</view>
       <view class="name-block">
