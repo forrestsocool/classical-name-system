@@ -1,7 +1,7 @@
 <view class="favorites-page" bindtap="closeOnTap">
   <view class="collection-hint" wx:if="{{cards.length}}">
     <view class="hint-line"></view>
-    <text>右滑卡片可取消收藏</text>
+    <text>左滑卡片可取消收藏</text>
     <view class="hint-line"></view>
   </view>
 

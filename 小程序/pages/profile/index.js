@@ -1,14 +1,14 @@
 const {preferenceKey} = require('../../utils/api');
 
 Page({
-  data: {surname: '未设置', gender: '不限', loading: true},
+  data: {surname: '未设置', gender: '不限', openid: '加载中', loading: true},
   async onShow() {
     if (this.getTabBar && this.getTabBar()) this.getTabBar().setData({selected: 2});
     try {
       const user = await getApp().session();
       const saved = wx.getStorageSync(preferenceKey(user)) || {};
       const gender = {male: '男孩', female: '女孩', any: '不限'}[saved.gender] || '不限';
-      this.setData({surname: saved.surname || '未设置', gender, loading: false});
+      this.setData({surname: saved.surname || '未设置', gender, openid: getApp().openid || '未获取', loading: false});
     } catch (error) {
       this.setData({loading: false});
     }

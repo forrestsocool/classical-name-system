@@ -42,7 +42,13 @@ function createHandler({getContext, transport=forward, env=process.env}) {
       const body=JSON.stringify({appid:APPID,openid:OPENID,action:event.action,data:event.data||{}});
       if(Buffer.byteLength(body)>16384) return {ok:false,status:413,message:'请求过大'};
       const result=await transport(url,body,signedHeaders(body,env.GATEWAY_SECRET));
-      if(result.status>=200 && result.status<300) return {ok:true,data:result.data};
+      if(result.status>=200 && result.status<300) {
+        // The platform context is the only trusted source of identity. Expose the
+        // caller's own OpenID only for the profile screen; never echo it for other actions.
+        let data=result.data;
+        if(event.action==='session.get' && data && typeof data==='object' && !Array.isArray(data)) data={...data,openid:OPENID};
+        return {ok:true,data};
+      }
       const safeStatus=[401,403,404,409,413,422,429].includes(result.status)?result.status:503;
       return {ok:false,status:safeStatus,message:safeStatus===503?'服务暂时不可用，请稍后重试':String(result.data.detail||'操作未完成').slice(0,120)};
     } catch {return {ok:false,status:503,message:'服务暂时不可用，请稍后重试'};}

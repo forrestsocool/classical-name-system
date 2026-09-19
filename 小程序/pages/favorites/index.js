@@ -114,7 +114,7 @@ Page({
     this.ignoreTapUntil = Date.now() + 350;
     this.setData({
       openId: start.id, dragging: true,
-      slideX: Math.round(Math.max(0, Math.min(this.actionWidth, start.base + dx)))
+      slideX: Math.round(Math.max(-this.actionWidth, Math.min(0, start.base + dx)))
     });
   },
   touchEnd(event) {
@@ -126,9 +126,9 @@ Page({
     const dx = point.clientX - start.x;
     const elapsed = (event.timeStamp || Date.now()) - start.time;
     const fast = elapsed > 0 && elapsed < 350 && Math.abs(dx) > 28 && Math.abs(dx) / elapsed > .4;
-    const open = fast ? dx > 0 : start.base + dx >= this.actionWidth * .45;
+    const open = fast ? dx < 0 : start.base + dx <= -this.actionWidth * .45;
     this.ignoreTapUntil = Date.now() + 350;
-    this.setData({openId: open ? start.id : null, slideX: open ? this.actionWidth : 0, dragging: false});
+    this.setData({openId: open ? start.id : null, slideX: open ? -this.actionWidth : 0, dragging: false});
   },
   touchCancel() { this.closeRow(); },
 

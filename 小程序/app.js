@@ -8,7 +8,11 @@ App({
   async session() {
     if (!this.sessionPromise) {
       const {call} = require('./utils/api');
-      this.sessionPromise=call('session.get',{}).then(data=>{this.userId=data.user_id;return data.user_id;}).catch(e=>{this.sessionPromise=null;throw e;});
+      this.sessionPromise=call('session.get',{}).then(data=>{
+        this.userId=data.user_id;
+        this.openid=data.openid || '';
+        return data.user_id;
+      }).catch(e=>{this.sessionPromise=null;throw e;});
     }
     return this.sessionPromise;
   }

@@ -50,6 +50,22 @@ test('gateway forwards only trusted platform identity to fixed endpoint', async 
   assert.equal(seen.headers['X-Gateway-Signature'], expected);
 });
 
+test('gateway adds the trusted OpenID only to the caller session response', async () => {
+  const handler = createHandler({
+    getContext: () => context,
+    env,
+    transport: async () => ({status: 200, data: {user_id: 'hashed-user'}})
+  });
+  const session = await handler({action: 'session.get'});
+  assert.deepEqual(session.data, {user_id: 'hashed-user', openid: context.OPENID});
+  const feed = await createHandler({
+    getContext: () => context,
+    env,
+    transport: async () => ({status: 200, data: {cards: []}})
+  })({action: 'feed.pull'});
+  assert.equal(feed.data.openid, undefined);
+});
+
 test('gateway rejects missing identity, unexpected app, admin actions and oversized input', async () => {
   const transport = () => { throw new Error('must not forward'); };
   assert.equal((await createHandler({getContext: () => ({}), env, transport})({action: 'session.get'})).status, 401);

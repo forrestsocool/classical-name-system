@@ -45,27 +45,27 @@ function touch(id, x, y, timeStamp) {
 }
 const tap = id => ({currentTarget: {dataset: {id}}});
 function openRow(page, id) {
-  page.touchStart(touch(id, 20, 150, 1000));
-  page.touchMove(touch(id, 95, 154, 1400));
-  page.touchEnd(touch(id, 95, 154, 1500));
+  page.touchStart(touch(id, 95, 150, 1000));
+  page.touchMove(touch(id, 20, 154, 1400));
+  page.touchEnd(touch(id, 20, 154, 1500));
 }
 async function until(condition) {
   for (let i = 0; i < 30 && !condition(); i++) await Promise.resolve();
   assert.ok(condition(), 'expected async step did not start');
 }
 
-test('favorites right swipe reveals removal without removing; left swipe, vertical scroll and touch cancellation are safe', async () => {
+test('favorites left swipe reveals removal without removing; right swipe, vertical scroll and touch cancellation are safe', async () => {
   const actions = [];
   const {page} = harness(async action => { actions.push(action); return {cards: [card(2), card(1)]}; });
   await page.onShow();
   openRow(page, 2);
   assert.equal(page.data.openId, 2);
-  assert.equal(page.data.slideX, 89);
+  assert.equal(page.data.slideX, -89);
   assert.deepEqual(actions, ['favorites.list']);
   page.detail(tap(2));
-  page.touchStart(touch(2, 100, 150, 2000));
-  page.touchMove(touch(2, 20, 151, 2400));
-  page.touchEnd(touch(2, 20, 151, 2500));
+  page.touchStart(touch(2, 20, 150, 2000));
+  page.touchMove(touch(2, 100, 151, 2400));
+  page.touchEnd(touch(2, 100, 151, 2500));
   assert.equal(page.data.openId, null);
   page.touchStart(touch(1, 20, 150, 3000));
   page.touchMove(touch(1, 26, 240, 3300));
@@ -78,14 +78,14 @@ test('favorites right swipe reveals removal without removing; left swipe, vertic
   assert.equal(page.data.openId, null);
 });
 
-test('short swipe rebounds; a fast right flick reveals the button and leaving the tab closes it', async () => {
+test('short swipe rebounds; a fast left flick reveals the button and leaving the tab closes it', async () => {
   const {page} = harness(async () => ({cards: [card(1)]}));
   await page.onShow();
   page.touchStart(touch(1, 20, 100, 1000));
   page.touchMove(touch(1, 42, 102, 1400));
   page.touchEnd(touch(1, 42, 102, 1500));
   assert.equal(page.data.openId, null);
-  page.touchStart(touch(1, 20, 100, 2000));
+  page.touchStart(touch(1, 95, 100, 2000));
   page.touchMove(touch(1, 57, 102, 2060));
   page.touchEnd(touch(1, 57, 102, 2070));
   assert.equal(page.data.openId, 1);

@@ -7,7 +7,7 @@
 .summary-card, .detail-section { margin-bottom: 20rpx; padding: 28rpx 30rpx; border: 1rpx solid #ebe9e1; border-radius: 22rpx; background: rgba(255,254,250,.98); box-shadow: 0 8rpx 22rpx rgba(54, 71, 63, .04); }
 .summary-card { padding-top: 33rpx; }
 .summary-top { display: flex; align-items: center; justify-content: space-between; }
-.detail-name { color: #074c42; font: 700 74rpx/1.05 "STKaiti", "KaiTi", "Songti SC", serif; letter-spacing: 11rpx; }
+.detail-name { color: #074c42; font: 700 74rpx/1.05 serif; letter-spacing: 11rpx; }
 .detail-pinyin { margin-top: 10rpx; color: #506967; font-size: 23rpx; letter-spacing: 8rpx; }
 .summary-scores { display: flex; align-items: center; gap: 10rpx; }
 .detail-score { height: 53rpx; padding: 0 19rpx; display: flex; align-items: center; gap: 8rpx; border-radius: 999rpx; font-size: 24rpx; }
@@ -16,7 +16,7 @@
 .score-female { color: #aa4654; background: #fff0f1; }
 .detail-tags { margin-top: 22rpx; white-space: nowrap; overflow: hidden; }
 .detail-tags text { display: inline-block; margin-right: 12rpx; padding: 9rpx 20rpx; border-radius: 999rpx; color: #2f695c; background: #edf4eb; font-size: 22rpx; }
-.summary-meaning { margin-top: 24rpx; color: #334a46; font: 400 27rpx/1.8 "STKaiti", "KaiTi", "Songti SC", serif; }
+.summary-meaning { margin-top: 24rpx; color: #334a46; font: 400 27rpx/1.8 serif; }
 .section-head { display: flex; align-items: center; justify-content: space-between; }
 .section-title { display: flex; align-items: center; gap: 13rpx; color: #0a594d; font-size: 29rpx; font-weight: 600; }
 .section-title image { width: 35rpx; height: 35rpx; }
