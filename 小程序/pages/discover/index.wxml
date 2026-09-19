@@ -1,21 +1,86 @@
-<view class="page">
-  <view class="eyebrow">一 字 一 意 · 一 名 一 生</view><view class="title">在古籍里，遇见好名字</view><view class="muted">循着文字的来处，寻找心中的名字。</view>
-  <view class="panel" wx:if="{{editing}}">
-    <view class="row"><view class="row-item"><view class="label">宝宝姓氏</view><input class="input" value="{{surname}}" maxlength="2" placeholder="如：李、欧阳" data-field="surname" bindinput="input" /></view><view class="row-item"><view class="label">名字字数</view><picker range="{{lengthLabels}}" value="{{lengthIndex}}" bindchange="lengthChange"><view class="input">{{lengthLabels[lengthIndex]}} ▾</view></picker></view></view>
-    <view class="row"><view class="row-item"><view class="label">固定字 · 选填</view><input class="input" value="{{required}}" maxlength="2" placeholder="希望包含的字" data-field="required" bindinput="input" /></view><view class="row-item"><view class="label">避用字 · 选填</view><input class="input" value="{{excluded}}" maxlength="32" placeholder="不想使用的字" data-field="excluded" bindinput="input" /></view></view>
-    <button class="button" loading="{{busy}}" disabled="{{busy}}" bindtap="start">开始寻名</button>
-  </view>
-  <view wx:else>
-    <view class="link" bindtap="edit">{{surname}}姓 · {{nameLength}}字名{{required ? ' · 含' + required : ''}}　修改条件</view>
-    <view class="panel" wx:if="{{current}}" bindtouchstart="touchStart" bindtouchend="touchEnd" bindtouchcancel="touchCancel">
-      <view class="card-top"><text class="label">来自《{{current.item.book}}》</text><text class="label">{{remaining}} 个待看</text></view>
-      <view class="name">{{current.item.name}}</view><view class="pinyin">{{current.item.pinyin}}</view>
-      <view class="meaning">{{current.item.meaning}}</view><view><text class="tag" wx:for="{{current.item.tags}}" wx:key="*this">{{item}}</text></view>
-      <view class="source">《{{current.item.book}}》 · {{current.item.chapter}}</view><view class="link" catchtap="detail">读原文，了解名字的来处 →</view>
+<view class="discover-page">
+  <view class="masthead">
+    <view class="brand-lockup">
+      <view class="brand-seal">好名</view>
+      <view>
+        <view class="brand-name">好名千寻</view>
+        <view class="brand-subtitle">从典籍深处，寻一个好名字</view>
+      </view>
     </view>
-    <view class="empty" wx:else><view>{{busy ? '正在翻阅名字…' : '好名字，值得慢慢遇见'}}</view><view class="muted">{{hint}}</view><button class="button secondary" disabled="{{busy || cooldown > 0}}" bindtap="load">{{cooldown > 0 ? cooldown + '秒后再看' : '再看一看'}}</button></view>
-    <view class="row" wx:if="{{current}}"><button class="button secondary row-item" disabled="{{busy}}" bindtap="skip">再看一个</button><button class="button row-item" disabled="{{busy}}" loading="{{saving}}" bindtap="favorite">♡ 收藏这个</button></view>
-    <view class="note" wx:if="{{current}}">左滑换一个 · 右滑收藏。名字释义由模型辅助整理，出处可自行核对。</view>
+    <view class="length-switch" aria-label="名字字数">
+      <view class="length-option {{nameLength === 1 ? 'is-active' : ''}}" data-length="1" bindtap="lengthChange">单字</view>
+      <view class="length-option {{nameLength === 2 ? 'is-active' : ''}}" data-length="2" bindtap="lengthChange">双字</view>
+    </view>
   </view>
-  <view class="muted error" wx:if="{{error}}">{{error}}</view>
+
+  <view class="deck" wx:if="{{ready}}">
+    <view class="name-card card-shadow card-third"></view>
+    <view class="name-card card-shadow card-next" style="{{stackStyle}}" wx:if="{{next}}">
+      <view class="card-kicker">下一页 · 《{{next.item.book}}》</view>
+      <view class="next-name">{{next.item.name}}</view>
+    </view>
+
+    <view
+      class="name-card card-current"
+      style="{{cardStyle}}"
+      wx:if="{{current}}"
+      bindtouchstart="touchStart"
+      catchtouchmove="touchMove"
+      bindtouchend="touchEnd"
+      bindtouchcancel="touchCancel"
+      catchtap="detail"
+    >
+      <view class="decision decision-skip" style="opacity:{{skipOpacity}}">略过</view>
+      <view class="decision decision-like" style="opacity:{{likeOpacity}}">收藏</view>
+
+      <view class="card-heading">
+        <view class="card-kicker">卷中拾字</view>
+        <view class="book-label">《{{current.item.book}}》</view>
+      </view>
+      <view class="name-block">
+        <view class="candidate-name">{{current.item.name}}</view>
+        <view class="candidate-pinyin">{{current.item.pinyin}}</view>
+      </view>
+      <view class="ink-rule"><view class="ink-diamond"></view></view>
+      <view class="candidate-meaning">{{current.item.meaning}}</view>
+      <view class="tags" wx:if="{{current.item.tags.length}}">
+        <text class="tag" wx:for="{{current.item.tags}}" wx:key="*this">{{item}}</text>
+      </view>
+      <view class="source-line">《{{current.item.book}}》 · {{current.item.chapter}}</view>
+      <view class="detail-link">
+        <image class="inline-icon" src="/assets/icons/book-open.svg" mode="aspectFit" />
+        <text>读原文与取名说明</text><text class="arrow">›</text>
+      </view>
+    </view>
+
+    <view class="deck-empty" wx:else>
+      <view class="loading-mark" wx:if="{{loading}}"><view></view><view></view><view></view></view>
+      <view class="empty-title">{{loading ? '正在翻阅典籍' : '这一叠已经看完'}}</view>
+      <view class="empty-copy" wx:if="{{!loading}}">{{cooldown > 0 ? cooldown + ' 秒后继续送来新名字' : '新名字正在陆续准备'}}</view>
+      <button class="retry-button" wx:if="{{!loading}}" disabled="{{cooldown > 0}}" bindtap="retry">{{cooldown > 0 ? '稍候片刻' : '再寻一叠'}}</button>
+    </view>
+  </view>
+
+  <view class="deck deck-loading" wx:else>
+    <view class="deck-empty"><view class="loading-mark"><view></view><view></view><view></view></view><view class="empty-title">正在进入好名千寻</view></view>
+  </view>
+
+  <view class="action-bar" wx:if="{{current}}">
+    <view class="action-wrap">
+      <button class="action-button action-skip" disabled="{{animating}}" bindtap="skip" aria-label="略过这个名字">
+        <image src="/assets/icons/x.svg" mode="aspectFit" />
+      </button>
+      <text>略过</text>
+    </view>
+    <view class="gesture-hint"><view class="hint-line"></view><text>左右滑动</text><view class="hint-line"></view></view>
+    <view class="action-wrap">
+      <button class="action-button action-like" loading="{{saving}}" disabled="{{animating}}" bindtap="favorite" aria-label="收藏这个名字">
+        <image src="/assets/icons/heart.svg" mode="aspectFit" />
+      </button>
+      <text>收藏</text>
+    </view>
+  </view>
+
+  <view class="error-toast" wx:if="{{error}}" bindtap="retry">{{error}}</view>
+  <view class="disclaimer">名字释义由模型辅助整理，出处可点进卡片自行核对</view>
 </view>

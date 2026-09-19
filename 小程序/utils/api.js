@@ -10,5 +10,5 @@ async function call(action,data={}) {
 }
 // Used solely for idempotency, never as identity or a credential.
 function requestId(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.floor(Math.random()*16);return(c==='x'?r:(r&3)|8).toString(16);});}
-function storageKey(user){return 'classical-names-v1:'+user;}
+function storageKey(user){return 'haomingqianxun-v2:'+user;}
 module.exports={call,requestId,storageKey};

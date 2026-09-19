@@ -16,11 +16,13 @@ class 严格参数(BaseModel):
 
 class 拉卡参数(严格参数):
     request_id: UUID
-    surname: str = Field(pattern=r"^[\u3400-\u9fff]{1,2}$")
     name_length: Literal[1, 2] = 2
-    required: str = Field(default="", pattern=r"^[\u3400-\u9fff]{0,2}$")
-    excluded: str = Field(default="", pattern=r"^[\u3400-\u9fff]{0,32}$")
     count: int = Field(default=8, ge=1, le=8)
+    # Rolling-deploy compatibility for the previous experience build. These
+    # fields are intentionally ignored by the shared inventory contract.
+    surname: str = Field(default="", max_length=2)
+    required: str = Field(default="", max_length=2)
+    excluded: str = Field(default="", max_length=32)
 
 
 class 名字参数(严格参数):
@@ -45,9 +47,7 @@ def 卡片(row):
 
 
 def 拉卡(owner, p):
-    if len(p.required) > p.name_length or set(p.required) & set(p.excluded):
-        raise HTTPException(422, "固定字与字数或避用字冲突")
-    指纹 = hashlib.sha256(json.dumps(p.model_dump(mode="json", exclude={"request_id"}), sort_keys=True).encode()).hexdigest()
+    指纹 = hashlib.sha256(json.dumps(p.model_dump(mode="json", exclude={"request_id","surname","required","excluded"}), sort_keys=True).encode()).hexdigest()
     with 连接数据库() as c:
         # All same-user selections serialize across API workers; no leases or process locks.
         c.execute("SELECT id FROM app_users WHERE id=%s FOR UPDATE", (owner,))
@@ -56,27 +56,24 @@ def 拉卡(owner, p):
             if 回执["fingerprint"] != 指纹:
                 raise HTTPException(409, "请求编号已用于其他条件")
             return 回执["response"]
-        档案 = c.execute("""INSERT INTO app_profiles(surname,name_length) VALUES (%s,%s)
-            ON CONFLICT(surname,name_length) DO UPDATE SET surname=excluded.surname RETURNING id""",
-            (p.surname, p.name_length)).fetchone()["id"]
-        条件 = ["m.profile_id=%s", "p.can_generate=1", "NOT EXISTS (SELECT 1 FROM app_deliveries d WHERE d.owner=%s AND d.full_name=m.full_name)"]
-        参数 = [档案, owner]
-        for 字 in set(p.required):
-            条件.append("char_length(m.given_name)-char_length(replace(m.given_name,%s,'')) >= %s")
-            参数.extend([字, p.required.count(字)])
-        if p.excluded:
-            条件.append("m.given_name !~ %s")
-            参数.append("[" + p.excluded + "]")
+        档案 = c.execute("SELECT id FROM app_profiles WHERE surname='' AND name_length=%s", (p.name_length,)).fetchone()
+        if not 档案:
+            raise HTTPException(503, "名字正在准备中，请稍后再试")
+        条件 = ["m.profile_id=%s", "p.can_generate=1", "m.book<>'东亚年号'",
+              "COALESCE((m.payload->>'基础分')::int,0)>=85",
+              "NOT EXISTS (SELECT 1 FROM app_seen_names d WHERE d.owner=%s AND d.given_name=m.given_name)"]
+        参数 = [档案["id"], owner]
         # Rank within each source, then interleave sources; do not load the whole pool in Python.
-        查询 = """SELECT id,payload FROM (
-            SELECT m.id,m.payload,m.book,row_number() OVER (PARTITION BY m.book ORDER BY m.id) AS rank
+        查询 = """SELECT id,given_name,full_name,payload FROM (
+            SELECT m.id,m.given_name,m.full_name,m.payload,m.book,row_number() OVER (PARTITION BY m.book ORDER BY m.id) AS rank
             FROM app_materials m JOIN passages p ON p.id=m.passage_id WHERE """ + " AND ".join(条件) + ") q ORDER BY rank,md5(book || %s) LIMIT %s"
         行 = c.execute(查询, [*参数, str(p.request_id), p.count]).fetchall()
         for 项 in 行:
+            c.execute("INSERT INTO app_seen_names(owner,given_name) VALUES (%s,%s)", (owner, 项["given_name"]))
             c.execute("INSERT INTO app_deliveries(owner,full_name,material_id) VALUES (%s,%s,%s)",
-                      (owner, 项["payload"]["姓名"], 项["id"]))
+                      (owner, 项["full_name"], 项["id"]))
         结果 = {"cards": [卡片(x) for x in 行], "status": "ready" if 行 else "preparing",
-              "message": "" if 行 else "暂时没有符合条件的新名字，可以稍后再看或放宽条件。", "retry_after": 15}
+              "message": "" if 行 else "这一叠已看完，新名字正在陆续准备。可以换个字数，或稍后再来。", "retry_after": 15}
         c.execute("INSERT INTO app_receipts(owner,request_id,fingerprint,response) VALUES (%s,%s,%s,%s)",
                   (owner, p.request_id, 指纹, Jsonb(结果)))
         return 结果

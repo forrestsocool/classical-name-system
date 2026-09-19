@@ -1,40 +1,206 @@
-const {call,requestId,storageKey}=require('../../utils/api');
-const {normalizeCards}=require('../../utils/view');
+const {call, requestId, storageKey} = require('../../utils/api');
+const {normalizeCards} = require('../../utils/view');
+const {dragState, releaseDirection} = require('../../utils/swipe');
+
+function emptyPool() { return {cards: [], pending: null, retryAt: 0, loading: false, error: ''}; }
+const restStyle = 'transform:translate3d(0px,0px,0) rotate(0deg);transition:none;';
+
 Page({
-  data:{editing:true,surname:'',required:'',excluded:'',nameLength:2,lengthIndex:1,lengthLabels:['单字名','双字名'],busy:false,saving:false,current:null,remaining:0,error:'',hint:'暂时没有符合条件的新名字，可以稍后再看或放宽条件。',cooldown:0},
-  async onLoad(){
-    this.cards=[];this.pending=null;
-    try{this.user=await getApp().session();const saved=wx.getStorageSync(storageKey(this.user));
-      if(saved && saved.conditions){const c=saved.conditions;this.setData({surname:c.surname,nameLength:c.name_length,lengthIndex:c.name_length-1,required:c.required||'',excluded:c.excluded||'',editing:false});this.cards=normalizeCards(saved.cards);this.pending=saved.pending||null;this.showCard();}
-    }catch(e){this.setData({error:e.message});}
+  data: {
+    nameLength: 2, current: null, next: null, ready: false, loading: true,
+    animating: false, saving: false, error: '', cooldown: 0,
+    cardStyle: restStyle, stackStyle: '', likeOpacity: 0, skipOpacity: 0
   },
-  onUnload(){clearInterval(this.timer);},
-  input(e){this.setData({[e.currentTarget.dataset.field]:e.detail.value.trim()});},
-  lengthChange(e){this.setData({lengthIndex:Number(e.detail.value),nameLength:Number(e.detail.value)+1});},
-  conditions(){return {surname:this.data.surname,name_length:this.data.nameLength,required:this.data.required,excluded:this.data.excluded,count:8};},
-  persist(){if(this.user)wx.setStorageSync(storageKey(this.user),{conditions:this.activeConditions||this.conditions(),cards:this.cards,pending:this.pending});},
-  showCard(){this.setData({current:this.cards[0]||null,remaining:this.cards.length});},
-  edit(){if(!this.data.busy){this.editingFrom=this.activeConditions||this.conditions();this.setData({editing:true,error:''});}},
-  async start(){
-    if(this.data.busy)return;
-    const c=this.conditions();if(!/^[\u3400-\u9fff]{1,2}$/.test(c.surname)||!/^[\u3400-\u9fff]{0,2}$/.test(c.required)||!/^[\u3400-\u9fff]{0,32}$/.test(c.excluded)){this.setData({error:'请填写汉字姓氏、固定字和避用字'});return;}
-    if(c.required.length>c.name_length||[...c.required].some(ch=>c.excluded.includes(ch))){this.setData({error:'固定字与字数或避用字冲突'});return;}
-    const old=this.activeConditions||this.editingFrom;
-    if(!old||JSON.stringify(old)!==JSON.stringify(c)){this.cards=[];this.pending=null;clearInterval(this.timer);this.setData({cooldown:0});}
-    this.activeConditions=c;this.setData({editing:false,error:''});this.showCard();this.persist();if(!this.cards.length)await this.load();
+
+  async onLoad() {
+    this.pools = {1: emptyPool(), 2: emptyPool()};
+    this.pulls = {};
+    this.visible = true;
+    this.windowWidth = (wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()).windowWidth || 375;
+    await this.connect();
   },
-  async load(){
-    if(this.data.busy||this.data.cooldown>0)return;this.setData({busy:true,error:''});
-    try{this.user=await getApp().session();this.activeConditions=this.conditions();
-      if(!this.pending)this.pending={...this.activeConditions,request_id:requestId()};this.persist();
-      const result=await call('feed.pull',this.pending);this.cards=normalizeCards(result.cards);this.pending=null;this.persist();this.showCard();
-      if(!this.cards.length){this.setData({hint:result.message,cooldown:result.retry_after||15});clearInterval(this.timer);this.timer=setInterval(()=>{const n=Math.max(0,this.data.cooldown-1);this.setData({cooldown:n});if(!n)clearInterval(this.timer);},1000);}
-    }catch(e){if(e.status===422||e.status===409){this.pending=null;this.persist();}this.setData({error:e.message});}finally{this.setData({busy:false});}
+  onShow() { this.visible = true; this.startTicker(); },
+  onHide() {
+    this.visible = false;
+    clearInterval(this.ticker);
+    if (!this.data.animating) this.resetDrag();
   },
-  skip(){if(this.data.busy||!this.cards.length)return;this.cards.shift();this.persist();this.showCard();if(!this.cards.length)this.load();},
-  async favorite(){if(this.data.busy||!this.data.current)return;this.setData({busy:true,saving:true,error:''});try{await call('favorites.add',{material_id:this.data.current.id});this.cards.shift();this.persist();this.showCard();wx.showToast({title:'已收藏',icon:'success'});}catch(e){this.setData({error:e.message});}finally{this.setData({busy:false,saving:false});}if(!this.cards.length)this.load();},
-  detail(){if(!this.data.current)return;getApp().selectedCard=this.data.current;wx.navigateTo({url:'/pages/detail/index'});},
-  touchStart(e){this.touch=e.touches.length===1?{x:e.touches[0].clientX,y:e.touches[0].clientY}:null;},
-  touchCancel(){this.touch=null;},
-  touchEnd(e){if(!this.touch||!e.changedTouches.length)return;const t=e.changedTouches[0],dx=t.clientX-this.touch.x,dy=t.clientY-this.touch.y;this.touch=null;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.5){if(dx>0)this.favorite();else this.skip();}}
+  onUnload() { this.closed = true; clearInterval(this.ticker); },
+
+  async connect() {
+    if (this.connecting) return;
+    this.connecting = true;
+    this.setData({loading: true, error: ''});
+    try {
+      this.user = await getApp().session();
+      const saved = wx.getStorageSync(storageKey(this.user));
+      if (saved && saved.version === 2) {
+        for (const length of [1, 2]) {
+          const pool = saved.pools && saved.pools[length];
+          if (!pool) continue;
+          this.pools[length].cards = normalizeCards(pool.cards).filter(card => card && card.id && card.item.name.length === length);
+          this.pools[length].pending = pool.pending && pool.pending.name_length === length ? pool.pending : null;
+          this.pools[length].retryAt = Math.min(Number(pool.retryAt) || 0, Date.now() + 60000);
+        }
+        if (saved.selectedLength === 1 || saved.selectedLength === 2) this.setData({nameLength: saved.selectedLength});
+      }
+      if (this.closed) return;
+      this.setData({ready: true});
+      this.render();
+      this.startTicker();
+      await this.refill(this.data.nameLength);
+    } catch (error) {
+      if (!this.closed) this.setData({loading: false, error: error.message || '暂时没有连接上，请重试'});
+    } finally { this.connecting = false; }
+  },
+
+  startTicker() {
+    clearInterval(this.ticker);
+    this.ticker = setInterval(() => {
+      if (!this.visible || !this.data.ready || this.closed) return;
+      const pool = this.pools[this.data.nameLength];
+      const cooldown = Math.max(0, Math.ceil((pool.retryAt - Date.now()) / 1000));
+      if (cooldown !== this.data.cooldown) this.setData({cooldown});
+      if (!cooldown && !pool.cards.length && !pool.loading && !pool.error) this.refill(this.data.nameLength);
+    }, 1000);
+  },
+  persist() {
+    if (!this.user) return;
+    const pools = {};
+    for (const length of [1, 2]) {
+      const pool = this.pools[length];
+      pools[length] = {cards: pool.cards, pending: pool.pending, retryAt: pool.retryAt};
+    }
+    wx.setStorageSync(storageKey(this.user), {version: 2, selectedLength: this.data.nameLength, pools});
+  },
+  render() {
+    if (this.closed) return;
+    const pool = this.pools[this.data.nameLength];
+    this.setData({
+      current: pool.cards[0] || null, next: pool.cards[1] || null,
+      loading: pool.loading, error: pool.error,
+      cooldown: Math.max(0, Math.ceil((pool.retryAt - Date.now()) / 1000))
+    });
+  },
+
+  refill(length, force = false) {
+    if (!this.user || this.closed) return Promise.resolve();
+    if (this.pulls[length]) return this.pulls[length];
+    const pool = this.pools[length];
+    if (!force && (pool.cards.length > 3 || pool.retryAt > Date.now() || pool.error)) return Promise.resolve();
+    pool.loading = true;
+    pool.error = '';
+    if (!pool.pending) pool.pending = {name_length: length, count: 8, request_id: requestId()};
+    this.persist();
+    if (length === this.data.nameLength) this.render();
+    const request = pool.pending;
+    // Register the in-flight promise before a synchronously failing transport can finish.
+    const pending = Promise.resolve().then(async () => {
+      try {
+        const result = await call('feed.pull', request);
+        const received = normalizeCards(result.cards);
+        const ids = new Set(pool.cards.map(card => card.id));
+        for (const card of received) {
+          if (!ids.has(card.id)) { pool.cards.push(card); ids.add(card.id); }
+        }
+        pool.pending = null;
+        pool.retryAt = received.length ? 0 : Date.now() + Math.max(5, Math.min(60, result.retry_after || 15)) * 1000;
+      } catch (error) {
+        if (error.status === 409 || error.status === 422) pool.pending = null;
+        pool.error = error.message || '新名字暂时没送到，点一下重试';
+      } finally {
+        pool.loading = false;
+        delete this.pulls[length];
+        this.persist();
+        if (length === this.data.nameLength && !this.data.animating) this.render();
+      }
+    });
+    this.pulls[length] = pending;
+    return pending;
+  },
+  async retry() {
+    if (!this.user) return this.connect();
+    return this.refill(this.data.nameLength, true);
+  },
+  async lengthChange(event) {
+    const length = Number(event.currentTarget.dataset.length);
+    if (![1, 2].includes(length) || length === this.data.nameLength || this.data.animating) return;
+    this.resetDrag();
+    this.setData({nameLength: length});
+    this.render();
+    this.persist();
+    await this.refill(length);
+  },
+
+  resetDrag(animated = false) {
+    this.touch = null;
+    if (this.closed) return;
+    this.setData({cardStyle: animated ? restStyle.replace('none', 'transform 260ms cubic-bezier(.2,.8,.2,1)') : restStyle,
+      stackStyle: '', likeOpacity: 0, skipOpacity: 0});
+  },
+  touchStart(event) {
+    if (this.data.animating || !this.data.current || event.touches.length !== 1) return;
+    const point = event.touches[0];
+    this.touch = {x: point.clientX, y: point.clientY, time: event.timeStamp || Date.now(), axis: null, lastPaint: 0};
+  },
+  touchMove(event) {
+    if (!this.touch || this.data.animating) return;
+    if (event.touches.length !== 1) return this.resetDrag(true);
+    const point = event.touches[0];
+    const dx = point.clientX - this.touch.x, dy = point.clientY - this.touch.y;
+    if (!this.touch.axis && Math.max(Math.abs(dx), Math.abs(dy)) > 8) this.touch.axis = Math.abs(dx) > Math.abs(dy) * 1.1 ? 'x' : 'y';
+    if (this.touch.axis !== 'x') return;
+    this.ignoreTapUntil = Date.now() + 350;
+    const now = Date.now();
+    if (now - this.touch.lastPaint < 16) return;
+    this.touch.lastPaint = now;
+    const state = dragState(dx, dy, this.windowWidth);
+    this.setData(state);
+  },
+  touchCancel() { if (!this.data.animating) this.resetDrag(true); },
+  touchEnd(event) {
+    if (!this.touch || this.data.animating) return;
+    const start = this.touch, point = event.changedTouches[0];
+    this.touch = null;
+    if (!point) return this.resetDrag(true);
+    const dx = point.clientX - start.x, dy = point.clientY - start.y;
+    const elapsed = (event.timeStamp || Date.now()) - start.time;
+    const direction = start.axis === 'y' ? 0 : releaseDirection(dx, dy, elapsed, this.windowWidth);
+    if (!direction) return this.resetDrag(true);
+    this.ignoreTapUntil = Date.now() + 350;
+    return this.swipe(direction);
+  },
+  skip() { return this.swipe(-1); },
+  favorite() { return this.swipe(1); },
+  async swipe(direction) {
+    if (this.data.animating || !this.data.current) return;
+    const length = this.data.nameLength, pool = this.pools[length], card = pool.cards[0];
+    this.touch = null;
+    this.setData({animating: true, saving: direction > 0, error: '',
+      cardStyle: `transform:translate3d(${direction * this.windowWidth * 1.35}px,-24px,0) rotate(${direction * 23}deg);transition:transform 280ms cubic-bezier(.2,.65,.25,1);`,
+      stackStyle: 'transform:translateY(0) scale(1);opacity:1;',
+      likeOpacity: direction > 0 ? 1 : 0, skipOpacity: direction < 0 ? 1 : 0});
+    // Capture a rejection immediately while the outgoing card is animating.
+    const save = direction > 0 ? call('favorites.add', {material_id: card.id}).then(() => null, error => error) : Promise.resolve(null);
+    await new Promise(resolve => setTimeout(resolve, 290));
+    const error = await save;
+    if (error) {
+      this.resetDrag(true);
+      if (!this.closed) this.setData({error: '收藏没有保存成功，名字已留在原位，请重试。', saving: false});
+      await new Promise(resolve => setTimeout(resolve, 270));
+    } else {
+      if (pool.cards[0] && pool.cards[0].id === card.id) pool.cards.shift();
+      this.persist();
+      this.resetDrag();
+      this.render();
+      if (direction > 0 && this.visible && !this.closed) wx.vibrateShort({type: 'light'});
+    }
+    if (!this.closed) this.setData({animating: false, saving: false});
+    if (!error) this.refill(length);
+  },
+  detail() {
+    if (!this.data.current || this.data.animating || Date.now() < (this.ignoreTapUntil || 0)) return;
+    getApp().selectedCard = this.data.current;
+    wx.navigateTo({url: '/pages/detail/index'});
+  }
 });

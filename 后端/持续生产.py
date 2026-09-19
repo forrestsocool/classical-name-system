@@ -24,15 +24,9 @@ def 心跳(status, error=""):
 
 
 def 播种档案():
-    from .小程序业务 import 拉卡参数
     with 连接数据库() as c:
-        for surname in os.getenv("PRODUCER_SURNAMES", "李,王,张,刘,陈").split(","):
-            surname = surname.strip()
-            if not surname:
-                continue
-            for length in (1, 2):
-                拉卡参数(request_id=uuid.uuid4(), surname=surname, name_length=length)
-                c.execute("INSERT INTO app_profiles(surname,name_length) VALUES (%s,%s) ON CONFLICT DO NOTHING", (surname, length))
+        for length in (1, 2):
+            c.execute("INSERT INTO app_profiles(surname,name_length) VALUES ('',%s) ON CONFLICT DO NOTHING", (length,))
 
 
 def 生产一次():
@@ -43,9 +37,10 @@ def 生产一次():
     验证模型地址(配置.地址)
     with 连接数据库() as c:
         档案 = c.execute("""SELECT f.id,f.surname,f.name_length,b.name AS book FROM app_profiles f
-            CROSS JOIN (SELECT DISTINCT b.name FROM books b JOIN passages p ON p.book_id=b.id WHERE p.can_generate=1) b
+            CROSS JOIN (SELECT DISTINCT b.name FROM books b JOIN passages p ON p.book_id=b.id
+                WHERE p.can_generate=1 AND b.name<>'东亚年号') b
             LEFT JOIN app_source_progress s ON s.profile_id=f.id AND s.book=b.name
-            WHERE f.enabled AND (s.retry_at IS NULL OR s.retry_at<=now())
+            WHERE f.enabled AND f.surname='' AND (s.retry_at IS NULL OR s.retry_at<=now())
             ORDER BY f.last_scheduled,COALESCE(s.last_started,'epoch'::timestamptz),f.id,b.name LIMIT 1""").fetchone()
         if not 档案:
             心跳("等待可用来源")
@@ -61,9 +56,9 @@ def 生产一次():
         if not 召回:
             c.execute("UPDATE app_source_progress SET retry_at=now()+interval '1 hour' WHERE profile_id=%s AND book=%s", (编号, 书))
             return False
-        上限 = max(0, int(os.getenv("PRODUCER_DAILY_BATCHES", "480")))
+        上限 = max(0, int(os.getenv("PRODUCER_DAILY_BATCHES", "0")))
         c.execute("INSERT INTO app_budget(day) VALUES (CURRENT_DATE) ON CONFLICT DO NOTHING")
-        批次 = c.execute("UPDATE app_budget SET batches=batches+1 WHERE day=CURRENT_DATE AND batches<%s RETURNING batches", (上限,)).fetchone()
+        批次 = c.execute("UPDATE app_budget SET batches=batches+1 WHERE day=CURRENT_DATE AND (%s=0 OR batches<%s) RETURNING batches", (上限, 上限)).fetchone()
         if not 批次:
             心跳("今日额度已用完")
             return False

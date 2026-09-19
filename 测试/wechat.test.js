@@ -1,78 +1,251 @@
 'use strict';
-const test=require('node:test');
-const assert=require('node:assert/strict');
-const fs=require('node:fs');
-const path=require('node:path');
-const vm=require('node:vm');
-const crypto=require('node:crypto');
-const {createHandler,signedHeaders}=require('../云函数/nameGateway/gateway');
-const view=require('../小程序/utils/view');
-const env={CORE_API_URL:'https://core.example.com',GATEWAY_SECRET:'test-gateway-secret-2026-32-characters',WECHAT_APP_ID:'wx1234567890abcdef'};
-const context={APPID:env.WECHAT_APP_ID,OPENID:'trusted-user'};
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const crypto = require('node:crypto');
+const {createHandler, signedHeaders} = require('../云函数/nameGateway/gateway');
+const view = require('../小程序/utils/view');
+const swipe = require('../小程序/utils/swipe');
 
-test('gateway forwards only trusted platform identity to fixed endpoint',async()=>{
+const env = {
+  CORE_API_URL: 'https://core.example.com',
+  GATEWAY_SECRET: 'test-gateway-secret-2026-32-characters',
+  WECHAT_APP_ID: 'wx1234567890abcdef'
+};
+const context = {APPID: env.WECHAT_APP_ID, OPENID: 'trusted-user'};
+
+test('gateway forwards only trusted platform identity to fixed endpoint', async () => {
   let seen;
-  const handler=createHandler({getContext:()=>context,env,transport:async(url,body,headers)=>{seen={url,body,headers};return{status:200,data:{cards:[]}};}});
-  const result=await handler({action:'feed.pull',data:{surname:'李'},openid:'victim',appid:'wrong',url:'https://evil.example',headers:{'X-Admin-Key':'bad'}});
-  assert.equal(result.ok,true);assert.equal(seen.url.href,'https://core.example.com/internal/v1/dispatch');
-  assert.deepEqual(JSON.parse(seen.body),{appid:context.APPID,openid:'trusted-user',action:'feed.pull',data:{surname:'李'}});
-  assert.equal(seen.headers['Content-Length'],Buffer.byteLength(seen.body));assert.equal(seen.headers['X-Admin-Key'],undefined);
-  const digest=crypto.createHash('sha256').update(seen.body).digest('hex');
-  const expected=crypto.createHmac('sha256',env.GATEWAY_SECRET).update(`v1\n${seen.headers['X-Gateway-Timestamp']}\n${seen.headers['X-Gateway-Nonce']}\n${digest}`).digest('hex');
-  assert.equal(seen.headers['X-Gateway-Signature'],expected);
-});
-test('gateway rejects missing identity, unexpected app, admin actions and oversized input',async()=>{
-  const transport=()=>{throw new Error('must not forward');};
-  assert.equal((await createHandler({getContext:()=>({}),env,transport})({action:'session.get'})).status,401);
-  assert.equal((await createHandler({getContext:()=>({...context,APPID:'another'}),env,transport})({action:'session.get'})).status,401);
-  const handler=createHandler({getContext:()=>context,env,transport});
-  assert.equal((await handler({action:'admin.metrics'})).status,404);
-  assert.equal((await handler({action:'feed.pull',data:{x:'字'.repeat(10000)}})).status,413);
-  assert.equal((await handler({action:'feed.pull',data:[]})).status,422);
-});
-test('gateway rejects redirects/config errors and hides upstream secrets',async()=>{
-  for(const url of ['http://core.example.com','https://user:pass@core.example.com','https://core.example.com/path','https://core.example.com?target=evil']){
-    assert.equal((await createHandler({getContext:()=>context,env:{...env,CORE_API_URL:url}})({action:'session.get'})).status,503);
-  }
-  for(const status of [302,500]){
-    const handler=createHandler({getContext:()=>context,env,transport:async()=>({status,data:{detail:'secret-db-url'}})});
-    const result=await handler({action:'session.get'});assert.equal(result.status,503);assert.ok(!result.message.includes('secret'));
-  }
-});
-test('signature changes with body and timestamp',()=>{
-  const a=signedHeaders('中文',env.GATEWAY_SECRET,'1789640000','a'.repeat(32));
-  const b=signedHeaders('中文 ',env.GATEWAY_SECRET,'1789640000','a'.repeat(32));
-  assert.notEqual(a['X-Gateway-Signature'],b['X-Gateway-Signature']);
+  const handler = createHandler({
+    getContext: () => context,
+    env,
+    transport: async (url, body, headers) => {
+      seen = {url, body, headers};
+      return {status: 200, data: {cards: []}};
+    }
+  });
+  const result = await handler({
+    action: 'feed.pull',
+    data: {name_length: 2, count: 8, request_id: crypto.randomUUID()},
+    openid: 'victim',
+    appid: 'wrong',
+    url: 'https://evil.example',
+    headers: {'X-Admin-Key': 'bad'}
+  });
+  assert.equal(result.ok, true);
+  assert.equal(seen.url.href, 'https://core.example.com/internal/v1/dispatch');
+  const forwarded = JSON.parse(seen.body);
+  assert.equal(forwarded.appid, context.APPID);
+  assert.equal(forwarded.openid, context.OPENID);
+  assert.equal(forwarded.data.name_length, 2);
+  assert.equal(forwarded.data.surname, undefined);
+  assert.equal(seen.headers['Content-Length'], Buffer.byteLength(seen.body));
+  assert.equal(seen.headers['X-Admin-Key'], undefined);
+  const digest = crypto.createHash('sha256').update(seen.body).digest('hex');
+  const expected = crypto.createHmac('sha256', env.GATEWAY_SECRET)
+    .update(`v1\n${seen.headers['X-Gateway-Timestamp']}\n${seen.headers['X-Gateway-Nonce']}\n${digest}`)
+    .digest('hex');
+  assert.equal(seen.headers['X-Gateway-Signature'], expected);
 });
 
-function pageHarness(call,user='user-A',saved={}){
-  let page;const storage=new Map(Object.entries(saved));const app={session:async()=>user};
-  const wx={getStorageSync:key=>storage.get(key),setStorageSync:(key,value)=>storage.set(key,JSON.parse(JSON.stringify(value))),showToast(){},navigateTo(){}};
-  const sandbox={Page:p=>{page=p;},getApp:()=>app,wx,require:modulePath=>modulePath.includes('/utils/view')?view:{call,requestId:()=>crypto.randomUUID(),storageKey:u=>'cache:'+u},setInterval:()=>1,clearInterval(){},console};
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../小程序/pages/discover/index.js'),'utf8'),sandbox);
-  page.data=JSON.parse(JSON.stringify(page.data));page.setData=patch=>Object.assign(page.data,patch);
-  return{page,storage};
+test('gateway rejects missing identity, unexpected app, admin actions and oversized input', async () => {
+  const transport = () => { throw new Error('must not forward'); };
+  assert.equal((await createHandler({getContext: () => ({}), env, transport})({action: 'session.get'})).status, 401);
+  assert.equal((await createHandler({getContext: () => ({...context, APPID: 'another'}), env, transport})({action: 'session.get'})).status, 401);
+  const handler = createHandler({getContext: () => context, env, transport});
+  assert.equal((await handler({action: 'admin.metrics'})).status, 404);
+  assert.equal((await handler({action: 'feed.pull', data: {x: '字'.repeat(10000)}})).status, 413);
+  assert.equal((await handler({action: 'feed.pull', data: []})).status, 422);
+});
+
+test('gateway rejects redirects/config errors and hides upstream secrets', async () => {
+  for (const url of ['http://core.example.com', 'https://user:pass@core.example.com', 'https://core.example.com/path', 'https://core.example.com?target=evil']) {
+    assert.equal((await createHandler({getContext: () => context, env: {...env, CORE_API_URL: url}})({action: 'session.get'})).status, 503);
+  }
+  for (const status of [302, 500]) {
+    const handler = createHandler({getContext: () => context, env, transport: async () => ({status, data: {detail: 'secret-db-url'}})});
+    const result = await handler({action: 'session.get'});
+    assert.equal(result.status, 503);
+    assert.ok(!result.message.includes('secret'));
+  }
+});
+
+test('signature changes with body and timestamp', () => {
+  const a = signedHeaders('中文', env.GATEWAY_SECRET, '1789640000', 'a'.repeat(32));
+  const b = signedHeaders('中文 ', env.GATEWAY_SECRET, '1789640000', 'a'.repeat(32));
+  assert.notEqual(a['X-Gateway-Signature'], b['X-Gateway-Signature']);
+});
+
+function card(id, name) {
+  return {id, item: {姓名: name, 拼音带调: 'qīng hé', 现代释义: '清润平和，温雅从容。', 文化标签: ['清雅'], 书名: '诗经', 篇章: '小雅'}};
 }
-test('mini app keeps request ID across failed pull and retries',async()=>{
-  const ids=[];let fail=true;
-  const {page,storage}=pageHarness(async(action,data)=>{ids.push(data.request_id);if(fail){fail=false;throw new Error('offline');}return{cards:[{id:1,item:{姓名:'李清和'}}]};});
-  await page.onLoad();page.setData({surname:'李'});await page.start();
-  assert.ok(page.pending);assert.equal(storage.get('cache:user-A').pending.request_id,ids[0]);
-  await page.load();assert.equal(ids[0],ids[1]);assert.equal(page.data.current.id,1);assert.equal(page.pending,null);
+
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return {promise, resolve, reject};
+}
+
+function pageHarness(call, user = 'user-A', saved = {}) {
+  let page;
+  const storage = new Map(Object.entries(saved));
+  const app = {selectedCard: null, session: async () => user};
+  const events = {navigations: [], vibrations: 0};
+  const wx = {
+    getWindowInfo: () => ({windowWidth: 375}),
+    getSystemInfoSync: () => ({windowWidth: 375}),
+    getStorageSync: key => storage.get(key),
+    setStorageSync: (key, value) => storage.set(key, JSON.parse(JSON.stringify(value))),
+    navigateTo: value => events.navigations.push(value),
+    vibrateShort: () => { events.vibrations += 1; }
+  };
+  const sandbox = {
+    Page: definition => { page = definition; },
+    getApp: () => app,
+    wx,
+    require: modulePath => {
+      if (modulePath.includes('/utils/view')) return view;
+      if (modulePath.includes('/utils/swipe')) return swipe;
+      return {call, requestId: () => crypto.randomUUID(), storageKey: value => `cache:${value}`};
+    },
+    setInterval: () => 1,
+    clearInterval() {},
+    setTimeout: callback => { queueMicrotask(callback); return 1; },
+    Date,
+    Promise,
+    Set,
+    console
+  };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../小程序/pages/discover/index.js'), 'utf8'), sandbox);
+  page.data = JSON.parse(JSON.stringify(page.data));
+  page.setData = patchData => Object.assign(page.data, patchData);
+  return {page, storage, app, events};
+}
+
+test('mini app opens directly on a double-name deck and sends no surname filters', async () => {
+  const requests = [];
+  const {page} = pageHarness(async (action, data) => {
+    requests.push({action, data});
+    return {cards: [card(1, '清和'), card(2, '景行')]};
+  });
+  await page.onLoad();
+  assert.equal(page.data.ready, true);
+  assert.equal(page.data.nameLength, 2);
+  assert.equal(page.data.current.item.name, '清和');
+  assert.equal(page.data.next.item.name, '景行');
+  assert.deepEqual(Object.keys(requests[0].data).sort(), ['count', 'name_length', 'request_id']);
+  assert.equal(requests[0].data.name_length, 2);
+  assert.equal(requests[0].data.count, 8);
 });
-test('mini app keeps current card when favorite fails and blocks double clicks',async()=>{
-  let finish,calls=0;const {page}=pageHarness(()=>{calls++;return new Promise((resolve,reject)=>{finish=reject;});});
-  await page.onLoad();page.cards=[{id:1,item:{姓名:'李清和'}}];page.showCard();
-  const first=page.favorite();await page.favorite();assert.equal(calls,1);finish(new Error('offline'));await first;
-  assert.equal(page.data.current.id,1);assert.equal(page.data.busy,false);
+
+test('mini app reuses the same request ID after an uncertain pull failure', async () => {
+  const ids = [];
+  let fail = true;
+  const {page, storage} = pageHarness(async (action, data) => {
+    ids.push(data.request_id);
+    if (fail) { fail = false; throw new Error('offline'); }
+    return {cards: [card(1, '清和')]};
+  });
+  await page.onLoad();
+  const cached = storage.get('cache:user-A');
+  assert.equal(cached.pools['2'].pending.request_id, ids[0]);
+  await page.retry();
+  assert.equal(ids[0], ids[1]);
+  assert.equal(page.data.current.id, 1);
+  assert.equal(storage.get('cache:user-A').pools['2'].pending, null);
 });
-test('mini app cache is scoped to authenticated user and rejects contradictory filters',async()=>{
-  let calls=0;const {page}=pageHarness(async()=>{calls++;return{cards:[]};},'user-B',{'cache:user-A':{conditions:{surname:'王',name_length:2},cards:[{id:99}]}});
-  await page.onLoad();assert.equal(page.data.current,null);assert.equal(page.data.surname,'');
-  page.setData({surname:'李',required:'清',excluded:'清'});await page.start();assert.equal(calls,0);assert.ok(page.data.error);
+
+test('favorite failure returns the card and blocks a second action', async () => {
+  const save = deferred();
+  let saves = 0;
+  const {page} = pageHarness(async (action) => {
+    if (action === 'feed.pull') return {cards: [card(1, '清和'), card(2, '景行')]};
+    saves += 1;
+    return save.promise;
+  });
+  await page.onLoad();
+  const first = page.favorite();
+  await page.favorite();
+  assert.equal(saves, 1);
+  save.reject(new Error('offline'));
+  await first;
+  assert.equal(page.data.current.id, 1);
+  assert.equal(page.data.animating, false);
+  assert.match(page.data.error, /留在原位/);
 });
-test('changing conditions clears cached cards and pending request',async()=>{
-  let requested;const {page}=pageHarness(async(action,data)=>{requested=data;return{cards:[]};});
-  await page.onLoad();page.setData({surname:'李'});page.activeConditions=page.conditions();page.cards=[{id:1}];page.pending={request_id:'old'};
-  page.edit();page.setData({surname:'王'});await page.start();assert.equal(requested.surname,'王');assert.notEqual(requested.request_id,'old');assert.equal(page.cards.length,0);
+
+test('successful favorite advances once and prefetches without duplicate actions', async () => {
+  const save = deferred();
+  let saves = 0;
+  const {page, events} = pageHarness(async (action) => {
+    if (action === 'feed.pull') return {cards: [card(1, '清和'), card(2, '景行'), card(3, '令仪'), card(4, '攸宁')]};
+    saves += 1;
+    return save.promise;
+  });
+  await page.onLoad();
+  const first = page.favorite();
+  await page.skip();
+  assert.equal(saves, 1);
+  save.resolve({favorite: true});
+  await first;
+  assert.equal(page.data.current.id, 2);
+  assert.equal(events.vibrations, 1);
+});
+
+test('late single-name response cannot replace the active double-name deck', async () => {
+  const single = deferred();
+  const {page, storage} = pageHarness(async (action, data) => {
+    if (data.name_length === 1) return single.promise;
+    return {cards: [card(21, '清和'), card(22, '景行'), card(23, '令仪'), card(24, '攸宁')]};
+  });
+  await page.onLoad();
+  const switching = page.lengthChange({currentTarget: {dataset: {length: 1}}});
+  assert.equal(page.data.nameLength, 1);
+  await page.lengthChange({currentTarget: {dataset: {length: 2}}});
+  assert.equal(page.data.current.item.name, '清和');
+  single.resolve({cards: [card(11, '宁')]});
+  await switching;
+  assert.equal(page.data.nameLength, 2);
+  assert.equal(page.data.current.item.name, '清和');
+  assert.equal(storage.get('cache:user-A').pools['1'].cards[0].item.name, '宁');
+});
+
+test('cache is scoped to the OpenID-derived user and restores each length independently', async () => {
+  const cached = {
+    version: 2,
+    selectedLength: 1,
+    pools: {
+      1: {cards: [card(7, '宁'), card(8, '安'), card(9, '和'), card(10, '清')], pending: null, retryAt: 0},
+      2: {cards: [card(11, '清和')], pending: null, retryAt: 0}
+    }
+  };
+  let calls = 0;
+  const {page} = pageHarness(async () => { calls += 1; return {cards: []}; }, 'user-B', {'cache:user-A': cached, 'cache:user-B': cached});
+  await page.onLoad();
+  assert.equal(page.data.nameLength, 1);
+  assert.equal(page.data.current.item.name, '宁');
+  assert.equal(calls, 0);
+});
+
+test('drag math follows the finger, reveals direction and rejects vertical or short gestures', () => {
+  const right = swipe.dragState(96, 20, 375);
+  assert.match(right.cardStyle, /translate3d\(96px,3.6px,0\)/);
+  assert.ok(right.likeOpacity > 0.9);
+  assert.equal(right.skipOpacity, 0);
+  assert.equal(swipe.releaseDirection(100, 12, 500, 375), 1);
+  assert.equal(swipe.releaseDirection(-42, 3, 55, 375), -1);
+  assert.equal(swipe.releaseDirection(28, 2, 70, 375), 0);
+  assert.equal(swipe.releaseDirection(120, 118, 180, 375), 0);
+});
+
+test('discover markup shows the new brand and contains no first-use form', () => {
+  const markup = fs.readFileSync(path.join(__dirname, '../小程序/pages/discover/index.wxml'), 'utf8');
+  assert.match(markup, /好名千寻/);
+  assert.match(markup, /catchtouchmove="touchMove"/);
+  assert.match(markup, /单字/);
+  assert.match(markup, /双字/);
+  assert.doesNotMatch(markup, /姓氏|固定字|避用字/);
 });
