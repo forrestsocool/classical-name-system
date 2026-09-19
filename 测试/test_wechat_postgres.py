@@ -82,10 +82,12 @@ class PostgreSQLTests(unittest.TestCase):
             names = ((self.single_profile, ("宁", "安", "和", "清", "嘉", "远")),
                      (self.double_profile, ("清和", "知远", "明德", "清清", "文轩", "思齐", "望舒", "嘉宁", "云舟", "书涵", "怀瑾", "如玉")))
             for profile, values in names:
-                for name in values:
+                for index, name in enumerate(values):
+                    male_score, female_score = ((78,22) if index % 2 == 0 else (31,69))
                     payload = {"姓名": name, "名字": name, "书名": p["book"], "篇章": p["section_title"], "原文": p["text"],
                         "来源片段编号": p["id"], "原文位置": 0, "取字方式": "原文连取", "出处核验状态": "已核验", "基础分": 90,
-                        "现代释义": "测试释义", "文化标签": ["清朗"], "拼音带调": "qīng hé"}
+                        "现代释义": "测试释义", "文化标签": ["清朗"], "拼音带调": "qīng hé",
+                        "男孩适配分": male_score, "女孩适配分": female_score}
                     c.execute("INSERT INTO app_materials(profile_id,given_name,full_name,book,passage_id,payload) VALUES (%s,%s,%s,%s,%s,%s)",
                               (profile,name,name,p["book"],p["id"],Jsonb(payload)))
 
@@ -159,6 +161,17 @@ class PostgreSQLTests(unittest.TestCase):
         self.assertEqual(len(names),12)
         self.assertEqual(len(names),len(set(names)))
 
+    def test_gender_filter_uses_model_scores_and_any_keeps_both(self):
+        male = self.request("feed.pull", self.pull(gender="male", count=6), user="male-user").json()["cards"]
+        female = self.request("feed.pull", self.pull(gender="female", count=6), user="female-user").json()["cards"]
+        any_gender = self.request("feed.pull", self.pull(gender="any", count=8), user="any-user").json()["cards"]
+        self.assertTrue(male)
+        self.assertTrue(female)
+        self.assertTrue(all(x["item"]["男孩适配分"] >= x["item"]["女孩适配分"] for x in male))
+        self.assertTrue(all(x["item"]["女孩适配分"] >= x["item"]["男孩适配分"] for x in female))
+        self.assertTrue(any(x["item"]["男孩适配分"] > x["item"]["女孩适配分"] for x in any_gender))
+        self.assertTrue(any(x["item"]["女孩适配分"] > x["item"]["男孩适配分"] for x in any_gender))
+
     def test_low_score_and_era_materials_are_not_exposed(self):
         with self.connect() as c:
             low=c.execute("SELECT id FROM app_materials WHERE profile_id=%s ORDER BY id LIMIT 1",(self.double_profile,)).fetchone()['id']
@@ -218,7 +231,8 @@ class PostgreSQLTests(unittest.TestCase):
                 "原文":self.passage['text'],"来源片段编号":self.passage['id'],"原文位置":0,
                 "取字方式":"原文连取","出处核验状态":"已核验"}]
         def approve(items, request, config):
-            return [{**x,'基础分':90,'现代释义':'结合古籍语境的测试释义','文化标签':['清朗']} for x in items]
+            return [{**x,'基础分':90,'现代释义':'结合古籍语境的测试释义','文化标签':['清朗'],
+                '男孩适配分':55,'女孩适配分':45} for x in items]
         with patch.object(producer,'读取环境配置',return_value=config), patch.object(producer,'验证模型地址'), \
              patch.object(producer,'批量召回',side_effect=recall), patch.object(producer,'补充解释',side_effect=lambda _,items,__:items), \
              patch.object(producer,'模型筛选单批',side_effect=approve) as model:
@@ -235,6 +249,7 @@ class PostgreSQLTests(unittest.TestCase):
             self.assertGreater(dict((x['name_length'],x['n']) for x in stocks)[2],12)
             self.assertEqual(set(requested_lengths[:2]),{1,2})
             self.assertEqual(c.execute('SELECT count(*) AS n FROM app_users').fetchone()['n'],0)
+            self.assertEqual(c.execute("SELECT count(*) AS n FROM app_materials WHERE payload ? '男孩适配分' AND payload ? '女孩适配分'").fetchone()['n'],21)
 
     def test_worker_failure_consumes_budget_but_can_retry_candidates(self):
         config=模型配置(地址='https://example.com/v1/chat/completions',密钥='test-only',模型='test')

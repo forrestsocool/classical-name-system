@@ -1,0 +1,4 @@
+.tab-bar { position: fixed; z-index: 999; left: 0; right: 0; bottom: 0; height: calc(105rpx + env(safe-area-inset-bottom)); padding: 9rpx 68rpx env(safe-area-inset-bottom); display: flex; align-items: flex-start; justify-content: space-between; border-top: 1rpx solid #edf0ec; background: rgba(255, 254, 250, .98); box-shadow: 0 -5rpx 24rpx rgba(48, 67, 58, .04); }
+.tab-item { width: 150rpx; height: 87rpx; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5rpx; color: #69736f; font-size: 21rpx; }
+.tab-item image { width: 41rpx; height: 41rpx; }
+.tab-item.is-active { color: #0b584b; font-weight: 600; }

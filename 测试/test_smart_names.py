@@ -7,7 +7,7 @@ from unittest.mock import patch
 from contextlib import closing
 from fastapi.testclient import TestClient
 from 后端 import 起名服务 as 服务
-from 后端.智能筛选 import 批量召回, 模型筛选, 多样性重排, 智能生成
+from 后端.智能筛选 import 批量召回, 模型筛选, 多样性重排, 智能生成, 归一化性别评分
 from 后端.模型接口 import 模型配置, 验证模型地址
 
 
@@ -58,15 +58,21 @@ class 智能流程测试(unittest.TestCase):
             class 内容:
                 def read(self, n):
                     return json.dumps({"choices":[{"message":{"content":json.dumps({"候选":[
-                        {"编号":0,"分数":90,"释义":"品性温和","文化标签":["温润"]},
-                        {"编号":0,"分数":95,"释义":"重复名字"},
-                        {"编号":999,"分数":95,"释义":"池外名字"},
-                        {"编号":1,"分数":50,"释义":"低分词组"}]})}}]}).encode()
+                        {"编号":0,"分数":90,"男孩适配分":64,"女孩适配分":36,"释义":"品性温和","文化标签":["温润"]},
+                        {"编号":0,"分数":95,"男孩适配分":60,"女孩适配分":40,"释义":"重复名字"},
+                        {"编号":999,"分数":95,"男孩适配分":50,"女孩适配分":50,"释义":"池外名字"},
+                        {"编号":1,"分数":50,"男孩适配分":40,"女孩适配分":60,"释义":"低分词组"}]})}}]}).encode()
             yield 内容()
         配置 = 模型配置(密钥="test-secret", 模型="test")
         with patch("后端.智能筛选.读取环境配置",return_value=配置), patch("后端.智能筛选.验证模型地址"), patch("urllib.request.OpenerDirector.open",side_effect=响应):
             结果 = 模型筛选([{"姓名":"李温和","名字":"温和","书名":"测试","原文位置":0,"原文":"温和"}, {"姓名":"李曰之","名字":"曰之","书名":"测试","原文位置":0,"原文":"曰之"}], {})
             self.assertEqual([x["名字"] for x in 结果],["温和"])
+            self.assertEqual((结果[0]["男孩适配分"],结果[0]["女孩适配分"]),(64,36))
+
+    def test性别评分始终归一到百分比(self):
+        self.assertEqual(归一化性别评分(82,18),(82,18))
+        self.assertEqual(归一化性别评分(2,1),(67,33))
+        self.assertEqual(归一化性别评分(0,0),(50,50))
 
     def test多样性与质量(self):
         池 = [{"名字":x,"基础分":90,"书名":"测试","文化标签":[]} for x in ["清风","清云","清远","安宁","明德","修竹"]]

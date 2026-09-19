@@ -1,0 +1,31 @@
+.favorites-page { min-height: calc(100vh - 105rpx); padding: 34rpx 28rpx 150rpx; color: #2e4741; background: #f7f5ee; }
+.favorites-head { padding: 8rpx 9rpx 28rpx; }
+.eyebrow { color: #7c8a85; font-size: 20rpx; letter-spacing: 4rpx; }
+.favorites-title { margin: 12rpx 0 7rpx; color: #0b584b; font: 600 53rpx/1.2 "STKaiti", "KaiTi", "Songti SC", serif; letter-spacing: 6rpx; }
+.muted { color: #87918d; font-size: 23rpx; line-height: 1.7; }
+.toolbar { margin-bottom: 20rpx; display: flex; gap: 16rpx; }
+.toolbar button, .more-button { height: 72rpx; flex: 1; margin: 0; border-radius: 15rpx; font-size: 24rpx; line-height: 72rpx; }
+.toolbar button::after, .more-button::after, .card-actions button::after { border: 0; }
+.soft-button, .more-button { color: #0b584b; background: #e8f0e9; }
+.compare-button { color: #fffefa; background: #0b584b; }
+.favorite-card, .comparison-panel { margin-bottom: 20rpx; padding: 27rpx 28rpx; border: 1rpx solid #e8e8df; border-radius: 22rpx; background: #fffefa; box-shadow: 0 9rpx 24rpx rgba(52, 69, 61, .045); }
+.favorite-top { display: flex; align-items: center; justify-content: space-between; }
+.favorite-name { color: #0a5549; font: 600 47rpx/1.2 "STKaiti", "KaiTi", "Songti SC", serif; letter-spacing: 7rpx; }
+.check { padding: 8rpx 18rpx; border: 1rpx solid #cdd8d1; border-radius: 999rpx; color: #72807a; font-size: 21rpx; }
+.check.selected { border-color: #0b6755; color: #fffefa; background: #0b6755; }
+.favorite-pinyin { margin-top: 3rpx; color: #7b8984; font-size: 21rpx; letter-spacing: 4rpx; }
+.mini-scores { margin-top: 14rpx; display: flex; gap: 10rpx; }
+.mini-scores text { padding: 6rpx 14rpx; border-radius: 999rpx; font-size: 19rpx; }
+.mini-male { color: #286ebd; background: #edf6ff; }
+.mini-female { color: #a64a56; background: #fff0f1; }
+.favorite-meaning { margin-top: 16rpx; color: #4c605a; font-size: 24rpx; line-height: 1.75; }
+.favorite-source { margin-top: 15rpx; color: #8a938f; font-size: 21rpx; }
+.card-actions { margin-top: 19rpx; padding-top: 17rpx; display: flex; gap: 12rpx; border-top: 1rpx solid #efefe8; }
+.card-actions button { height: 61rpx; flex: 1; margin: 0; border-radius: 12rpx; color: #37675c; background: #f0f5ee; font-size: 22rpx; line-height: 61rpx; }
+.empty { padding: 105rpx 30rpx; color: #536760; text-align: center; font-size: 29rpx; line-height: 2; }
+.error { margin-bottom: 18rpx; color: #a65548; text-align: center; }
+.more-button { width: 100%; margin-bottom: 20rpx; }
+.comparison-title { margin-bottom: 18rpx; color: #0b584b; font-size: 30rpx; font-weight: 600; }
+.comparison { padding: 20rpx 0; border-top: 1rpx solid #eeeeea; }
+.comparison:first-of-type { border-top: 0; }
+.comparison-tag { display: inline-block; margin: 12rpx 10rpx 0 0; padding: 6rpx 13rpx; border-radius: 999rpx; color: #36675c; background: #edf4eb; font-size: 20rpx; }

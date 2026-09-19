@@ -1,0 +1,13 @@
+<view class="profile-page">
+  <view class="profile-head"><view class="profile-seal">寻</view><view><view class="profile-title">个人中心</view><view class="profile-subtitle">你的寻名偏好与使用说明</view></view></view>
+  <view class="profile-panel">
+    <view class="profile-row"><text>当前姓氏</text><text class="profile-value">{{surname}}</text></view>
+    <view class="profile-row"><text>性别筛选</text><text class="profile-value">{{gender}}</text></view>
+    <view class="profile-note">姓氏和筛选都可以在好名千寻首页随时修改。</view>
+    <button class="profile-button" bindtap="chooseNames">继续寻名</button>
+  </view>
+  <view class="profile-panel privacy-panel" bindtap="showPrivacy">
+    <view><view class="privacy-title">隐私与同步</view><view class="profile-note">免注册使用，收藏通过微信身份跨设备同步</view></view><text class="profile-arrow">›</text>
+  </view>
+  <view class="profile-foot">名字释义由模型辅助整理，重要出处请结合原典核对</view>
+</view>

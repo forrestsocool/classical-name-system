@@ -2,7 +2,8 @@ const config = require('./config');
 App({
   onLaunch() {
     this.selectedCard = null;
-    if (wx.cloud && config.envId) wx.cloud.init({env:config.envId});
+    this.namePreferences = {surname: '', gender: 'any'};
+    if (wx.cloud && config.envId) wx.cloud.init({env:config.envId, traceUser:true});
   },
   async session() {
     if (!this.sessionPromise) {

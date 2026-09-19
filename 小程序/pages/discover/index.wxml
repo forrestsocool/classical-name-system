@@ -1,12 +1,26 @@
-<view class="discover-page">
-  <view class="masthead">
-    <view class="brand-lockup">
-      <view class="brand-seal">好名</view>
-      <view>
-        <view class="brand-name">好名千寻</view>
-        <view class="brand-subtitle">从典籍深处，寻一个好名字</view>
-      </view>
+<view class="discover-page" style="padding-top:{{statusBarHeight}}px">
+  <view class="hero">
+    <image class="hero-landscape" src="/assets/landscape.svg" mode="aspectFill" />
+    <view class="brand-row">
+      <view class="brand-name">好名千寻</view>
+      <view class="brand-seal">隽<text>名</text></view>
     </view>
+    <view class="brand-subtitle">从典籍深处，寻一个好名字</view>
+    <view class="brand-motto"><view></view><text>好 名 伴 一 生</text><view></view></view>
+  </view>
+
+  <view class="filters">
+    <view class="filter-control surname-control">
+      <text class="filter-label">姓氏</text>
+      <input class="surname-input" value="{{surname}}" maxlength="2" placeholder="请输入" placeholder-class="input-placeholder" bindinput="onSurnameInput" />
+    </view>
+    <picker class="gender-picker" mode="selector" range="{{genderLabels}}" value="{{genderIndex}}" bindchange="genderChange">
+      <view class="filter-control gender-control">
+        <image src="/assets/icons/{{genderIcon}}.svg" mode="aspectFit" />
+        <text>{{genderLabel}}</text>
+        <view class="chevron"></view>
+      </view>
+    </picker>
     <view class="length-switch" aria-label="名字字数">
       <view class="length-option {{nameLength === 1 ? 'is-active' : ''}}" data-length="1" bindtap="lengthChange">单字</view>
       <view class="length-option {{nameLength === 2 ? 'is-active' : ''}}" data-length="2" bindtap="lengthChange">双字</view>
@@ -16,10 +30,8 @@
   <view class="deck" wx:if="{{ready}}">
     <view class="name-card card-shadow card-third"></view>
     <view class="name-card card-shadow card-next" style="{{stackStyle}}" wx:if="{{next}}">
-      <view class="card-kicker">下一页 · 《{{next.item.book}}》</view>
-      <view class="next-name">{{next.item.name}}</view>
+      <view class="next-name">{{next.item.displayName}}</view>
     </view>
-
     <view
       class="name-card card-current"
       style="{{cardStyle}}"
@@ -30,33 +42,30 @@
       bindtouchcancel="touchCancel"
       catchtap="detail"
     >
-      <view class="decision decision-skip" style="opacity:{{skipOpacity}}">略过</view>
+      <image class="card-landscape" src="/assets/card-landscape.svg" mode="aspectFill" />
+      <view class="bamboo"><view class="stem"></view><view class="leaf leaf-a"></view><view class="leaf leaf-b"></view><view class="leaf leaf-c"></view></view>
+      <view class="decision decision-skip" style="opacity:{{skipOpacity}}">不喜欢</view>
       <view class="decision decision-like" style="opacity:{{likeOpacity}}">收藏</view>
-
-      <view class="card-heading">
-        <view class="card-kicker">卷中拾字</view>
-        <view class="book-label">《{{current.item.book}}》</view>
-      </view>
       <view class="name-block">
-        <view class="candidate-name">{{current.item.name}}</view>
+        <view class="candidate-name">{{current.item.displayName}}</view>
         <view class="candidate-pinyin">{{current.item.pinyin}}</view>
       </view>
-      <view class="ink-rule"><view class="ink-diamond"></view></view>
+      <view class="gender-scores">
+        <view class="score-pill score-male"><image src="/assets/icons/male.svg" mode="aspectFit" /><text>{{current.item.maleScore}}%</text></view>
+        <view class="score-divider"></view>
+        <view class="score-pill score-female"><image src="/assets/icons/female.svg" mode="aspectFit" /><text>{{current.item.femaleScore}}%</text></view>
+      </view>
       <view class="candidate-meaning">{{current.item.meaning}}</view>
       <view class="tags" wx:if="{{current.item.tags.length}}">
         <text class="tag" wx:for="{{current.item.tags}}" wx:key="*this">{{item}}</text>
       </view>
-      <view class="source-line">《{{current.item.book}}》 · {{current.item.chapter}}</view>
-      <view class="detail-link">
-        <image class="inline-icon" src="/assets/icons/book-open.svg" mode="aspectFit" />
-        <text>读原文与取名说明</text><text class="arrow">›</text>
-      </view>
+      <view class="card-seal">寻</view>
     </view>
 
     <view class="deck-empty" wx:else>
       <view class="loading-mark" wx:if="{{loading}}"><view></view><view></view><view></view></view>
       <view class="empty-title">{{loading ? '正在翻阅典籍' : '这一叠已经看完'}}</view>
-      <view class="empty-copy" wx:if="{{!loading}}">{{cooldown > 0 ? cooldown + ' 秒后继续送来新名字' : '新名字正在陆续准备'}}</view>
+      <view class="empty-copy" wx:if="{{!loading}}">{{cooldown > 0 ? cooldown + ' 秒后继续送来新名字' : '可换一种筛选，或稍后再来'}}</view>
       <button class="retry-button" wx:if="{{!loading}}" disabled="{{cooldown > 0}}" bindtap="retry">{{cooldown > 0 ? '稍候片刻' : '再寻一叠'}}</button>
     </view>
   </view>
@@ -67,20 +76,25 @@
 
   <view class="action-bar" wx:if="{{current}}">
     <view class="action-wrap">
-      <button class="action-button action-skip" disabled="{{animating}}" bindtap="skip" aria-label="略过这个名字">
+      <button class="action-button action-skip" disabled="{{animating}}" bindtap="skip" aria-label="不喜欢这个名字">
         <image src="/assets/icons/x.svg" mode="aspectFit" />
       </button>
-      <text>略过</text>
+      <text>不喜欢</text>
     </view>
-    <view class="gesture-hint"><view class="hint-line"></view><text>左右滑动</text><view class="hint-line"></view></view>
     <view class="action-wrap">
-      <button class="action-button action-like" loading="{{saving}}" disabled="{{animating}}" bindtap="favorite" aria-label="收藏这个名字">
-        <image src="/assets/icons/heart.svg" mode="aspectFit" />
+      <button class="action-button action-favorite" loading="{{saving}}" disabled="{{animating}}" bindtap="favorite" aria-label="收藏这个名字">
+        <image src="/assets/icons/star.svg" mode="aspectFit" />
       </button>
       <text>收藏</text>
+    </view>
+    <view class="action-wrap">
+      <button class="action-button action-next" disabled="{{animating}}" bindtap="next" aria-label="查看下一个名字">
+        <image src="/assets/icons/arrow-right.svg" mode="aspectFit" />
+      </button>
+      <text>下一个</text>
     </view>
   </view>
 
   <view class="error-toast" wx:if="{{error}}" bindtap="retry">{{error}}</view>
-  <view class="disclaimer">名字释义由模型辅助整理，出处可点进卡片自行核对</view>
+  <view class="disclaimer">左右滑动：左边略过，右边收藏</view>
 </view>

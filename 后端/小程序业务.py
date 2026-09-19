@@ -17,6 +17,7 @@ class 严格参数(BaseModel):
 class 拉卡参数(严格参数):
     request_id: UUID
     name_length: Literal[1, 2] = 2
+    gender: Literal["any", "male", "female"] = "any"
     count: int = Field(default=8, ge=1, le=8)
     # Rolling-deploy compatibility for the previous experience build. These
     # fields are intentionally ignored by the shared inventory contract.
@@ -43,11 +44,18 @@ class 比较参数(严格参数):
 
 
 def 卡片(row):
-    return {"id": row["id"], "item": row["payload"]}
+    内容 = dict(row["payload"])
+    内容.setdefault("男孩适配分", 50)
+    内容.setdefault("女孩适配分", 50)
+    return {"id": row["id"], "item": 内容}
 
 
 def 拉卡(owner, p):
-    指纹 = hashlib.sha256(json.dumps(p.model_dump(mode="json", exclude={"request_id","surname","required","excluded"}), sort_keys=True).encode()).hexdigest()
+    指纹条件 = p.model_dump(mode="json", exclude={"request_id","surname","required","excluded"})
+    # Keep old "any" request receipts replayable across the rolling upgrade.
+    if p.gender == "any":
+        指纹条件.pop("gender", None)
+    指纹 = hashlib.sha256(json.dumps(指纹条件, sort_keys=True).encode()).hexdigest()
     with 连接数据库() as c:
         # All same-user selections serialize across API workers; no leases or process locks.
         c.execute("SELECT id FROM app_users WHERE id=%s FOR UPDATE", (owner,))
@@ -63,6 +71,10 @@ def 拉卡(owner, p):
               "COALESCE((m.payload->>'基础分')::int,0)>=85",
               "NOT EXISTS (SELECT 1 FROM app_seen_names d WHERE d.owner=%s AND d.given_name=m.given_name)"]
         参数 = [档案["id"], owner]
+        if p.gender == "male":
+            条件.append("COALESCE((m.payload->>'男孩适配分')::int,50)>=COALESCE((m.payload->>'女孩适配分')::int,50)")
+        elif p.gender == "female":
+            条件.append("COALESCE((m.payload->>'女孩适配分')::int,50)>=COALESCE((m.payload->>'男孩适配分')::int,50)")
         # Rank within each source, then interleave sources; do not load the whole pool in Python.
         查询 = """SELECT id,given_name,full_name,payload FROM (
             SELECT m.id,m.given_name,m.full_name,m.payload,m.book,row_number() OVER (PARTITION BY m.book ORDER BY m.id) AS rank

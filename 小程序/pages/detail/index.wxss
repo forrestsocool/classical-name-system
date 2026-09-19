@@ -1,0 +1,42 @@
+.detail-page { min-height: 100vh; padding-bottom: calc(128rpx + env(safe-area-inset-bottom)); color: #2f4541; background: #f7f5ee; }
+.detail-nav { position: sticky; z-index: 20; top: 0; height: 88rpx; display: flex; align-items: center; justify-content: center; background: rgba(247,245,238,.96); }
+.nav-title { color: #182a27; font-size: 32rpx; font-weight: 600; letter-spacing: 1rpx; }
+.nav-back { position: absolute; left: 29rpx; bottom: 0; width: 75rpx; height: 88rpx; display: flex; align-items: center; }
+.nav-back view { width: 23rpx; height: 23rpx; border-left: 4rpx solid #172824; border-bottom: 4rpx solid #172824; transform: rotate(45deg); }
+.detail-content { padding: 18rpx 24rpx 34rpx; }
+.summary-card, .detail-section { margin-bottom: 20rpx; padding: 28rpx 30rpx; border: 1rpx solid #ebe9e1; border-radius: 22rpx; background: rgba(255,254,250,.98); box-shadow: 0 8rpx 22rpx rgba(54, 71, 63, .04); }
+.summary-card { padding-top: 33rpx; }
+.summary-top { display: flex; align-items: center; justify-content: space-between; }
+.detail-name { color: #074c42; font: 700 74rpx/1.05 "STKaiti", "KaiTi", "Songti SC", serif; letter-spacing: 11rpx; }
+.detail-pinyin { margin-top: 10rpx; color: #506967; font-size: 23rpx; letter-spacing: 8rpx; }
+.summary-scores { display: flex; align-items: center; gap: 10rpx; }
+.detail-score { height: 53rpx; padding: 0 19rpx; display: flex; align-items: center; gap: 8rpx; border-radius: 999rpx; font-size: 24rpx; }
+.detail-score image { width: 28rpx; height: 28rpx; }
+.score-male { color: #2269be; background: #edf6ff; }
+.score-female { color: #aa4654; background: #fff0f1; }
+.detail-tags { margin-top: 22rpx; white-space: nowrap; overflow: hidden; }
+.detail-tags text { display: inline-block; margin-right: 12rpx; padding: 9rpx 20rpx; border-radius: 999rpx; color: #2f695c; background: #edf4eb; font-size: 22rpx; }
+.summary-meaning { margin-top: 24rpx; color: #334a46; font: 400 27rpx/1.8 "STKaiti", "KaiTi", "Songti SC", serif; }
+.section-head { display: flex; align-items: center; justify-content: space-between; }
+.section-title { display: flex; align-items: center; gap: 13rpx; color: #0a594d; font-size: 29rpx; font-weight: 600; }
+.section-title image { width: 35rpx; height: 35rpx; }
+.source-book { color: #7c8783; font-size: 21rpx; }
+.source-box { margin-top: 22rpx; padding: 17rpx 20rpx; border-left: 4rpx solid #1b806a; border-radius: 2rpx 12rpx 12rpx 2rpx; background: #f7f8f4; }
+.source-chapter { color: #2b3f3b; font-size: 24rpx; }
+.source-quote { margin-top: 8rpx; color: #53615e; font-size: 23rpx; line-height: 1.72; white-space: pre-wrap; }
+.section-note { margin-top: 16rpx; color: #89938f; font-size: 20rpx; line-height: 1.7; }
+.section-copy { margin-top: 17rpx; color: #465954; font-size: 25rpx; line-height: 1.78; }
+.muted-copy { color: #7f8985; }
+.element-row { margin-top: 17rpx; display: flex; flex-wrap: wrap; gap: 12rpx; }
+.element-row text { padding: 7rpx 16rpx; border-radius: 999rpx; color: #326457; background: #edf4eb; font-size: 22rpx; }
+.section-title-hot { color: #765113; }
+.feedback-link { padding: 13rpx 0 25rpx; color: #6d7e78; text-align: center; font-size: 22rpx; text-decoration: underline; }
+.detail-error { margin-bottom: 20rpx; color: #a44f43; text-align: center; font-size: 22rpx; }
+.detail-actions { position: fixed; z-index: 30; left: 0; right: 0; bottom: 0; height: calc(112rpx + env(safe-area-inset-bottom)); padding: 14rpx 24rpx env(safe-area-inset-bottom); display: flex; gap: 18rpx; border-top: 1rpx solid #e8e8e1; background: rgba(255,254,250,.98); }
+.detail-actions button { height: 84rpx; margin: 0; display: flex; align-items: center; justify-content: center; gap: 12rpx; border-radius: 16rpx; font-size: 27rpx; line-height: 84rpx; }
+.detail-actions button::after { border: 0; }
+.detail-actions image { width: 34rpx; height: 34rpx; }
+.favorite-outline { width: 290rpx; border: 2rpx solid #ec941c; color: #e68508; background: #fffefa; }
+.continue-button { flex: 1; color: #fffefa; background: linear-gradient(145deg, #16705d, #075244); }
+.continue-button image { width: 37rpx; height: 37rpx; }
+.empty { padding: 150rpx 40rpx; color: #7f8a86; text-align: center; background: #f7f5ee; }

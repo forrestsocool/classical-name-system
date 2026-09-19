@@ -1,25 +1,44 @@
-const {call, requestId, storageKey} = require('../../utils/api');
-const {normalizeCards} = require('../../utils/view');
+const {call, requestId, storageKey, preferenceKey} = require('../../utils/api');
+const {normalizeCard, normalizeCards} = require('../../utils/view');
 const {dragState, releaseDirection} = require('../../utils/swipe');
 
+const GENDERS = ['any', 'male', 'female'];
+const GENDER_LABELS = ['不限', '男孩', '女孩'];
+const GENDER_ICONS = ['users', 'male', 'female'];
+
 function emptyPool() { return {cards: [], pending: null, retryAt: 0, loading: false, error: ''}; }
+function poolKey(length, gender) { return `${gender}:${length}`; }
+function newPools() {
+  const pools = {};
+  for (const gender of GENDERS) for (const length of [1, 2]) pools[poolKey(length, gender)] = emptyPool();
+  return pools;
+}
+function cleanSurname(value) { return String(value || '').replace(/[^\u3400-\u9fff]/g, '').slice(0, 2); }
 const restStyle = 'transform:translate3d(0px,0px,0) rotate(0deg);transition:none;';
 
 Page({
   data: {
+    statusBarHeight: 0, surname: '', gender: 'any', genderIndex: 0,
+    genderLabel: '不限', genderIcon: 'users', genderLabels: GENDER_LABELS,
     nameLength: 2, current: null, next: null, ready: false, loading: true,
     animating: false, saving: false, error: '', cooldown: 0,
     cardStyle: restStyle, stackStyle: '', likeOpacity: 0, skipOpacity: 0
   },
 
   async onLoad() {
-    this.pools = {1: emptyPool(), 2: emptyPool()};
+    this.pools = newPools();
     this.pulls = {};
     this.visible = true;
-    this.windowWidth = (wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()).windowWidth || 375;
+    const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
+    this.windowWidth = info.windowWidth || 375;
+    this.setData({statusBarHeight: info.statusBarHeight || 0});
     await this.connect();
   },
-  onShow() { this.visible = true; this.startTicker(); },
+  onShow() {
+    this.visible = true;
+    if (this.getTabBar && this.getTabBar()) this.getTabBar().setData({selected: 0});
+    this.startTicker();
+  },
   onHide() {
     this.visible = false;
     clearInterval(this.ticker);
@@ -27,20 +46,30 @@ Page({
   },
   onUnload() { this.closed = true; clearInterval(this.ticker); },
 
+  activeKey(length = this.data.nameLength, gender = this.data.gender) { return poolKey(length, gender); },
   async connect() {
     if (this.connecting) return;
     this.connecting = true;
     this.setData({loading: true, error: ''});
     try {
       this.user = await getApp().session();
+      const preferences = wx.getStorageSync(preferenceKey(this.user)) || {};
+      const surname = cleanSurname(preferences.surname);
+      const gender = GENDERS.includes(preferences.gender) ? preferences.gender : 'any';
+      const genderIndex = GENDERS.indexOf(gender);
+      getApp().namePreferences = {surname, gender};
+      this.setData({surname, gender, genderIndex, genderLabel: GENDER_LABELS[genderIndex], genderIcon: GENDER_ICONS[genderIndex]});
+
       const saved = wx.getStorageSync(storageKey(this.user));
-      if (saved && saved.version === 2) {
-        for (const length of [1, 2]) {
-          const pool = saved.pools && saved.pools[length];
+      if (saved && saved.version === 3) {
+        for (const key of Object.keys(this.pools)) {
+          const pool = saved.pools && saved.pools[key];
           if (!pool) continue;
-          this.pools[length].cards = normalizeCards(pool.cards).filter(card => card && card.id && card.item.name.length === length);
-          this.pools[length].pending = pool.pending && pool.pending.name_length === length ? pool.pending : null;
-          this.pools[length].retryAt = Math.min(Number(pool.retryAt) || 0, Date.now() + 60000);
+          const length = Number(key.slice(-1));
+          const poolGender = key.split(':')[0];
+          this.pools[key].cards = normalizeCards(pool.cards).filter(card => card && card.id && card.item.name.length === length);
+          this.pools[key].pending = pool.pending && pool.pending.name_length === length && pool.pending.gender === poolGender ? pool.pending : null;
+          this.pools[key].retryAt = Math.min(Number(pool.retryAt) || 0, Date.now() + 60000);
         }
         if (saved.selectedLength === 1 || saved.selectedLength === 2) this.setData({nameLength: saved.selectedLength});
       }
@@ -48,7 +77,7 @@ Page({
       this.setData({ready: true});
       this.render();
       this.startTicker();
-      await this.refill(this.data.nameLength);
+      await this.refill(this.data.nameLength, this.data.gender);
     } catch (error) {
       if (!this.closed) this.setData({loading: false, error: error.message || '暂时没有连接上，请重试'});
     } finally { this.connecting = false; }
@@ -58,43 +87,50 @@ Page({
     clearInterval(this.ticker);
     this.ticker = setInterval(() => {
       if (!this.visible || !this.data.ready || this.closed) return;
-      const pool = this.pools[this.data.nameLength];
+      const pool = this.pools[this.activeKey()];
       const cooldown = Math.max(0, Math.ceil((pool.retryAt - Date.now()) / 1000));
       if (cooldown !== this.data.cooldown) this.setData({cooldown});
-      if (!cooldown && !pool.cards.length && !pool.loading && !pool.error) this.refill(this.data.nameLength);
+      if (!cooldown && !pool.cards.length && !pool.loading && !pool.error) this.refill();
     }, 1000);
+  },
+  persistPreferences() {
+    if (!this.user) return;
+    const preferences = {surname: this.data.surname, gender: this.data.gender};
+    getApp().namePreferences = preferences;
+    wx.setStorageSync(preferenceKey(this.user), preferences);
   },
   persist() {
     if (!this.user) return;
     const pools = {};
-    for (const length of [1, 2]) {
-      const pool = this.pools[length];
-      pools[length] = {cards: pool.cards, pending: pool.pending, retryAt: pool.retryAt};
+    for (const key of Object.keys(this.pools)) {
+      const pool = this.pools[key];
+      pools[key] = {cards: pool.cards, pending: pool.pending, retryAt: pool.retryAt};
     }
-    wx.setStorageSync(storageKey(this.user), {version: 2, selectedLength: this.data.nameLength, pools});
+    wx.setStorageSync(storageKey(this.user), {version: 3, selectedLength: this.data.nameLength, pools});
   },
   render() {
     if (this.closed) return;
-    const pool = this.pools[this.data.nameLength];
+    const pool = this.pools[this.activeKey()];
     this.setData({
-      current: pool.cards[0] || null, next: pool.cards[1] || null,
+      current: normalizeCard(pool.cards[0] || null, this.data.surname),
+      next: normalizeCard(pool.cards[1] || null, this.data.surname),
       loading: pool.loading, error: pool.error,
       cooldown: Math.max(0, Math.ceil((pool.retryAt - Date.now()) / 1000))
     });
   },
 
-  refill(length, force = false) {
+  refill(length = this.data.nameLength, gender = this.data.gender, force = false) {
     if (!this.user || this.closed) return Promise.resolve();
-    if (this.pulls[length]) return this.pulls[length];
-    const pool = this.pools[length];
+    const key = this.activeKey(length, gender);
+    if (this.pulls[key]) return this.pulls[key];
+    const pool = this.pools[key];
     if (!force && (pool.cards.length > 3 || pool.retryAt > Date.now() || pool.error)) return Promise.resolve();
     pool.loading = true;
     pool.error = '';
-    if (!pool.pending) pool.pending = {name_length: length, count: 8, request_id: requestId()};
+    if (!pool.pending) pool.pending = {name_length: length, gender, count: 8, request_id: requestId()};
     this.persist();
-    if (length === this.data.nameLength) this.render();
+    if (key === this.activeKey()) this.render();
     const request = pool.pending;
-    // Register the in-flight promise before a synchronously failing transport can finish.
     const pending = Promise.resolve().then(async () => {
       try {
         const result = await call('feed.pull', request);
@@ -110,17 +146,33 @@ Page({
         pool.error = error.message || '新名字暂时没送到，点一下重试';
       } finally {
         pool.loading = false;
-        delete this.pulls[length];
+        delete this.pulls[key];
         this.persist();
-        if (length === this.data.nameLength && !this.data.animating) this.render();
+        if (key === this.activeKey() && !this.data.animating) this.render();
       }
     });
-    this.pulls[length] = pending;
+    this.pulls[key] = pending;
     return pending;
   },
   async retry() {
     if (!this.user) return this.connect();
-    return this.refill(this.data.nameLength, true);
+    return this.refill(this.data.nameLength, this.data.gender, true);
+  },
+  onSurnameInput(event) {
+    const surname = cleanSurname(event.detail.value);
+    this.setData({surname});
+    this.persistPreferences();
+    this.render();
+    return surname;
+  },
+  async genderChange(event) {
+    const genderIndex = Number(event.detail.value);
+    if (!GENDERS[genderIndex] || GENDERS[genderIndex] === this.data.gender || this.data.animating) return;
+    this.resetDrag();
+    this.setData({gender: GENDERS[genderIndex], genderIndex, genderLabel: GENDER_LABELS[genderIndex], genderIcon: GENDER_ICONS[genderIndex]});
+    this.persistPreferences();
+    this.render();
+    await this.refill();
   },
   async lengthChange(event) {
     const length = Number(event.currentTarget.dataset.length);
@@ -129,7 +181,7 @@ Page({
     this.setData({nameLength: length});
     this.render();
     this.persist();
-    await this.refill(length);
+    await this.refill();
   },
 
   resetDrag(animated = false) {
@@ -154,8 +206,7 @@ Page({
     const now = Date.now();
     if (now - this.touch.lastPaint < 16) return;
     this.touch.lastPaint = now;
-    const state = dragState(dx, dy, this.windowWidth);
-    this.setData(state);
+    this.setData(dragState(dx, dy, this.windowWidth));
   },
   touchCancel() { if (!this.data.animating) this.resetDrag(true); },
   touchEnd(event) {
@@ -168,20 +219,20 @@ Page({
     const direction = start.axis === 'y' ? 0 : releaseDirection(dx, dy, elapsed, this.windowWidth);
     if (!direction) return this.resetDrag(true);
     this.ignoreTapUntil = Date.now() + 350;
-    return this.swipe(direction);
+    return this.dismiss(direction, direction > 0);
   },
-  skip() { return this.swipe(-1); },
-  favorite() { return this.swipe(1); },
-  async swipe(direction) {
+  skip() { return this.dismiss(-1, false); },
+  favorite() { return this.dismiss(1, true); },
+  next() { return this.dismiss(1, false); },
+  async dismiss(direction, shouldFavorite) {
     if (this.data.animating || !this.data.current) return;
-    const length = this.data.nameLength, pool = this.pools[length], card = pool.cards[0];
+    const key = this.activeKey(), pool = this.pools[key], card = pool.cards[0];
     this.touch = null;
-    this.setData({animating: true, saving: direction > 0, error: '',
+    this.setData({animating: true, saving: shouldFavorite, error: '',
       cardStyle: `transform:translate3d(${direction * this.windowWidth * 1.35}px,-24px,0) rotate(${direction * 23}deg);transition:transform 280ms cubic-bezier(.2,.65,.25,1);`,
       stackStyle: 'transform:translateY(0) scale(1);opacity:1;',
-      likeOpacity: direction > 0 ? 1 : 0, skipOpacity: direction < 0 ? 1 : 0});
-    // Capture a rejection immediately while the outgoing card is animating.
-    const save = direction > 0 ? call('favorites.add', {material_id: card.id}).then(() => null, error => error) : Promise.resolve(null);
+      likeOpacity: shouldFavorite ? 1 : 0, skipOpacity: direction < 0 ? 1 : 0});
+    const save = shouldFavorite ? call('favorites.add', {material_id: card.id}).then(() => null, error => error) : Promise.resolve(null);
     await new Promise(resolve => setTimeout(resolve, 290));
     const error = await save;
     if (error) {
@@ -193,14 +244,15 @@ Page({
       this.persist();
       this.resetDrag();
       this.render();
-      if (direction > 0 && this.visible && !this.closed) wx.vibrateShort({type: 'light'});
+      if (shouldFavorite && this.visible && !this.closed) wx.vibrateShort({type: 'light'});
     }
     if (!this.closed) this.setData({animating: false, saving: false});
-    if (!error) this.refill(length);
+    if (!error) this.refill();
   },
   detail() {
     if (!this.data.current || this.data.animating || Date.now() < (this.ignoreTapUntil || 0)) return;
     getApp().selectedCard = this.data.current;
+    getApp().selectedSurname = this.data.surname;
     wx.navigateTo({url: '/pages/detail/index'});
   }
 });

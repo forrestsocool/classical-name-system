@@ -79,7 +79,7 @@ test('signature changes with body and timestamp', () => {
 });
 
 function card(id, name) {
-  return {id, item: {姓名: name, 拼音带调: 'qīng hé', 现代释义: '清润平和，温雅从容。', 文化标签: ['清雅'], 书名: '诗经', 篇章: '小雅'}};
+  return {id, item: {姓名: name, 拼音带调: 'qīng hé', 现代释义: '清润平和，温雅从容。', 文化标签: ['清雅'], 书名: '诗经', 篇章: '小雅', 男孩适配分: 62, 女孩适配分: 38}};
 }
 
 function deferred() {
@@ -92,7 +92,7 @@ function deferred() {
 function pageHarness(call, user = 'user-A', saved = {}) {
   let page;
   const storage = new Map(Object.entries(saved));
-  const app = {selectedCard: null, session: async () => user};
+  const app = {selectedCard: null, namePreferences: {surname: '', gender: 'any'}, session: async () => user};
   const events = {navigations: [], vibrations: 0};
   const wx = {
     getWindowInfo: () => ({windowWidth: 375}),
@@ -109,7 +109,7 @@ function pageHarness(call, user = 'user-A', saved = {}) {
     require: modulePath => {
       if (modulePath.includes('/utils/view')) return view;
       if (modulePath.includes('/utils/swipe')) return swipe;
-      return {call, requestId: () => crypto.randomUUID(), storageKey: value => `cache:${value}`};
+      return {call, requestId: () => crypto.randomUUID(), storageKey: value => `cache:${value}`, preferenceKey: value => `prefs:${value}`};
     },
     setInterval: () => 1,
     clearInterval() {},
@@ -136,8 +136,10 @@ test('mini app opens directly on a double-name deck and sends no surname filters
   assert.equal(page.data.nameLength, 2);
   assert.equal(page.data.current.item.name, '清和');
   assert.equal(page.data.next.item.name, '景行');
-  assert.deepEqual(Object.keys(requests[0].data).sort(), ['count', 'name_length', 'request_id']);
+  assert.deepEqual(Object.keys(requests[0].data).sort(), ['count', 'gender', 'name_length', 'request_id']);
   assert.equal(requests[0].data.name_length, 2);
+  assert.equal(requests[0].data.gender, 'any');
+  assert.equal(requests[0].data.surname, undefined);
   assert.equal(requests[0].data.count, 8);
 });
 
@@ -151,11 +153,11 @@ test('mini app reuses the same request ID after an uncertain pull failure', asyn
   });
   await page.onLoad();
   const cached = storage.get('cache:user-A');
-  assert.equal(cached.pools['2'].pending.request_id, ids[0]);
+  assert.equal(cached.pools['any:2'].pending.request_id, ids[0]);
   await page.retry();
   assert.equal(ids[0], ids[1]);
   assert.equal(page.data.current.id, 1);
-  assert.equal(storage.get('cache:user-A').pools['2'].pending, null);
+  assert.equal(storage.get('cache:user-A').pools['any:2'].pending, null);
 });
 
 test('favorite failure returns the card and blocks a second action', async () => {
@@ -210,16 +212,16 @@ test('late single-name response cannot replace the active double-name deck', asy
   await switching;
   assert.equal(page.data.nameLength, 2);
   assert.equal(page.data.current.item.name, '清和');
-  assert.equal(storage.get('cache:user-A').pools['1'].cards[0].item.name, '宁');
+  assert.equal(storage.get('cache:user-A').pools['any:1'].cards[0].item.name, '宁');
 });
 
 test('cache is scoped to the OpenID-derived user and restores each length independently', async () => {
   const cached = {
-    version: 2,
+    version: 3,
     selectedLength: 1,
     pools: {
-      1: {cards: [card(7, '宁'), card(8, '安'), card(9, '和'), card(10, '清')], pending: null, retryAt: 0},
-      2: {cards: [card(11, '清和')], pending: null, retryAt: 0}
+      'any:1': {cards: [card(7, '宁'), card(8, '安'), card(9, '和'), card(10, '清')], pending: null, retryAt: 0},
+      'any:2': {cards: [card(11, '清和')], pending: null, retryAt: 0}
     }
   };
   let calls = 0;
@@ -228,6 +230,36 @@ test('cache is scoped to the OpenID-derived user and restores each length indepe
   assert.equal(page.data.nameLength, 1);
   assert.equal(page.data.current.item.name, '宁');
   assert.equal(calls, 0);
+});
+
+test('surname changes display only and gender switch pulls an isolated deck', async () => {
+  const requests = [];
+  const {page, storage} = pageHarness(async (action, data) => {
+    requests.push(data);
+    if (data.gender === 'female') return {cards: [card(20, '令仪')]};
+    return {cards: [card(1, '清和'), card(2, '景行')]};
+  });
+  await page.onLoad();
+  page.onSurnameInput({detail: {value: '赵1'}});
+  assert.equal(page.data.current.item.displayName, '赵清和');
+  assert.equal(storage.get('prefs:user-A').surname, '赵');
+  assert.equal(requests[0].surname, undefined);
+  await page.genderChange({detail: {value: '2'}});
+  assert.equal(page.data.gender, 'female');
+  assert.equal(page.data.current.item.displayName, '赵令仪');
+  assert.equal(requests[1].gender, 'female');
+});
+
+test('next advances without writing a favorite', async () => {
+  const actions = [];
+  const {page} = pageHarness(async (action) => {
+    actions.push(action);
+    return {cards: [card(1, '清和'), card(2, '景行'), card(3, '令仪'), card(4, '攸宁')]};
+  });
+  await page.onLoad();
+  await page.next();
+  assert.equal(page.data.current.id, 2);
+  assert.equal(actions.filter(action => action === 'favorites.add').length, 0);
 });
 
 test('drag math follows the finger, reveals direction and rejects vertical or short gestures', () => {
@@ -241,11 +273,15 @@ test('drag math follows the finger, reveals direction and rejects vertical or sh
   assert.equal(swipe.releaseDirection(120, 118, 180, 375), 0);
 });
 
-test('discover markup shows the new brand and contains no first-use form', () => {
+test('discover markup matches the brand controls and omits advanced character filters', () => {
   const markup = fs.readFileSync(path.join(__dirname, '../小程序/pages/discover/index.wxml'), 'utf8');
+  const script = fs.readFileSync(path.join(__dirname, '../小程序/pages/discover/index.js'), 'utf8');
   assert.match(markup, /好名千寻/);
   assert.match(markup, /catchtouchmove="touchMove"/);
   assert.match(markup, /单字/);
   assert.match(markup, /双字/);
-  assert.doesNotMatch(markup, /姓氏|固定字|避用字/);
+  assert.match(markup, /姓氏/);
+  assert.match(script, /男孩/);
+  assert.match(script, /女孩/);
+  assert.doesNotMatch(markup, /固定字|避用字/);
 });

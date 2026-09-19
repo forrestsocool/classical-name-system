@@ -1,5 +1,63 @@
-<view class="page" wx:if="{{card}}"><view class="eyebrow">名字的来处</view><view class="panel"><view class="name">{{card.item.name}}</view><view class="pinyin">{{card.item.pinyin}}</view><view class="meaning">{{card.item.meaning}}</view><text class="tag" wx:for="{{card.item.tags}}" wx:key="*this">{{item}}</text></view>
-<view class="panel"><view class="section-title">《{{card.item.book}}》 · {{card.item.chapter}}</view><view class="quote">{{card.item.original}}</view><view class="note">取字方式：{{card.item.extraction}}。释义包含现代寄意，不能替代古文原意。</view></view>
-<view class="panel"><view class="section-title">五行参考</view><view class="muted" wx:for="{{elements}}" wx:key="char">{{item.char}} · {{item.element}}</view><view class="muted" wx:if="{{unknown}}">资料不足：{{unknown}}</view><view class="note">仅为传统取名参考，不据此判断宝宝八字或应补五行。</view><view class="spacer"></view><view class="section-title">姓名热度参考</view><view class="muted">{{popularity}}</view></view>
-<button class="button" disabled="{{busy}}" bindtap="favorite">♡ 收藏这个名字</button><view class="link" bindtap="feedback">反馈出处或释义问题</view><view class="muted error" wx:if="{{error}}">{{error}}</view></view>
-<view class="empty" wx:else>请从发现或收藏页打开一个名字。</view>
+<view class="detail-page" wx:if="{{card}}">
+  <view class="detail-nav" style="padding-top:{{statusBarHeight}}px">
+    <view class="nav-back" bindtap="goBack"><view></view></view>
+    <view class="nav-title">名字的来处</view>
+  </view>
+  <view class="detail-content">
+    <view class="summary-card">
+      <view class="summary-top">
+        <view>
+          <view class="detail-name">{{card.item.displayName}}</view>
+          <view class="detail-pinyin">{{card.item.pinyin}}</view>
+        </view>
+        <view class="summary-scores">
+          <view class="detail-score score-male"><image src="/assets/icons/male.svg" mode="aspectFit" />{{card.item.maleScore}}%</view>
+          <view class="detail-score score-female"><image src="/assets/icons/female.svg" mode="aspectFit" />{{card.item.femaleScore}}%</view>
+        </view>
+      </view>
+      <view class="detail-tags" wx:if="{{card.item.tags.length}}">
+        <text wx:for="{{card.item.tags}}" wx:key="*this">{{item}}</text>
+      </view>
+      <view class="summary-meaning">{{card.item.meaning}}</view>
+    </view>
+
+    <view class="detail-section source-section">
+      <view class="section-head">
+        <view class="section-title"><image src="/assets/icons/book-open.svg" mode="aspectFit" />典籍出处</view>
+        <view class="source-book">《{{card.item.book}}》</view>
+      </view>
+      <view class="source-box">
+        <view class="source-chapter">《{{card.item.book}} · {{card.item.chapter}}》</view>
+        <view class="source-quote">{{card.item.original}}</view>
+      </view>
+      <view class="section-note">取字方式：{{card.item.extraction}}。释义包含现代寄意，不能替代古文原意。</view>
+    </view>
+
+    <view class="detail-section">
+      <view class="section-title"><image src="/assets/icons/leaf.svg" mode="aspectFit" />释义与寓意</view>
+      <view class="section-copy">{{card.item.meaning}}</view>
+    </view>
+
+    <view class="detail-section">
+      <view class="section-title"><image src="/assets/icons/yinyang.svg" mode="aspectFit" />五行参考</view>
+      <view class="element-row" wx:if="{{elements.length}}">
+        <text wx:for="{{elements}}" wx:key="char">{{item.char}}：{{item.element}}</text>
+      </view>
+      <view class="section-copy muted-copy" wx:if="{{unknown}}">资料不足：{{unknown}}</view>
+      <view class="section-note">仅为传统取名参考，不据此判断宝宝八字或应补五行。</view>
+    </view>
+
+    <view class="detail-section popularity-section">
+      <view class="section-title section-title-hot"><image src="/assets/icons/chart.svg" mode="aspectFit" />姓名热度参考</view>
+      <view class="section-copy">{{popularity}}</view>
+    </view>
+
+    <view class="feedback-link" bindtap="feedback">反馈出处或释义问题</view>
+    <view class="detail-error" wx:if="{{error}}">{{error}}</view>
+  </view>
+  <view class="detail-actions">
+    <button class="favorite-outline" disabled="{{busy}}" bindtap="favorite"><image src="/assets/icons/star-outline.svg" mode="aspectFit" />收藏名字</button>
+    <button class="continue-button" disabled="{{busy}}" bindtap="continueChoosing">继续挑选<image src="/assets/icons/arrow-right.svg" mode="aspectFit" /></button>
+  </view>
+</view>
+<view class="empty" wx:else>请从好名千寻或收藏页打开一个名字。</view>
