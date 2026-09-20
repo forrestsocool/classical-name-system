@@ -59,7 +59,7 @@
     <view class="detail-error" wx:if="{{error}}">{{error}}</view>
   </view>
   <view class="detail-actions">
-    <button class="favorite-outline" disabled="{{busy}}" bindtap="favorite"><image src="/assets/icons/star-outline.svg" mode="aspectFit" />{{busy ? '正在收藏…' : '收藏名字'}}</button>
+    <button class="favorite-outline" disabled="{{busy}}" bindtap="favorite"><image src="/assets/icons/star-outline.svg" mode="aspectFit" />{{busy ? '正在收藏' : '收藏名字'}}</button>
     <button class="continue-button" disabled="{{busy}}" bindtap="continueChoosing">继续挑选<image src="/assets/icons/arrow-right.svg" mode="aspectFit" /></button>
   </view>
 </view>
