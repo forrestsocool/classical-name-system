@@ -4,7 +4,7 @@
     <view class="profile-row"><text>当前姓氏</text><text class="profile-value">{{surname}}</text></view>
     <view class="profile-row"><text>性别筛选</text><text class="profile-value">{{gender}}</text></view>
     <view class="profile-row profile-openid-row"><text>OpenID</text><text class="profile-value profile-openid" selectable="true">{{openid}}</text></view>
-    <view class="profile-note">姓氏和筛选都可以在好名千寻首页随时修改。</view>
+    <view class="profile-note">姓氏和筛选都可以在千千佳名首页随时修改。</view>
     <button class="profile-button" bindtap="chooseNames">继续寻名</button>
   </view>
   <view class="profile-panel privacy-panel" bindtap="showPrivacy">

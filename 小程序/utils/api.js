@@ -10,6 +10,6 @@ async function call(action,data={}) {
 }
 // Used solely for idempotency, never as identity or a credential.
 function requestId(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.floor(Math.random()*16);return(c==='x'?r:(r&3)|8).toString(16);});}
-function storageKey(user){return 'haomingqianxun-v3:'+user;}
-function preferenceKey(user){return 'haomingqianxun-preferences-v1:'+user;}
+function storageKey(user){return 'qianqianjiaming-v3:'+user;}
+function preferenceKey(user){return 'qianqianjiaming-preferences-v1:'+user;}
 module.exports={call,requestId,storageKey,preferenceKey};
