@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 140" fill="none">
+  <defs>
+    <linearGradient id="far" x1="0" y1="30" x2="0" y2="140" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#cbded8" stop-opacity=".43"/>
+      <stop offset="1" stop-color="#e9eee4" stop-opacity=".12"/>
+    </linearGradient>
+    <linearGradient id="middle" x1="0" y1="60" x2="0" y2="140" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#bcd3c9" stop-opacity=".42"/>
+      <stop offset="1" stop-color="#dde8dc" stop-opacity=".22"/>
+    </linearGradient>
+    <linearGradient id="near" x1="0" y1="86" x2="0" y2="140" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#acc8ba" stop-opacity=".32"/>
+      <stop offset="1" stop-color="#d5e2d5" stop-opacity=".2"/>
+    </linearGradient>
+    <linearGradient id="mist" x1="0" y1="104" x2="0" y2="140" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f7f5ee" stop-opacity="0"/>
+      <stop offset="1" stop-color="#f7f5ee" stop-opacity=".8"/>
+    </linearGradient>
+  </defs>
+  <!-- Wide valleys and uneven, rounded ridges keep the horizon low. -->
+  <path d="M0 82C17 74 29 50 44 52C58 54 62 32 77 34C91 36 101 58 117 62C132 66 143 47 157 49C175 52 186 80 207 85C226 89 238 76 254 79C275 83 286 105 310 105C333 104 347 94 366 97C389 101 404 110 428 103C447 99 458 80 475 83C493 87 504 63 521 65C542 68 552 46 567 48C586 51 597 77 613 77C630 78 641 61 656 63C674 65 684 36 701 39C720 43 733 65 750 62V140H0Z" fill="url(#far)"/>
+  <path d="M0 101C20 100 35 84 49 86C64 89 72 61 89 65C107 69 116 90 132 91C150 92 157 78 172 81C193 85 203 103 224 103C244 104 257 94 273 98C291 102 306 119 328 118C352 117 371 109 392 112C419 117 437 104 457 103C476 103 488 86 505 89C522 92 536 79 551 81C569 85 580 97 598 95C619 92 631 78 647 82C665 88 676 70 691 73C715 77 727 96 750 89V140H0Z" fill="url(#middle)"/>
+  <path d="M0 121C21 118 36 105 52 108C70 112 84 99 99 103C116 108 128 121 149 118C169 116 185 110 201 115C229 123 253 124 277 122C306 120 327 132 356 127C384 122 405 131 432 124C455 119 466 111 486 113C507 116 519 104 536 107C553 110 564 121 586 117C608 113 622 105 642 110C665 115 678 99 697 101C718 105 732 112 750 108V140H0Z" fill="url(#near)"/>
+  <path d="M16 103C33 95 43 92 53 95M66 91C77 80 86 72 94 77C105 83 111 96 124 98M542 88C551 87 560 96 570 98M674 88C682 82 690 80 698 83C710 86 719 99 731 99" stroke="#afcabc" stroke-opacity=".18" stroke-width="1.2" stroke-linecap="round"/>
+  <path d="M0 124C95 117 164 130 246 127C328 124 400 133 484 126C572 119 641 128 750 121" stroke="#fffef8" stroke-opacity=".55" stroke-width="2"/>
+  <path d="M0 104H750V140H0Z" fill="url(#mist)"/>
+</svg>

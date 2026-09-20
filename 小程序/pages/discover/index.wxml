@@ -1,18 +1,17 @@
 <view class="discover-page" style="padding-top:{{statusBarHeight}}px">
-  <view class="hero">
-    <image class="hero-landscape" src="/assets/landscape.svg" mode="aspectFit" />
+  <image class="hero-landscape" style="top:{{statusBarHeight - 12}}px" src="/assets/landscape.svg" mode="aspectFill" aria-hidden="true" />
+  <image class="footer-landscape" src="/assets/footer-mountains.svg" mode="scaleToFill" aria-hidden="true" />
+  <view class="hero" style="height:{{navHeight}}px">
     <view class="brand-row">
       <view class="brand-name">好名千寻</view>
       <view class="brand-seal">隽<text>名</text></view>
     </view>
-    <view class="brand-subtitle">从典籍深处，寻一个好名字</view>
-    <view class="brand-motto"><view></view><text>好 名 伴 一 生</text><view></view></view>
   </view>
 
   <view class="filters">
     <view class="filter-control surname-control">
       <text class="filter-label">姓氏</text>
-      <input class="surname-input" value="{{surname}}" maxlength="2" placeholder="请输入" placeholder-class="input-placeholder" bindinput="onSurnameInput" />
+      <input class="surname-input" value="{{surname}}" maxlength="2" placeholder="选填" placeholder-class="input-placeholder" bindinput="onSurnameInput" />
     </view>
     <picker class="gender-picker" mode="selector" range="{{genderLabels}}" value="{{genderIndex}}" bindchange="genderChange">
       <view class="filter-control gender-control">
@@ -28,7 +27,7 @@
   </view>
 
   <view class="deck" wx:if="{{ready}}">
-    <view class="name-card card-shadow card-third"></view>
+    <view class="name-card card-shadow card-third" wx:if="{{current}}"></view>
     <view class="name-card card-shadow card-next" style="{{stackStyle}}" wx:if="{{next}}">
       <view class="next-name">{{next.item.displayName}}</view>
     </view>
@@ -46,18 +45,31 @@
       <image class="bamboo" src="/assets/bamboo.svg" mode="aspectFit" />
       <view class="decision decision-skip" style="opacity:{{skipOpacity}}">不喜欢</view>
       <view class="decision decision-like" style="opacity:{{likeOpacity}}">收藏</view>
-      <view class="name-block">
-        <view class="candidate-name">{{current.item.displayName}}</view>
-        <view class="candidate-pinyin">{{current.item.pinyin}}</view>
+      <view class="card-heading">
+        <view class="name-block">
+          <view class="candidate-name {{current.item.displayName.length > 3 ? 'candidate-name-long' : ''}}">{{current.item.displayName}}</view>
+          <view class="candidate-pinyin">{{current.item.pinyin}}</view>
+        </view>
+        <view class="gender-scores">
+          <view class="score-pill score-male"><image src="/assets/icons/male.svg" mode="aspectFit" /><text>{{current.item.maleScore}}%</text></view>
+          <view class="score-divider"></view>
+          <view class="score-pill score-female"><image src="/assets/icons/female.svg" mode="aspectFit" /><text>{{current.item.femaleScore}}%</text></view>
+        </view>
       </view>
-      <view class="gender-scores">
-        <view class="score-pill score-male"><image src="/assets/icons/male.svg" mode="aspectFit" /><text>{{current.item.maleScore}}%</text></view>
-        <view class="score-divider"></view>
-        <view class="score-pill score-female"><image src="/assets/icons/female.svg" mode="aspectFit" /><text>{{current.item.femaleScore}}%</text></view>
+      <view class="card-story">
+        <view class="candidate-meaning">{{current.item.meaning}}</view>
+        <view class="tags" wx:if="{{current.item.tags.length}}">
+          <text class="tag" wx:for="{{current.item.tags}}" wx:key="*this" wx:if="{{index < 3}}">{{item}}</text>
+        </view>
       </view>
-      <view class="candidate-meaning">{{current.item.meaning}}</view>
-      <view class="tags" wx:if="{{current.item.tags.length}}">
-        <text class="tag" wx:for="{{current.item.tags}}" wx:key="*this">{{item}}</text>
+      <view class="card-footer">
+        <view class="card-source" wx:if="{{current.item.book}}">
+          <image src="/assets/icons/book-open.svg" mode="aspectFit" />
+          <text>《{{current.item.book}}》<text wx:if="{{current.item.chapter}}"> · {{current.item.chapter}}</text></text>
+        </view>
+        <view class="card-detail" catchtap="detail" role="button" aria-label="查看名字的出处与释义">
+          <text>查看出处</text><image src="/assets/icons/arrow-right-green.svg" mode="aspectFit" />
+        </view>
       </view>
       <view class="card-seal">寻</view>
     </view>

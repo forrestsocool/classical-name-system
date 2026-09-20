@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 285" fill="none">
   <defs>
-    <linearGradient id="sun" x1="647" y1="60" x2="647" y2="161" gradientUnits="userSpaceOnUse">
+    <linearGradient id="sun" x1="470" y1="45" x2="470" y2="145" gradientUnits="userSpaceOnUse">
       <stop stop-color="#f8c9a7" stop-opacity=".8"/>
       <stop offset=".52" stop-color="#f9dcc0" stop-opacity=".5"/>
       <stop offset="1" stop-color="#f9e9d4" stop-opacity="0"/>
@@ -33,7 +33,7 @@
       <stop offset="1" stop-color="#f7f5ee"/>
     </linearGradient>
   </defs>
-  <circle cx="647" cy="109" r="47" fill="url(#sun)"/>
+  <circle cx="470" cy="92" r="47" fill="url(#sun)"/>
   <!-- Uneven, rounded ridges leave the lettering in open sky. -->
   <path d="M356 265C374 258 382 246 393 247C406 249 414 230 424 233C441 238 461 199 476 190C492 179 499 203 510 205C522 207 538 179 551 175C565 171 575 195 588 194C606 192 619 175 633 167C647 158 656 174 669 168C693 155 706 129 722 119C735 109 743 117 750 123V285H356Z" fill="url(#distant)"/>
   <path d="M417 265C437 257 448 248 462 251C481 254 491 236 505 227C521 217 532 191 545 177C554 167 560 169 567 157C580 137 591 139 602 153C614 168 621 178 631 179C641 180 650 166 660 166C672 165 681 181 691 179C706 175 716 152 730 145C738 141 744 144 750 149V285H417Z" fill="url(#rear)"/>
@@ -48,7 +48,7 @@
   <path d="M0 274C59 269 81 279 123 278C186 274 222 284 289 279C365 274 384 279 438 273C489 267 518 275 571 267C635 258 688 269 750 261V285H0Z" fill="#eff2e9" fill-opacity=".65"/>
   <path d="M0 280C119 273 169 282 245 282C355 282 399 276 471 279C575 282 652 272 750 276" stroke="#fffef8" stroke-opacity=".56" stroke-width="2.5"/>
   <path d="M0 234H750V285H0Z" fill="url(#mist)"/>
-  <g stroke="#7e9ea0" stroke-opacity=".82" stroke-width="1.7" stroke-linecap="round">
+  <g transform="translate(-145 -30)" stroke="#7e9ea0" stroke-opacity=".82" stroke-width="1.7" stroke-linecap="round">
     <path d="M510 113C515 111 519 113 522 117C522 112 526 109 531 109"/>
     <path d="M544 135C548 133 551 135 553 137C555 134 558 133 562 134"/>
   </g>

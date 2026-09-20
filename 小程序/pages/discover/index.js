@@ -18,7 +18,7 @@ const restStyle = 'transform:translate3d(0px,0px,0) rotate(0deg);transition:none
 
 Page({
   data: {
-    statusBarHeight: 0, surname: '', gender: 'any', genderIndex: 0,
+    statusBarHeight: 0, navHeight: 44, surname: '', gender: 'any', genderIndex: 0,
     genderLabel: '不限', genderIcon: 'users', genderLabels: GENDER_LABELS,
     nameLength: 2, current: null, next: null, ready: false, loading: true,
     animating: false, saving: false, error: '', cooldown: 0,
@@ -29,11 +29,20 @@ Page({
     this.pools = newPools();
     this.pulls = {};
     this.visible = true;
-    const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
-    this.windowWidth = info.windowWidth || 375;
-    this.setData({statusBarHeight: info.statusBarHeight || 0});
+    this.updateLayout();
     await this.connect();
   },
+  updateLayout() {
+    const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
+    const statusBarHeight = info.statusBarHeight || 0;
+    const capsule = wx.getMenuButtonBoundingClientRect && wx.getMenuButtonBoundingClientRect();
+    this.windowWidth = info.windowWidth || 375;
+    // Align the compact wordmark with the native capsule on each device.
+    const navHeight = capsule && capsule.bottom > statusBarHeight
+      ? capsule.bottom - statusBarHeight + 8 : 44;
+    this.setData({statusBarHeight, navHeight});
+  },
+  onResize() { this.updateLayout(); },
   onShow() {
     this.visible = true;
     if (this.getTabBar && this.getTabBar()) this.getTabBar().setData({selected: 0});
