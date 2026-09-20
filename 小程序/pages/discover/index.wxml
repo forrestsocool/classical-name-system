@@ -105,7 +105,7 @@
     </view>
     <view class="action-wrap">
       <button class="action-button action-favorite" loading="{{saving}}" disabled="{{animating}}" bindtap="favorite" aria-label="收藏这个名字">
-        <image src="/assets/icons/star.svg" mode="aspectFit" />
+        <image wx:if="{{!saving}}" src="/assets/icons/star.svg" mode="aspectFit" />
       </button>
       <text>收藏</text>
     </view>

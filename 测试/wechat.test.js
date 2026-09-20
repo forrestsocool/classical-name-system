@@ -309,6 +309,7 @@ test('discover markup matches the brand controls and omits advanced character fi
   assert.match(markup, /catchtouchmove="touchMove"/);
   assert.match(markup, /正在收藏/);
   assert.doesNotMatch(markup, /正在翻阅收藏/);
+  assert.match(markup, /wx:if="{{!saving}}" src="\/assets\/icons\/star\.svg"/);
   assert.match(markup, /next && !saving/);
   assert.match(markup, /单字/);
   assert.match(markup, /双字/);
