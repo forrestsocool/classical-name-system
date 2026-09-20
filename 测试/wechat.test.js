@@ -307,7 +307,8 @@ test('discover markup matches the brand controls and omits advanced character fi
   const script = fs.readFileSync(path.join(__dirname, '../小程序/pages/discover/index.js'), 'utf8');
   assert.match(markup, /千千嘉名/);
   assert.match(markup, /catchtouchmove="touchMove"/);
-  assert.match(markup, /正在翻阅收藏/);
+  assert.match(markup, /正在收藏/);
+  assert.doesNotMatch(markup, /正在翻阅收藏/);
   assert.match(markup, /next && !saving/);
   assert.match(markup, /单字/);
   assert.match(markup, /双字/);
