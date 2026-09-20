@@ -14,7 +14,7 @@
 .favorite-top, .mini-scores, .favorite-meaning, .favorite-tags, .favorite-source { position: relative; z-index: 1; }
 .favorite-top { display: flex; align-items: center; justify-content: space-between; gap: 18rpx; }
 .name-group { flex: 1; min-width: 0; }
-.favorite-name { color: #094e43; font: 600 55rpx/1.2 'Songti SC', 'STSong', 'SimSun', serif; letter-spacing: 7rpx; overflow-wrap: anywhere; }
+.favorite-name { color: #094e43; font-weight: 600; font-size: 55rpx; line-height: 1.2; letter-spacing: 7rpx; overflow-wrap: anywhere; }
 .favorite-pinyin { margin-top: 9rpx; color: #7e8c87; font-size: 20rpx; line-height: 1.5; letter-spacing: 4rpx; word-break: break-word; }
 .source-button { flex: none; display: flex; align-items: center; justify-content: center; gap: 10rpx; width: 188rpx; min-width: 188rpx; max-width: 188rpx; height: 61rpx; margin: 0; padding: 0 17rpx; border: 1rpx solid #dce6da; border-radius: 999rpx; color: #0b584b; background: #f0f5ed; font-size: 22rpx; font-weight: 400; line-height: 1; }
 .source-button image { width: 27rpx; height: 27rpx; }
@@ -25,7 +25,7 @@
 .mini-score image { width: 23rpx; height: 23rpx; }
 .mini-male { color: #2467b8; background: #edf6ff; }
 .mini-female { color: #a94854; background: #fff0f1; }
-.favorite-meaning { display: -webkit-box; overflow: hidden; margin-top: 20rpx; color: #435b51; font: 400 27rpx/1.85 'Songti SC', 'STSong', 'SimSun', serif; letter-spacing: .5rpx; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.favorite-meaning { display: -webkit-box; overflow: hidden; margin-top: 20rpx; color: #435b51; font-weight: 400; font-size: 27rpx; line-height: 1.85; letter-spacing: .5rpx; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
 .favorite-tags { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 18rpx; }
 .favorite-tags text { display: block; padding: 7rpx 16rpx; border-radius: 999rpx; color: #3c6b59; background: #edf4eb; font-size: 20rpx; line-height: 1.4; }
 .favorite-source { display: flex; align-items: flex-start; gap: 10rpx; margin-top: 23rpx; padding-top: 17rpx; border-top: 1rpx solid #eef0e8; color: #87938b; font-size: 21rpx; line-height: 1.6; }
@@ -39,7 +39,7 @@
 .empty-art { position: relative; width: 360rpx; height: 180rpx; margin-bottom: 16rpx; }
 .empty-mountains { position: absolute; inset: 0; width: 360rpx; height: 214rpx; }
 .empty-heart { position: absolute; width: 63rpx; height: 63rpx; left: 149rpx; top: 65rpx; opacity: .62; }
-.state-title { margin-top: 25rpx; color: #315a4b; font: 400 33rpx/1.6 'Songti SC', 'STSong', 'SimSun', serif; letter-spacing: 3rpx; }
+.state-title { margin-top: 25rpx; color: #315a4b; font-weight: 400; font-size: 33rpx; line-height: 1.6; letter-spacing: 3rpx; }
 .state-copy { margin-top: 12rpx; color: #8b9790; font-size: 24rpx; line-height: 1.7; }
 .discover-button { display: flex; align-items: center; gap: 22rpx; margin: 36rpx 0 0; padding: 0 33rpx; border-radius: 999rpx; color: #fffefa; background: linear-gradient(145deg, #237460, #0b584b); font-size: 26rpx; line-height: 78rpx; }
 .discover-button image { width: 30rpx; height: 30rpx; }

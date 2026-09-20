@@ -1,7 +1,9 @@
 const {preferenceKey} = require('../../utils/api');
+const build = require('../../utils/build');
 
 Page({
-  data: {surname: '未设置', gender: '不限', openid: '加载中', loading: true},
+  data: {surname: '未设置', gender: '不限', openid: '加载中', loading: true,
+    buildVersion: build.version},
   async onShow() {
     if (this.getTabBar && this.getTabBar()) this.getTabBar().setData({selected: 2});
     try {
