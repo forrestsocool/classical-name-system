@@ -46,6 +46,7 @@ Page({
   onShow() {
     this.visible = true;
     if (this.getTabBar && this.getTabBar()) this.getTabBar().setData({selected: 0});
+    this.consumePendingFavorite();
     this.startTicker();
   },
   onHide() {
@@ -87,6 +88,7 @@ Page({
       this.render();
       this.startTicker();
       await this.refill(this.data.nameLength, this.data.gender);
+      this.consumePendingFavorite(true);
     } catch (error) {
       if (!this.closed) this.setData({loading: false, error: error.message || '暂时没有连接上，请重试'});
     } finally { this.connecting = false; }
@@ -157,7 +159,10 @@ Page({
         pool.loading = false;
         delete this.pulls[key];
         this.persist();
-        if (key === this.activeKey() && !this.data.animating) this.render();
+        if (key === this.activeKey() && !this.data.animating) {
+          this.render();
+          this.consumePendingFavorite(true);
+        }
       }
     });
     this.pulls[key] = pending;
@@ -237,18 +242,23 @@ Page({
     if (this.data.animating || !this.data.current) return;
     const key = this.activeKey(), pool = this.pools[key], card = pool.cards[0];
     this.touch = null;
+    const outgoingStyle = `transform:translate3d(${direction * this.windowWidth * 1.35}px,-24px,0) rotate(${direction * 23}deg);transition:transform 280ms cubic-bezier(.2,.65,.25,1);`;
     this.setData({animating: true, saving: shouldFavorite, error: '',
-      cardStyle: `transform:translate3d(${direction * this.windowWidth * 1.35}px,-24px,0) rotate(${direction * 23}deg);transition:transform 280ms cubic-bezier(.2,.65,.25,1);`,
-      stackStyle: 'transform:translateY(0) scale(1);opacity:1;',
-      likeOpacity: shouldFavorite ? 1 : 0, skipOpacity: direction < 0 ? 1 : 0});
+      cardStyle: shouldFavorite ? restStyle : outgoingStyle,
+      stackStyle: shouldFavorite ? 'opacity:0;' : 'transform:translateY(0) scale(1);opacity:1;',
+      likeOpacity: 0, skipOpacity: direction < 0 ? 1 : 0});
     const save = shouldFavorite ? call('favorites.add', {material_id: card.id}).then(() => null, error => error) : Promise.resolve(null);
-    await new Promise(resolve => setTimeout(resolve, 290));
-    const error = await save;
+    if (!shouldFavorite) await new Promise(resolve => setTimeout(resolve, 290));
+    let error = await save;
     if (error) {
       this.resetDrag(true);
       if (!this.closed) this.setData({error: '收藏没有保存成功，名字已留在原位，请重试。', saving: false});
       await new Promise(resolve => setTimeout(resolve, 270));
     } else {
+      if (shouldFavorite) {
+        this.setData({cardStyle: outgoingStyle, stackStyle: 'opacity:0;'});
+        await new Promise(resolve => setTimeout(resolve, 290));
+      }
       if (pool.cards[0] && pool.cards[0].id === card.id) pool.cards.shift();
       this.persist();
       this.resetDrag();
@@ -257,6 +267,30 @@ Page({
     }
     if (!this.closed) this.setData({animating: false, saving: false});
     if (!error) this.refill();
+  },
+  consumePendingFavorite(allowMiss = false) {
+    const pending = getApp().pendingFavorite;
+    if (!pending) return;
+    const removed = this.completeFavoriteFromDetail(pending.id);
+    if (removed || allowMiss) getApp().pendingFavorite = null;
+  },
+  completeFavoriteFromDetail(id) {
+    if (!this.pools || this.closed) return;
+    let target = null;
+    for (const key of Object.keys(this.pools)) {
+      const pool = this.pools[key];
+      const index = pool.cards.findIndex(card => String(card.id) === String(id));
+      if (index >= 0) { target = {key, pool, index}; break; }
+    }
+    if (!target) return false;
+    target.pool.cards.splice(target.index, 1);
+    this.persist();
+    if (target.key === this.activeKey() && target.index === 0) {
+      this.resetDrag();
+      this.render();
+      this.refill();
+    }
+    return true;
   },
   detail() {
     if (!this.data.current || this.data.animating || Date.now() < (this.ignoreTapUntil || 0)) return;

@@ -88,6 +88,10 @@
 .loading-mark view:nth-child(2) { animation-delay: 140ms; }
 .loading-mark view:nth-child(3) { animation-delay: 280ms; }
 @keyframes pulse { 0%, 80%, 100% { opacity: .24; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-9rpx); } }
+.save-status { position: absolute; z-index: 8; left: 50%; top: 50%; min-width: 245rpx; padding: 24rpx 30rpx 22rpx; display: flex; flex-direction: column; align-items: center; gap: 12rpx; transform: translate(-50%, -50%); border: 1rpx solid rgba(188, 211, 196, .78); border-radius: 20rpx; color: #2f6658; background: rgba(255, 254, 250, .94); box-shadow: 0 12rpx 30rpx rgba(45, 74, 57, .11); pointer-events: none; }
+.save-status .loading-mark { height: 24rpx; }
+.save-status .loading-mark view { width: 8rpx; height: 8rpx; }
+.save-status text { font-size: 24rpx; line-height: 1.4; letter-spacing: 1rpx; }
 .retry-button { margin-top: 30rpx; padding: 0 38rpx; border: 1rpx solid #b8c3bb; border-radius: 999rpx; color: var(--green); background: transparent; font-size: 24rpx; line-height: 68rpx; }
 .retry-button::after { border: 0; }
 

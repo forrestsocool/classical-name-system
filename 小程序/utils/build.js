@@ -1,2 +1,2 @@
 // The source build marker also identifies preview builds, where version is empty.
-module.exports = {version: '0.4.11', revision: 'brand-jia-1'};
+module.exports = {version: '0.4.12', revision: 'favorite-feedback-1'};

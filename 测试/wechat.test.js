@@ -186,6 +186,8 @@ test('favorite failure returns the card and blocks a second action', async () =>
   });
   await page.onLoad();
   const first = page.favorite();
+  assert.equal(page.data.saving, true);
+  assert.equal(page.data.animating, true);
   await page.favorite();
   assert.equal(saves, 1);
   save.reject(new Error('offline'));
@@ -211,6 +213,17 @@ test('successful favorite advances once and prefetches without duplicate actions
   await first;
   assert.equal(page.data.current.id, 2);
   assert.equal(events.vibrations, 1);
+});
+
+test('favorite from detail removes the matching card before showing the next one', async () => {
+  const {page} = pageHarness(async (action) => {
+    if (action === 'feed.pull') return {cards: [card(1, '清和'), card(2, '景行')]};
+    return {favorite: true};
+  });
+  await page.onLoad();
+  assert.equal(page.completeFavoriteFromDetail(1), true);
+  assert.equal(page.data.current.id, 2);
+  assert.equal(page.completeFavoriteFromDetail(999), false);
 });
 
 test('late single-name response cannot replace the active double-name deck', async () => {
@@ -294,10 +307,13 @@ test('discover markup matches the brand controls and omits advanced character fi
   const script = fs.readFileSync(path.join(__dirname, '../小程序/pages/discover/index.js'), 'utf8');
   assert.match(markup, /千千嘉名/);
   assert.match(markup, /catchtouchmove="touchMove"/);
+  assert.match(markup, /正在翻阅收藏/);
+  assert.match(markup, /next && !saving/);
   assert.match(markup, /单字/);
   assert.match(markup, /双字/);
   assert.match(markup, /姓氏/);
   assert.match(script, /男孩/);
   assert.match(script, /女孩/);
   assert.doesNotMatch(markup, /固定字|避用字/);
+  assert.match(script, /completeFavoriteFromDetail/);
 });

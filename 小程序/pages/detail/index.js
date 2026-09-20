@@ -33,10 +33,10 @@ Page({
     this.setData({busy: true, error: ''});
     try {
       await call('favorites.add', {material_id: this.data.card.id});
-      wx.showToast({title: '已收藏', icon: 'success'});
+      getApp().pendingFavorite = {id: this.data.card.id};
+      wx.switchTab({url: '/pages/discover/index'});
     } catch (error) {
       this.setData({error: error.message});
-    } finally {
       this.setData({busy: false});
     }
   },
