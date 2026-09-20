@@ -63,4 +63,4 @@
     <button class="continue-button" disabled="{{busy}}" bindtap="continueChoosing">继续挑选<image src="/assets/icons/arrow-right.svg" mode="aspectFit" /></button>
   </view>
 </view>
-<view class="empty" wx:else>请从千千佳名或收藏页打开一个名字。</view>
+<view class="empty" wx:else>请从千千嘉名或收藏页打开一个名字。</view>

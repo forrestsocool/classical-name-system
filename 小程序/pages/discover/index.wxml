@@ -3,7 +3,7 @@
   <image class="footer-landscape" src="/assets/footer-mountains.svg" mode="scaleToFill" aria-hidden="true" />
   <view class="hero" style="height:{{navHeight}}px">
     <view class="brand-row">
-      <view class="brand-name">千千佳名</view>
+      <view class="brand-name">千千嘉名</view>
       <view class="brand-seal" aria-label="小程序"><text>小</text><text>程</text><text>序</text></view>
     </view>
   </view>
@@ -87,7 +87,7 @@
   </view>
 
   <view class="deck deck-loading" wx:else>
-    <view class="deck-empty"><view class="loading-mark"><view></view><view></view><view></view></view><view class="empty-title">正在进入千千佳名</view></view>
+    <view class="deck-empty"><view class="loading-mark"><view></view><view></view><view></view></view><view class="empty-title">正在进入千千嘉名</view></view>
   </view>
 
   <view class="action-bar" wx:if="{{current}}">
