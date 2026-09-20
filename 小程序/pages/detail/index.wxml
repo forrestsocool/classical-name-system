@@ -1,7 +1,10 @@
 <view class="detail-page" wx:if="{{card}}">
   <view class="detail-nav" style="padding-top:{{statusBarHeight}}px">
-    <view class="nav-back" bindtap="goBack"><view></view></view>
-    <view class="nav-title">名字的来处</view>
+    <view class="detail-nav-row">
+      <view class="nav-back" bindtap="goBack" role="button" aria-label="返回"><view></view></view>
+      <view class="nav-title">名字的来处</view>
+      <view class="nav-balance" aria-hidden="true"></view>
+    </view>
   </view>
   <view class="detail-content">
     <view class="summary-card">
