@@ -18,7 +18,13 @@
 .hero { position: relative; z-index: 1; flex: none; display: flex; align-items: flex-end; padding: 0 32rpx 8px; }
 .brand-row { display: flex; align-items: center; }
 .brand-name { color: #315c50; font: 600 35rpx/1 serif; letter-spacing: 4rpx; }
-.brand-seal { width: 22rpx; height: 30rpx; margin-left: 12rpx; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1rpx solid #be7768; border-radius: 3rpx; color: #be7768; font: 12rpx/1.05 serif; transform: rotate(-2deg); }
+.brand-seal { width: 23rpx; height: 43rpx; margin-left: 12rpx; padding: 2rpx 0; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1rpx solid #be7768; border-radius: 3rpx; color: #be7768; font: 12rpx/1 serif; }
+.brand-seal text { display: block; flex: none; width: 100%; height: 12rpx; line-height: 12rpx; text-align: center; }
+.brand-copy { position: relative; z-index: 1; flex: none; margin: 0 32rpx 4rpx; }
+.brand-subtitle { color: #618176; font: 400 22rpx/1.5 serif; letter-spacing: 3rpx; }
+.brand-motto { width: 328rpx; margin: 6rpx 0 0 16rpx; display: flex; align-items: center; gap: 14rpx; color: #8b9b91; font: 400 18rpx/1.4 serif; letter-spacing: 4rpx; }
+.brand-motto view { flex: 1; height: 1rpx; background: #bccbc0; }
+.brand-motto text { flex: none; }
 
 .filters { flex: none; position: relative; z-index: 8; margin: 10rpx 28rpx 0; height: 76rpx; display: flex; align-items: stretch; gap: 14rpx; }
 .filter-control { height: 76rpx; display: flex; align-items: center; border: 1rpx solid #e2e6dc; border-radius: 15rpx; background: rgba(255, 254, 250, .65); }
@@ -35,11 +41,11 @@
 .length-option.is-active { color: #245e4d; background: #fffefa; box-shadow: 0 2rpx 8rpx rgba(45, 70, 49, .08); }
 
 /* A bounded flexible deck keeps every action visible, including on short phones. */
-.deck { position: relative; flex: 1; min-height: 440rpx; max-height: 840rpx; margin: 24rpx 28rpx 32rpx; }
+.deck { position: relative; flex: 1; min-height: 440rpx; max-height: 840rpx; margin: 24rpx 28rpx 38rpx; }
 .name-card { position: absolute; inset: 0; border-radius: 26rpx; transform-origin: 50% 92%; }
-.card-shadow { border: 1rpx solid #e6e8de; background: #fffdf8; pointer-events: none; }
-.card-third { top: 19rpx; bottom: -19rpx; left: 28rpx; right: 28rpx; opacity: .5; transform: rotate(-1deg); }
-.card-next { top: 10rpx; bottom: -10rpx; left: 13rpx; right: 13rpx; opacity: .7; transform: rotate(.8deg); transition: transform 180ms ease, opacity 180ms ease; }
+.card-shadow { border: 1rpx solid #dfe5d9; background: #fffdf8; box-shadow: 0 7rpx 16rpx rgba(45, 63, 54, .065); pointer-events: none; }
+.card-third { top: 28rpx; bottom: -28rpx; left: 30rpx; right: 24rpx; opacity: .7; transform: rotate(-1.5deg); }
+.card-next { top: 14rpx; bottom: -14rpx; left: 12rpx; right: 10rpx; opacity: .88; transform: rotate(1.1deg); transition: transform 180ms ease, opacity 180ms ease; }
 .next-name { margin-top: 47rpx; text-align: center; color: rgba(24, 75, 65, .14); font: 600 84rpx/1.2 serif; letter-spacing: 9rpx; }
 .card-current { z-index: 3; display: flex; flex-direction: column; padding: 46rpx 40rpx 30rpx; border: 1rpx solid rgba(75, 94, 77, .12); overflow: hidden; background: var(--card); box-shadow: 0 14rpx 36rpx rgba(45, 63, 54, .09), 0 2rpx 7rpx rgba(53, 70, 56, .04); will-change: transform; }
 .card-current::after { content: ""; position: absolute; inset: 12rpx; border: 1rpx solid rgba(75, 101, 89, .045); border-radius: 19rpx; pointer-events: none; }
@@ -94,7 +100,6 @@
 .action-skip, .action-favorite { border: 1rpx solid #e7ebe2; }
 .action-next { border: 0; background: #0b584b; box-shadow: 0 7rpx 19rpx rgba(11, 88, 75, .18); }
 .error-toast { position: fixed; z-index: 20; left: 50%; bottom: calc(180rpx + env(safe-area-inset-bottom)); width: 590rpx; transform: translateX(-50%); padding: 18rpx 24rpx; border-radius: 13rpx; color: #fffaf2; background: rgba(121, 65, 50, .94); text-align: center; font-size: 23rpx; }
-.disclaimer { position: relative; z-index: 1; flex: none; height: 28rpx; text-align: center; color: #9aa399; font-size: 18rpx; line-height: 28rpx; }
 
 @media (max-height: 730px) {
   .card-current { padding-top: 34rpx; padding-bottom: 24rpx; }
@@ -106,7 +111,7 @@
   .tags { margin-top: 18rpx; }
 }
 @media (max-height: 620px) {
-  .deck { min-height: 430rpx; margin-top: 18rpx; margin-bottom: 24rpx; }
+  .deck { min-height: 430rpx; margin-top: 18rpx; margin-bottom: 32rpx; }
   .card-current { padding-top: 24rpx; padding-bottom: 20rpx; }
   .candidate-name { font-size: 84rpx; }
   .candidate-name-long { font-size: 74rpx; }

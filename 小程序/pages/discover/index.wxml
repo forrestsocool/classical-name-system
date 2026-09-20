@@ -4,8 +4,12 @@
   <view class="hero" style="height:{{navHeight}}px">
     <view class="brand-row">
       <view class="brand-name">好名千寻</view>
-      <view class="brand-seal">隽<text>名</text></view>
+      <view class="brand-seal" aria-label="小程序"><text>小</text><text>程</text><text>序</text></view>
     </view>
+  </view>
+  <view class="brand-copy">
+    <view class="brand-subtitle">从典籍深处，寻一个好名字</view>
+    <view class="brand-motto"><view></view><text>好名伴一生</text><view></view></view>
   </view>
 
   <view class="filters">
@@ -108,5 +112,4 @@
   </view>
 
   <view class="error-toast" wx:if="{{error}}" bindtap="retry">{{error}}</view>
-  <view class="disclaimer">左右滑动：左边略过，右边收藏</view>
 </view>
