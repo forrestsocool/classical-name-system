@@ -1,7 +1,7 @@
 .profile-page { min-height: calc(100vh - 105rpx); padding: 46rpx 32rpx 150rpx; background: #f7f5ee; color: #294740; }
 .profile-head { display: flex; align-items: center; gap: 22rpx; padding: 18rpx 10rpx 36rpx; }
-.profile-seal { width: 74rpx; height: 74rpx; border: 2rpx solid #b95c4f; border-radius: 12rpx; color: #b95c4f; text-align: center; font: 40rpx/70rpx serif; transform: rotate(-3deg); }
-.profile-title { color: #0b584b; font: 600 47rpx/1.2 serif; letter-spacing: 5rpx; }
+.profile-seal { width: 74rpx; height: 74rpx; border: 2rpx solid #b95c4f; border-radius: 12rpx; color: #b95c4f; text-align: center; font: 40rpx/70rpx 'Songti SC', 'STSong', 'SimSun', serif; transform: rotate(-3deg); }
+.profile-title { color: #0b584b; font: 600 47rpx/1.2 'Songti SC', 'STSong', 'SimSun', serif; letter-spacing: 5rpx; }
 .profile-subtitle { margin-top: 6rpx; color: #88938f; font-size: 22rpx; }
 .profile-panel { margin-bottom: 24rpx; padding: 10rpx 30rpx 30rpx; border: 1rpx solid #e8e8df; border-radius: 24rpx; background: #fffefa; box-shadow: 0 10rpx 28rpx rgba(52, 69, 61, .05); }
 .profile-row { height: 89rpx; display: flex; align-items: center; justify-content: space-between; border-bottom: 1rpx solid #eeeee8; font-size: 27rpx; }
