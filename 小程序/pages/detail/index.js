@@ -4,7 +4,7 @@ const {highlightText} = require('../../utils/richText');
 
 Page({
   data: {
-    statusBarHeight: 0, card: null, elements: [], unknown: '',
+    statusBarHeight: 0, card: null, elements: [], unknown: '', showElements: false,
     popularity: '未命中已收录的历史热门资料，不代表实时重名率。',
     busy: false, error: ''
   },

@@ -35,7 +35,7 @@
       <view class="section-note">取字方式：{{card.item.extraction}}。释义包含现代寄意，不能替代古文原意。</view>
     </view>
 
-    <view class="detail-section">
+    <view class="detail-section" wx:if="{{showElements}}">
       <view class="section-title"><image src="/assets/icons/leaf.svg" mode="aspectFit" />释义与寓意</view>
       <view class="section-copy">{{card.item.meaning}}</view>
     </view>

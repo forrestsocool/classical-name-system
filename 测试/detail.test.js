@@ -19,5 +19,7 @@ test('detail page renders highlighted original and keeps meaning in one section'
   assert.match(markup, /rich-text class="source-quote" nodes="\{\{card\.item\.originalNodes\}\}"/);
   assert.doesNotMatch(markup, /summary-meaning/);
   assert.match(markup, /释义与寓意/);
+  assert.match(markup, /class="detail-section" wx:if="\{\{showElements\}\}"/);
+  assert.match(script, /showElements: false/);
   assert.match(script, /highlightText\(card\.item\.original, card\.item\.name\)/);
 });
