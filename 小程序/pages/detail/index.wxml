@@ -35,12 +35,12 @@
       <view class="section-note">取字方式：{{card.item.extraction}}。释义包含现代寄意，不能替代古文原意。</view>
     </view>
 
-    <view class="detail-section" wx:if="{{showElements}}">
+    <view class="detail-section">
       <view class="section-title"><image src="/assets/icons/leaf.svg" mode="aspectFit" />释义与寓意</view>
       <view class="section-copy">{{card.item.meaning}}</view>
     </view>
 
-    <view class="detail-section">
+    <view class="detail-section elements-section" wx:if="{{showElements}}">
       <view class="section-title"><image src="/assets/icons/yinyang.svg" mode="aspectFit" />五行参考</view>
       <view class="element-row" wx:if="{{elements.length}}">
         <text wx:for="{{elements}}" wx:key="char">{{item.char}}：{{item.element}}</text>
