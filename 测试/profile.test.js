@@ -29,7 +29,6 @@ test('source switches default on, persist independently and preserve homepage pr
   const {page, storage} = harness({surname: '李', gender: 'female'});
   await page.onShow();
   assert.equal(page.data.enabledCount, 2);
-  assert.equal(page.data.openid, 'test-openid');
   page.sourceChange({currentTarget: {dataset: {name: '东亚年号'}}, detail: {value: false}});
   assert.equal(page.data.enabledCount, 1);
   assert.deepEqual(storage.get('prefs:user').excluded_sources, ['东亚年号']);
@@ -37,10 +36,6 @@ test('source switches default on, persist independently and preserve homepage pr
   assert.equal(storage.get('prefs:user').gender, 'female');
   await page.onShow();
   assert.equal(page.data.sources.find(source => source.name === '东亚年号').enabled, false);
-  page.disableAllSources();
-  assert.equal(page.data.enabledCount, 0);
-  page.enableAllSources();
-  assert.equal(page.data.enabledCount, 2);
 });
 
 test('character edits save automatically while conflicts retain the last valid settings', async () => {
@@ -72,4 +67,15 @@ test('catalog failure is recoverable and does not erase filters; new sources def
   assert.equal(page.data.enabledCount, 1);
   assert.equal(page.data.sources.find(source => source.name === '东亚年号').enabled, true);
   assert.deepEqual(storage.get('prefs:user').excluded_sources, ['诗经']);
+});
+
+test('profile markup keeps only individual source switches and puts name filters below them', () => {
+  const markup = fs.readFileSync(path.join(__dirname, '../小程序/pages/profile/index.wxml'), 'utf8');
+  assert.ok(markup.indexOf('名字来源') < markup.indexOf('名字用字'));
+  assert.ok(markup.indexOf('名字用字') < markup.indexOf('继续寻名'));
+  assert.ok(markup.indexOf('继续寻名') < markup.indexOf('千千嘉名'));
+  for (const hidden of ['全开', '全关', '默认全部开启', '从喜欢的典籍与年号中寻找名字', '当前偏好', 'OpenID', '隐私与同步', '名字释义由模型辅助整理']) {
+    assert.doesNotMatch(markup, new RegExp(hidden));
+  }
+  assert.doesNotMatch(markup, /enableAllSources|disableAllSources/);
 });

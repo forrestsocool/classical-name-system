@@ -5,8 +5,7 @@ const build = require('../../utils/build');
 Page({
   data: {
     required: '', excluded: '', sources: [], sourceCount: 0, enabledCount: 0, sourceLoading: true,
-    sourceError: '', inputError: '', savedNotice: '', openid: '加载中', ready: false,
-    surname: '未设置', gender: '不限', buildVersion: build.version
+    sourceError: '', inputError: '', savedNotice: '', ready: false, buildVersion: build.version
   },
   async onShow() {
     if (this.getTabBar && this.getTabBar()) this.getTabBar().setData({selected: 2});
@@ -15,8 +14,7 @@ Page({
       const saved = wx.getStorageSync(preferenceKey(this.user)) || {};
       this.filters = normalizeFilters(saved);
       this.setData({required: this.filters.required, excluded: this.filters.excluded,
-        surname: saved.surname || '未设置', gender: {male: '男孩', female: '女孩', any: '不限'}[saved.gender] || '不限',
-        openid: getApp().openid || '未获取', ready: true, inputError: '', savedNotice: ''});
+        ready: true, inputError: '', savedNotice: ''});
       this.renderSources();
       await this.loadSources();
     } catch (error) {
@@ -77,20 +75,8 @@ Page({
     this.saveFilters({...this.filters, excluded_sources: [...disabled]});
     this.renderSources();
   },
-  enableAllSources() {
-    this.saveFilters({...this.filters, excluded_sources: []});
-    this.renderSources();
-  },
-  disableAllSources() {
-    if (!this.catalog) return;
-    this.saveFilters({...this.filters, excluded_sources: this.catalog.map(source => source.name)});
-    this.renderSources();
-  },
   chooseNames() {
     if (this.data.inputError) return wx.showToast({title: '请先解决用字冲突', icon: 'none'});
     wx.switchTab({url: '/pages/discover/index'});
-  },
-  showPrivacy() {
-    wx.showModal({title: '隐私与同步', content: '无需填写手机号或创建帐号。收藏与已看过的名字通过微信 OPENID 识别。筛选设置保存在当前设备，修改后不会清空收藏或已看记录。', showCancel: false, confirmText: '知道了'});
   }
 });
