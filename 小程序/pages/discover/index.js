@@ -15,7 +15,9 @@ function newPools() {
   for (const gender of GENDERS) for (const length of [1, 2]) pools[poolKey(length, gender)] = emptyPool();
   return pools;
 }
-function cleanSurname(value) { return String(value || '').replace(/[^\u3400-\u9fff]/g, '').slice(0, 2); }
+// Keep the native input's raw maxlength generous enough for pinyin composition;
+// enforce the semantic surname limit only after the IME commits Chinese text.
+function cleanSurname(value) { return String(value || '').replace(/[^\u3400-\u9fff]/g, '').slice(0, 4); }
 const restStyle = 'transform:translate3d(0px,0px,0) rotate(0deg);transition:none;';
 
 Page({

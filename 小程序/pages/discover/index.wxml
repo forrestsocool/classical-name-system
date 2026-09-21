@@ -15,7 +15,7 @@
   <view class="filters">
     <view class="filter-control surname-control">
       <text class="filter-label">姓氏</text>
-      <input class="surname-input" value="{{surname}}" maxlength="2" placeholder="选填" placeholder-class="input-placeholder" bindinput="onSurnameInput" />
+      <input class="surname-input" value="{{surname}}" maxlength="32" placeholder="选填" placeholder-class="input-placeholder" bindinput="onSurnameInput" />
     </view>
     <picker class="gender-picker" mode="selector" range="{{genderLabels}}" value="{{genderIndex}}" bindchange="genderChange">
       <view class="filter-control gender-control">

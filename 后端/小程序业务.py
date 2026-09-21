@@ -21,7 +21,7 @@ class 拉卡参数(严格参数):
     gender: Literal["any", "male", "female"] = "any"
     count: int = Field(default=8, ge=1, le=8)
     # Surname affects display only; character filters apply to the given name.
-    surname: str = Field(default="", max_length=2)
+    surname: str = Field(default="", max_length=4)
     required: str = Field(default="", max_length=2)
     excluded: str = Field(default="", max_length=32)
     excluded_sources: list[Annotated[str, StringConstraints(min_length=1, max_length=100)]] = Field(default_factory=list, max_length=256)

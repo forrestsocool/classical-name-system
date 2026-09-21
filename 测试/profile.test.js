@@ -78,4 +78,6 @@ test('profile markup keeps only individual source switches and puts name filters
     assert.doesNotMatch(markup, new RegExp(hidden));
   }
   assert.doesNotMatch(markup, /enableAllSources|disableAllSources/);
+  assert.match(markup, /data-field="required"[^>]*maxlength="64"/);
+  assert.match(markup, /data-field="excluded"[^>]*maxlength="128"/);
 });

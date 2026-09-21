@@ -281,6 +281,14 @@ test('surname changes display only and gender switch pulls an isolated deck', as
   assert.equal(requests[1].gender, 'female');
 });
 
+test('surname accepts compound surnames beyond the old two-character cap', async () => {
+  const {page} = pageHarness(async () => ({cards: [card(1, '清和')]}));
+  await page.onLoad();
+  page.onSurnameInput({detail: {value: '爱新觉罗'}});
+  assert.equal(page.data.surname, '爱新觉罗');
+  assert.equal(page.data.current.item.displayName, '爱新觉罗清和');
+});
+
 test('next advances without writing a favorite', async () => {
   const actions = [];
   const {page} = pageHarness(async (action) => {
@@ -316,6 +324,7 @@ test('discover markup matches the brand controls and omits advanced character fi
   assert.match(markup, /单字/);
   assert.match(markup, /双字/);
   assert.match(markup, /姓氏/);
+  assert.match(markup, /class="surname-input"[^>]*maxlength="32"/);
   assert.match(script, /男孩/);
   assert.match(script, /女孩/);
   assert.doesNotMatch(markup, /固定字|避用字/);
