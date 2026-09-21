@@ -135,6 +135,20 @@ class PostgreSQLTests(unittest.TestCase):
         self.assertEqual(response.status_code,200,response.text)
         self.assertTrue(response.json()['cards'])
 
+    def test_identifier_bounds_are_rejected_before_database_queries(self):
+        for value in (0, -1, "9223372036854775808", "9" * 100):
+            cases = (("favorites.list", {"before_id": value}),
+                     ("favorites.add", {"material_id": value}),
+                     ("favorites.remove", {"material_id": value}),
+                     ("favorites.compare", {"material_ids": [1, value]}),
+                     ("feedback.save", {"material_id": value, "kind": "不喜欢"}))
+            for action, data in cases:
+                with self.subTest(action=action, value=value):
+                    response = self.request(action, data)
+                    self.assertEqual(response.status_code, 422, response.text)
+        for cursor in (None, 1, 9223372036854775807):
+            self.assertEqual(self.request("favorites.list", {"before_id": cursor}).status_code, 200)
+
     def test_idempotency_default_length_and_strict_parameters(self):
         data = self.pull(count=3)
         first = self.request("feed.pull",data)

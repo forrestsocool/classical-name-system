@@ -11,6 +11,10 @@ from psycopg.types.json import Jsonb
 from .数据库 import 连接数据库
 
 
+# PostgreSQL identifiers are signed bigint; reject overflow before executing SQL.
+名字编号 = Annotated[int, Field(gt=0, le=9223372036854775807)]
+
+
 class 严格参数(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -46,7 +50,7 @@ class 拉卡参数(严格参数):
 
 
 class 名字参数(严格参数):
-    material_id: int = Field(gt=0)
+    material_id: 名字编号
 
 
 class 反馈参数(名字参数):
@@ -55,11 +59,11 @@ class 反馈参数(名字参数):
 
 
 class 列表参数(严格参数):
-    before_id: int | None = Field(default=None, gt=0)
+    before_id: 名字编号 | None = None
 
 
 class 比较参数(严格参数):
-    material_ids: list[int] = Field(min_length=2, max_length=4)
+    material_ids: list[名字编号] = Field(min_length=2, max_length=4)
 
 
 def 卡片(row):
