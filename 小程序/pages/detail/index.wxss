@@ -20,7 +20,6 @@
 .score-female { color: #aa4654; background: #fff0f1; }
 .detail-tags { margin-top: 25rpx; white-space: nowrap; overflow: hidden; }
 .detail-tags text { display: inline-block; margin-right: 12rpx; padding: 9rpx 20rpx; border-radius: 999rpx; color: #2f695c; background: #edf4eb; font-size: 22rpx; }
-.summary-meaning { margin-top: 26rpx; color: #334a46; font-weight: 400; font-size: 27rpx; line-height: 1.82; }
 .section-head { display: flex; align-items: center; justify-content: space-between; gap: 18rpx; }
 .section-title { display: flex; align-items: center; gap: 13rpx; color: #0a594d; font-size: 29rpx; font-weight: 600; }
 .section-title image { width: 35rpx; height: 35rpx; }

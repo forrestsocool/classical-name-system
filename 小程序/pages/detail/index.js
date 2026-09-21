@@ -1,5 +1,6 @@
 const {call} = require('../../utils/api');
 const {normalizeCard} = require('../../utils/view');
+const {highlightText} = require('../../utils/richText');
 
 Page({
   data: {
@@ -17,7 +18,7 @@ Page({
     const rawHints = hot.hints || hot['提示'];
     const hints = Array.isArray(rawHints) ? rawHints.join('；') : rawHints;
     this.setData({
-      card,
+      card: {...card, item: {...card.item, originalNodes: highlightText(card.item.original, card.item.name)}},
       elements: Object.entries(elements.known || elements['已知字符'] || {}).map(([char, element]) => ({char, element})),
       unknown: (elements.unknown || elements['未知字符'] || []).join('、'),
       popularity: hints ? hints + '。' + (hot.note || hot['说明'] || '') : this.data.popularity

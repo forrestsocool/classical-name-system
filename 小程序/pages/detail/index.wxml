@@ -21,7 +21,6 @@
       <view class="detail-tags" wx:if="{{card.item.tags.length}}">
         <text wx:for="{{card.item.tags}}" wx:key="*this">{{item}}</text>
       </view>
-      <view class="summary-meaning">{{card.item.meaning}}</view>
     </view>
 
     <view class="detail-section source-section">
@@ -31,7 +30,7 @@
       </view>
       <view class="source-box">
         <view class="source-chapter">《{{card.item.book}} · {{card.item.chapter}}》</view>
-        <view class="source-quote">{{card.item.original}}</view>
+        <rich-text class="source-quote" nodes="{{card.item.originalNodes}}"></rich-text>
       </view>
       <view class="section-note">取字方式：{{card.item.extraction}}。释义包含现代寄意，不能替代古文原意。</view>
     </view>
