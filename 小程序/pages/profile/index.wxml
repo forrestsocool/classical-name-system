@@ -9,7 +9,7 @@
     </view>
   </view>
 
-  <view class="profile-panel character-panel">
+  <view class="profile-panel character-panel" wx:if="{{showCharacterFilters}}">
     <view class="section-head"><image class="section-icon" src="/assets/icons/leaf.svg" mode="aspectFit" /><text class="section-title">名字用字</text><text class="section-caption">选填</text></view>
     <view class="character-field">
       <view class="field-heading"><text>必须包含的字</text><text class="field-limit">{{required.length}} / 2</text></view>

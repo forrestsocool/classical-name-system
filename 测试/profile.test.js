@@ -78,6 +78,8 @@ test('profile markup keeps only individual source switches and puts name filters
     assert.doesNotMatch(markup, new RegExp(hidden));
   }
   assert.doesNotMatch(markup, /enableAllSources|disableAllSources/);
+  assert.match(markup, /class="profile-panel character-panel" wx:if="\{\{showCharacterFilters\}\}"/);
   assert.match(markup, /data-field="required"[^>]*maxlength="64"/);
   assert.match(markup, /data-field="excluded"[^>]*maxlength="128"/);
+  assert.match(fs.readFileSync(path.join(__dirname, '../小程序/pages/profile/index.js'), 'utf8'), /showCharacterFilters: false/);
 });
