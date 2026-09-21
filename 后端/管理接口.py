@@ -39,8 +39,8 @@ class 档案参数(严格参数):
 @路由.get("/profiles")
 def 档案列表():
     with 连接数据库() as c:
-        return c.execute("""SELECT p.*,count(m.id) FILTER (WHERE m.book<>'东亚年号'
-                AND COALESCE((m.payload->>'基础分')::int,0)>=85) AS stock
+        return c.execute("""SELECT p.*,count(m.id) FILTER (WHERE
+                COALESCE((m.payload->>'基础分')::int,0)>=85) AS stock
             FROM app_profiles p LEFT JOIN app_materials m ON m.profile_id=p.id
             WHERE p.surname='' GROUP BY p.id ORDER BY p.name_length""").fetchall()
 

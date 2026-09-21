@@ -1,7 +1,7 @@
 'use strict';
 const crypto = require('node:crypto');
 const https = require('node:https');
-const ACTIONS = new Set(['session.get','feed.pull','favorites.list','favorites.add','favorites.remove','favorites.compare','feedback.save']);
+const ACTIONS = new Set(['session.get','sources.list','feed.pull','favorites.list','favorites.add','favorites.remove','favorites.compare','feedback.save']);
 
 function signedHeaders(body, secret, timestamp = String(Math.floor(Date.now()/1000)), nonce = crypto.randomBytes(16).toString('hex')) {
   const digest = crypto.createHash('sha256').update(body).digest('hex');

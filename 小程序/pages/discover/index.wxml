@@ -86,9 +86,10 @@
 
     <view class="deck-empty" wx:else>
       <view class="loading-mark" wx:if="{{loading}}"><view></view><view></view><view></view></view>
-      <view class="empty-title">{{loading ? '正在翻阅典籍' : '这一叠已经看完'}}</view>
-      <view class="empty-copy" wx:if="{{!loading}}">{{cooldown > 0 ? cooldown + ' 秒后继续送来新名字' : '可换一种筛选，或稍后再来'}}</view>
-      <button class="retry-button" wx:if="{{!loading}}" disabled="{{cooldown > 0}}" bindtap="retry">{{cooldown > 0 ? '稍候片刻' : '再寻一叠'}}</button>
+      <view class="empty-title">{{loading ? '正在翻阅典籍' : (hasFilters ? '暂无符合条件的新名字' : '这一叠已经看完')}}</view>
+      <view class="empty-copy" wx:if="{{!loading}}">{{filterMessage || (hasFilters ? '可调整个人中心的来源或用字条件' : (cooldown > 0 ? cooldown + ' 秒后继续送来新名字' : '可换一种筛选，或稍后再来'))}}</view>
+      <button class="retry-button" wx:if="{{!loading && hasFilters}}" bindtap="editFilters">调整筛选</button>
+      <button class="retry-button" wx:elif="{{!loading}}" disabled="{{cooldown > 0}}" bindtap="retry">{{cooldown > 0 ? '稍候片刻' : '再寻一叠'}}</button>
     </view>
   </view>
 

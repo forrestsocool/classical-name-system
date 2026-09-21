@@ -172,7 +172,7 @@ class PostgreSQLTests(unittest.TestCase):
         self.assertTrue(any(x["item"]["男孩适配分"] > x["item"]["女孩适配分"] for x in any_gender))
         self.assertTrue(any(x["item"]["女孩适配分"] > x["item"]["男孩适配分"] for x in any_gender))
 
-    def test_low_score_and_era_materials_are_not_exposed(self):
+    def test_low_score_stays_hidden_but_era_source_is_enabled_by_default(self):
         with self.connect() as c:
             low=c.execute("SELECT id FROM app_materials WHERE profile_id=%s ORDER BY id LIMIT 1",(self.double_profile,)).fetchone()['id']
             era=c.execute("SELECT id FROM app_materials WHERE profile_id=%s ORDER BY id OFFSET 1 LIMIT 1",(self.double_profile,)).fetchone()['id']
@@ -181,7 +181,57 @@ class PostgreSQLTests(unittest.TestCase):
         cards=self.request('feed.pull',self.pull(count=8),user='quality-user').json()['cards']
         ids={x['id'] for x in cards}
         self.assertNotIn(low,ids)
-        self.assertNotIn(era,ids)
+        self.assertIn(era,ids)
+        filtered=self.request('feed.pull',self.pull(count=8,excluded_sources=['东亚年号']),user='without-era').json()['cards']
+        self.assertNotIn(era,{x['id'] for x in filtered})
+
+    def test_catalog_lists_all_books_even_without_inventory_and_all_off_returns_empty(self):
+        response = self.request('sources.list')
+        self.assertEqual(response.status_code,200,response.text)
+        sources = response.json()['sources']
+        with self.connect() as c:
+            names = {x['name'] for x in c.execute('SELECT DISTINCT name FROM books')}
+        self.assertEqual({x['name'] for x in sources},names)
+        self.assertIn({'name':'东亚年号','kind':'年号'},sources)
+        self.assertTrue(all(set(x)=={'name','kind'} for x in sources))
+        self.assertEqual(self.request('feed.pull',self.pull(excluded_sources=list(names))).json()['cards'],[])
+        # Excluded rows were not marked as seen; relaxing settings still yields names.
+        self.assertTrue(self.request('feed.pull',self.pull()).json()['cards'])
+
+    def test_character_filters_are_all_required_any_excluded_and_ignore_surname(self):
+        selected=self.request('feed.pull',self.pull(required='清',excluded='和',surname='李')).json()['cards']
+        self.assertEqual([x['item']['名字'] for x in selected],['清清'])
+        both=self.request('feed.pull',self.pull(required='和清'),user='both').json()['cards']
+        self.assertEqual([x['item']['名字'] for x in both],['清和'])
+        surname=self.request('feed.pull',self.pull(surname='李',required='李'),user='surname').json()['cards']
+        self.assertEqual(surname,[])
+        impossible=self.request('feed.pull',self.pull(name_length=1,required='清宁'),user='two-for-single')
+        self.assertEqual(impossible.status_code,200)
+        self.assertEqual(impossible.json()['cards'],[])
+        no_avoid=self.request('feed.pull',self.pull(excluded='清远'),user='avoid').json()['cards']
+        self.assertTrue(no_avoid)
+        self.assertTrue(all(not set('清远') & set(x['item']['名字']) for x in no_avoid))
+
+    def test_filtered_receipts_normalize_settings_but_reject_changed_conditions(self):
+        data=self.pull(required='清和',excluded_sources=['东亚年号','楚辞'])
+        first=self.request('feed.pull',data)
+        self.assertEqual(first.status_code,200,first.text)
+        replay=self.request('feed.pull',{**data,'required':'和清','excluded_sources':['楚辞','东亚年号','楚辞']})
+        self.assertEqual(first.json(),replay.json())
+        for changes in ({'required':'清'},{'excluded':'宁'},{'excluded_sources':[]}):
+            self.assertEqual(self.request('feed.pull',{**data,**changes}).status_code,409)
+        old=self.pull()
+        receipt=self.request('feed.pull',old,user='old-receipt')
+        self.assertEqual(self.request('feed.pull',{**old,'required':'','excluded':'','excluded_sources':[]},user='old-receipt').json(),receipt.json())
+
+    def test_filter_validation_and_combination_with_gender_and_length(self):
+        for invalid in ({'required':'清清宁'},{'excluded':'x%'},{'required':'清','excluded':'清'},
+                        {'excluded_sources':[1]},{'excluded_sources':['']},{'excluded_sources':['诗经']*257}):
+            self.assertEqual(self.request('feed.pull',self.pull(**invalid)).status_code,422,invalid)
+        cards=self.request('feed.pull',self.pull(required='清',gender='male',name_length=1),user='combined').json()['cards']
+        self.assertEqual(cards,[])  # 单字“清”在夹具中为女孩适配分更高。
+        cards=self.request('feed.pull',self.pull(required='清',gender='female',name_length=1),user='combined').json()['cards']
+        self.assertEqual([x['item']['名字'] for x in cards],['清'])
 
     def test_user_ownership_favorite_retry_compare_and_feedback(self):
         cards=self.request("feed.pull",self.pull(count=2)).json()["cards"]

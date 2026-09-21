@@ -74,6 +74,28 @@ class 智能流程测试(unittest.TestCase):
         self.assertEqual(归一化性别评分(2,1),(67,33))
         self.assertEqual(归一化性别评分(0,0),(50,50))
 
+    def test年号来源允许按现代人名标准评审而不整体禁用(self):
+        from contextlib import contextmanager
+        from 后端.智能筛选 import 模型筛选单批
+        prompts = []
+        @contextmanager
+        def response(request, **kwargs):
+            prompts.append(json.loads(request.data)['messages'][0]['content'])
+            class Body:
+                def read(self, n):
+                    return json.dumps({'choices':[{'message':{'content':json.dumps({'候选':[
+                        {'编号':0,'分数':90,'男孩适配分':50,'女孩适配分':50,'释义':'源于年号，寓意安宁'},
+                        {'编号':1,'分数':70,'男孩适配分':50,'女孩适配分':50,'释义':'不适合人名'}]})}}]}).encode()
+            yield Body()
+        candidates = [{'姓名':name,'名字':name,'书名':'东亚年号','原文位置':0,'原文':name} for name in ('永宁','大业')]
+        with patch('urllib.request.OpenerDirector.open',side_effect=response):
+            result = 模型筛选单批(candidates,{'来源书名':'东亚年号'},模型配置(密钥='test',模型='test'))
+            模型筛选单批(candidates,{'来源书名':'诗经'},模型配置(密钥='test',模型='test'))
+        self.assertEqual([item['名字'] for item in result],['永宁'])
+        self.assertIn('不得仅因属于年号而拒绝',prompts[0])
+        self.assertNotIn('拒绝完整的帝王年号',prompts[0])
+        self.assertIn('拒绝完整的帝王年号',prompts[1])
+
     def test多样性与质量(self):
         池 = [{"名字":x,"基础分":90,"书名":"测试","文化标签":[]} for x in ["清风","清云","清远","安宁","明德","修竹"]]
         结果 = 多样性重排(池, 9, 3)

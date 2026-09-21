@@ -8,6 +8,7 @@ const crypto = require('node:crypto');
 const {createHandler, signedHeaders} = require('../云函数/nameGateway/gateway');
 const view = require('../小程序/utils/view');
 const swipe = require('../小程序/utils/swipe');
+const filters = require('../小程序/utils/filters');
 
 const env = {
   CORE_API_URL: 'https://core.example.com',
@@ -125,6 +126,7 @@ function pageHarness(call, user = 'user-A', saved = {}) {
     require: modulePath => {
       if (modulePath.includes('/utils/view')) return view;
       if (modulePath.includes('/utils/swipe')) return swipe;
+      if (modulePath.includes('/utils/filters')) return filters;
       return {call, requestId: () => crypto.randomUUID(), storageKey: value => `cache:${value}`, preferenceKey: value => `prefs:${value}`};
     },
     setInterval: () => 1,
@@ -169,11 +171,11 @@ test('mini app reuses the same request ID after an uncertain pull failure', asyn
   });
   await page.onLoad();
   const cached = storage.get('cache:user-A');
-  assert.equal(cached.pools['any:2'].pending.request_id, ids[0]);
+  assert.equal(cached.pools['any:2'].requests[filters.filterKey({})].pending.request_id, ids[0]);
   await page.retry();
   assert.equal(ids[0], ids[1]);
   assert.equal(page.data.current.id, 1);
-  assert.equal(storage.get('cache:user-A').pools['any:2'].pending, null);
+  assert.equal(Object.keys(storage.get('cache:user-A').pools['any:2'].requests).length, 0);
 });
 
 test('favorite failure returns the card and blocks a second action', async () => {
@@ -318,4 +320,111 @@ test('discover markup matches the brand controls and omits advanced character fi
   assert.match(script, /女孩/);
   assert.doesNotMatch(markup, /固定字|避用字/);
   assert.match(script, /completeFavoriteFromDetail/);
+});
+
+test('returning from profile filters cached cards without losing hidden unconsumed names', async () => {
+  let pulls = 0;
+  const {page, storage} = pageHarness(async () => {
+    pulls += 1;
+    return {cards: pulls === 1 ? [card(1, '清和'), card(2, '清宁'), card(3, '嘉宁'), card(4, '望舒')] : []};
+  });
+  await page.onLoad();
+  storage.set('prefs:user-A', {required: '宁', excluded: '嘉'});
+  await page.syncFilters();
+  assert.equal(page.data.current.id, 2);
+  assert.equal(page.data.next, null);
+  await page.next();
+  assert.equal(page.data.current, null);
+  storage.set('prefs:user-A', {});
+  await page.syncFilters();
+  assert.equal(page.data.current.id, 1);
+  assert.ok(!page.pools['any:2'].cards.some(item => item.id === 2));
+});
+
+test('late response and rapid filter changes cannot display a disabled source or corrupt retries', async () => {
+  const first = deferred(), second = deferred();
+  const requests = [];
+  const {page, storage} = pageHarness(async (action, data) => {
+    requests.push(data);
+    return data.excluded_sources ? second.promise : first.promise;
+  });
+  const loading = page.onLoad();
+  await new Promise(resolve => setImmediate(resolve));
+  storage.set('prefs:user-A', {excluded_sources: ['诗经']});
+  const changed = page.syncFilters();
+  await new Promise(resolve => setImmediate(resolve));
+  const era = card(9, '永宁'); era.item['书名'] = '东亚年号';
+  second.resolve({cards: [era]});
+  await changed;
+  first.resolve({cards: [card(1, '清和')]});
+  await loading;
+  assert.equal(page.data.current.id, 9);
+  assert.equal(page.data.next, null);
+  assert.notEqual(requests[0].request_id, requests[1].request_id);
+  assert.deepEqual(requests[1].excluded_sources, ['诗经']);
+  storage.set('prefs:user-A', {excluded_sources: ['东亚年号']});
+  await page.syncFilters();
+  assert.equal(page.data.current.id, 1);
+});
+
+test('required characters and excluded characters apply only to given names and survive surname changes', async () => {
+  const {page, storage} = pageHarness(async () => ({cards: [card(1, '清和'), card(2, '知远')]}), 'user-A', {
+    'prefs:user-A': {surname: '清', required: '清', excluded: '远', excluded_sources: ['东亚年号']}
+  });
+  await page.onLoad();
+  assert.equal(page.data.current.item.displayName, '清清和');
+  assert.equal(page.data.next, null);
+  page.onSurnameInput({detail: {value: '李'}});
+  assert.equal(storage.get('prefs:user-A').required, '清');
+  assert.deepEqual(storage.get('prefs:user-A').excluded_sources, ['东亚年号']);
+});
+
+test('two required characters do not fetch or show single names', async () => {
+  let pulls = 0;
+  const {page} = pageHarness(async () => { pulls += 1; return {cards: [card(1, '清宁')]}; }, 'user-A', {
+    'prefs:user-A': {required: '清宁'}
+  });
+  await page.onLoad();
+  await page.lengthChange({currentTarget: {dataset: {length: 1}}});
+  assert.equal(page.data.current, null);
+  assert.equal(pulls, 1);
+  assert.match(page.data.filterMessage, /双字/);
+});
+
+test('filter fingerprints normalize ordering and conflicts are rejected', () => {
+  assert.equal(filters.filterKey({required: '宁清', excluded_sources: ['诗经', '东亚年号']}),
+    filters.filterKey({required: '清宁', excluded_sources: ['东亚年号', '诗经', '诗经']}));
+  assert.match(filters.filterError({required: '宁', excluded: '宁和'}), /不能同时/);
+  assert.equal(filters.filterError({required: '宁', excluded: '和'}), '');
+});
+
+test('a filtered request survives restart and replays its receipt instead of consuming new names', async () => {
+  let originalId;
+  const first = pageHarness(async (action, data) => {
+    originalId = data.request_id;
+    throw new Error('response lost');
+  }, 'user-A', {'prefs:user-A': {required: '宁', excluded_sources: ['诗经']}});
+  await first.page.onLoad();
+  const saved = Object.fromEntries(first.storage);
+  const second = pageHarness(async (action, data) => {
+    assert.equal(data.request_id, originalId);
+    assert.equal(data.required, '宁');
+    assert.deepEqual(data.excluded_sources, ['诗经']);
+    const era = card(12, '永宁'); era.item['书名'] = '东亚年号';
+    return {cards: [era]};
+  }, 'user-A', saved);
+  await second.page.onLoad();
+  assert.equal(second.page.data.current.item.name, '永宁');
+});
+
+test('gateway forwards source catalog through the same identity boundary', async () => {
+  let forwarded;
+  const handler = createHandler({getContext: () => context, env, transport: async (url, body) => {
+    forwarded = JSON.parse(body);
+    return {status: 200, data: {sources: [{name: '诗经', kind: '古籍'}]}};
+  }});
+  const response = await handler({action: 'sources.list', openid: 'forged'});
+  assert.equal(response.ok, true);
+  assert.equal(forwarded.openid, context.OPENID);
+  assert.equal(forwarded.action, 'sources.list');
 });

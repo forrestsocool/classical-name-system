@@ -1,22 +1,96 @@
-const {preferenceKey} = require('../../utils/api');
+const {call, preferenceKey} = require('../../utils/api');
+const {cleanCharacters, normalizeFilters, filterError} = require('../../utils/filters');
 const build = require('../../utils/build');
 
 Page({
-  data: {surname: '未设置', gender: '不限', openid: '加载中', loading: true,
-    buildVersion: build.version},
+  data: {
+    required: '', excluded: '', sources: [], sourceCount: 0, enabledCount: 0, sourceLoading: true,
+    sourceError: '', inputError: '', savedNotice: '', openid: '加载中', ready: false,
+    surname: '未设置', gender: '不限', buildVersion: build.version
+  },
   async onShow() {
     if (this.getTabBar && this.getTabBar()) this.getTabBar().setData({selected: 2});
     try {
-      const user = await getApp().session();
-      const saved = wx.getStorageSync(preferenceKey(user)) || {};
-      const gender = {male: '男孩', female: '女孩', any: '不限'}[saved.gender] || '不限';
-      this.setData({surname: saved.surname || '未设置', gender, openid: getApp().openid || '未获取', loading: false});
+      this.user = await getApp().session();
+      const saved = wx.getStorageSync(preferenceKey(this.user)) || {};
+      this.filters = normalizeFilters(saved);
+      this.setData({required: this.filters.required, excluded: this.filters.excluded,
+        surname: saved.surname || '未设置', gender: {male: '男孩', female: '女孩', any: '不限'}[saved.gender] || '不限',
+        openid: getApp().openid || '未获取', ready: true, inputError: '', savedNotice: ''});
+      this.renderSources();
+      await this.loadSources();
     } catch (error) {
-      this.setData({loading: false});
+      this.setData({sourceLoading: false, sourceError: error.message || '暂时没有连接上，请重试'});
     }
   },
-  chooseNames() { wx.switchTab({url: '/pages/discover/index'}); },
+  async loadSources() {
+    if (!this.user) return this.onShow();
+    if (this.sourcePending) return this.sourcePending;
+    this.setData({sourceLoading: true, sourceError: ''});
+    this.sourcePending = call('sources.list').then(result => {
+      this.catalog = result.sources || [];
+      this.renderSources();
+    }).catch(error => {
+      this.setData({sourceError: error.message || '来源暂时没加载成功，请重试'});
+    }).finally(() => {
+      this.sourcePending = null;
+      this.setData({sourceLoading: false});
+    });
+    return this.sourcePending;
+  },
+  renderSources() {
+    const disabled = new Set((this.filters || {}).excluded_sources || []);
+    const sources = (this.catalog || []).map(source => ({...source, enabled: !disabled.has(source.name)}));
+    this.setData({sources, sourceCount: sources.length, enabledCount: sources.filter(source => source.enabled).length});
+  },
+  saveFilters(next) {
+    if (!this.user) return false;
+    const filters = normalizeFilters(next);
+    try {
+      const preferences = {...(wx.getStorageSync(preferenceKey(this.user)) || {}), ...filters};
+      wx.setStorageSync(preferenceKey(this.user), preferences);
+      getApp().namePreferences = preferences;
+      this.filters = filters;
+      this.setData({savedNotice: '已保存，返回首页即生效'});
+      return true;
+    } catch {
+      wx.showToast({title: '设置未保存，请重试', icon: 'none'});
+      return false;
+    }
+  },
+  characterInput(event) {
+    const field = event.currentTarget.dataset.field;
+    if (!['required', 'excluded'].includes(field)) return;
+    const value = cleanCharacters(event.detail.value, field === 'required' ? 2 : 32);
+    this.setData({[field]: value});
+    const next = {...this.filters, required: this.data.required, excluded: this.data.excluded};
+    const inputError = filterError(next);
+    this.setData({inputError, savedNotice: ''});
+    if (!inputError) this.saveFilters(next);
+    return value;
+  },
+  sourceChange(event) {
+    const name = event.currentTarget.dataset.name;
+    if (!(this.catalog || []).some(source => source.name === name)) return;
+    const disabled = new Set(this.filters.excluded_sources);
+    if (event.detail.value) disabled.delete(name); else disabled.add(name);
+    this.saveFilters({...this.filters, excluded_sources: [...disabled]});
+    this.renderSources();
+  },
+  enableAllSources() {
+    this.saveFilters({...this.filters, excluded_sources: []});
+    this.renderSources();
+  },
+  disableAllSources() {
+    if (!this.catalog) return;
+    this.saveFilters({...this.filters, excluded_sources: this.catalog.map(source => source.name)});
+    this.renderSources();
+  },
+  chooseNames() {
+    if (this.data.inputError) return wx.showToast({title: '请先解决用字冲突', icon: 'none'});
+    wx.switchTab({url: '/pages/discover/index'});
+  },
   showPrivacy() {
-    wx.showModal({title: '隐私说明', content: '无需填写手机号或创建帐号。微信云开发会提供当前小程序内的匿名 OPENID，用于同步收藏和避免重复展示名字。', showCancel: false, confirmText: '知道了'});
+    wx.showModal({title: '隐私与同步', content: '无需填写手机号或创建帐号。收藏与已看过的名字通过微信 OPENID 识别。筛选设置保存在当前设备，修改后不会清空收藏或已看记录。', showCancel: false, confirmText: '知道了'});
   }
 });

@@ -1,12 +1,14 @@
 const {call, requestId, storageKey, preferenceKey} = require('../../utils/api');
 const {normalizeCard, normalizeCards} = require('../../utils/view');
 const {dragState, releaseDirection} = require('../../utils/swipe');
+const {normalizeFilters, filterKey, filterError, matchesCard} = require('../../utils/filters');
 
 const GENDERS = ['any', 'male', 'female'];
 const GENDER_LABELS = ['不限', '男孩', '女孩'];
 const GENDER_ICONS = ['users', 'male', 'female'];
 
-function emptyPool() { return {cards: [], pending: null, retryAt: 0, loading: false, error: ''}; }
+function emptyRequest() { return {pending: null, retryAt: 0, loading: false, error: ''}; }
+function emptyPool() { return {cards: [], requests: {}}; }
 function poolKey(length, gender) { return `${gender}:${length}`; }
 function newPools() {
   const pools = {};
@@ -21,12 +23,13 @@ Page({
     statusBarHeight: 0, navHeight: 44, surname: '', gender: 'any', genderIndex: 0,
     genderLabel: '不限', genderIcon: 'users', genderLabels: GENDER_LABELS,
     nameLength: 2, current: null, next: null, ready: false, loading: true,
-    animating: false, saving: false, error: '', cooldown: 0,
+    animating: false, saving: false, error: '', cooldown: 0, hasFilters: false, filterMessage: '',
     cardStyle: restStyle, stackStyle: '', likeOpacity: 0, skipOpacity: 0
   },
 
   async onLoad() {
     this.pools = newPools();
+    this.filters = normalizeFilters();
     this.pulls = {};
     this.visible = true;
     this.updateLayout();
@@ -46,6 +49,7 @@ Page({
   onShow() {
     this.visible = true;
     if (this.getTabBar && this.getTabBar()) this.getTabBar().setData({selected: 0});
+    if (this.data.ready) this.syncFilters();
     this.consumePendingFavorite();
     this.startTicker();
   },
@@ -57,6 +61,20 @@ Page({
   onUnload() { this.closed = true; clearInterval(this.ticker); },
 
   activeKey(length = this.data.nameLength, gender = this.data.gender) { return poolKey(length, gender); },
+  requestState(pool, filters = this.filters) {
+    const key = filterKey(filters);
+    if (!pool.requests[key]) pool.requests[key] = emptyRequest();
+    return pool.requests[key];
+  },
+  matchingCards(pool) { return pool.cards.filter(card => matchesCard(card, this.filters)); },
+  syncFilters() {
+    const next = normalizeFilters(wx.getStorageSync(preferenceKey(this.user)) || {});
+    if (filterKey(next) === filterKey(this.filters)) return;
+    this.filters = next;
+    this.resetDrag();
+    this.render();
+    return this.refill();
+  },
   async connect() {
     if (this.connecting) return;
     this.connecting = true;
@@ -67,19 +85,26 @@ Page({
       const surname = cleanSurname(preferences.surname);
       const gender = GENDERS.includes(preferences.gender) ? preferences.gender : 'any';
       const genderIndex = GENDERS.indexOf(gender);
-      getApp().namePreferences = {surname, gender};
+      this.filters = normalizeFilters(preferences);
+      getApp().namePreferences = {...preferences, surname, gender, ...this.filters};
       this.setData({surname, gender, genderIndex, genderLabel: GENDER_LABELS[genderIndex], genderIcon: GENDER_ICONS[genderIndex]});
 
       const saved = wx.getStorageSync(storageKey(this.user));
-      if (saved && saved.version === 3) {
+      if (saved && (saved.version === 3 || saved.version === 4)) {
         for (const key of Object.keys(this.pools)) {
           const pool = saved.pools && saved.pools[key];
           if (!pool) continue;
           const length = Number(key.slice(-1));
           const poolGender = key.split(':')[0];
           this.pools[key].cards = normalizeCards(pool.cards).filter(card => card && card.id && card.item.name.length === length);
-          this.pools[key].pending = pool.pending && pool.pending.name_length === length && pool.pending.gender === poolGender ? pool.pending : null;
-          this.pools[key].retryAt = Math.min(Number(pool.retryAt) || 0, Date.now() + 60000);
+          const requests = saved.version === 3 ? {[filterKey(pool.pending || {})]: pool} : (pool.requests || {});
+          for (const signature of Object.keys(requests)) {
+            const state = requests[signature];
+            const pending = state.pending;
+            this.pools[key].requests[signature] = {...emptyRequest(),
+              pending: pending && pending.name_length === length && pending.gender === poolGender && filterKey(pending) === signature ? pending : null,
+              retryAt: Math.min(Number(state.retryAt) || 0, Date.now() + 60000)};
+          }
         }
         if (saved.selectedLength === 1 || saved.selectedLength === 2) this.setData({nameLength: saved.selectedLength});
       }
@@ -99,14 +124,15 @@ Page({
     this.ticker = setInterval(() => {
       if (!this.visible || !this.data.ready || this.closed) return;
       const pool = this.pools[this.activeKey()];
-      const cooldown = Math.max(0, Math.ceil((pool.retryAt - Date.now()) / 1000));
+      const state = this.requestState(pool);
+      const cooldown = Math.max(0, Math.ceil((state.retryAt - Date.now()) / 1000));
       if (cooldown !== this.data.cooldown) this.setData({cooldown});
-      if (!cooldown && !pool.cards.length && !pool.loading && !pool.error) this.refill();
+      if (!cooldown && !this.matchingCards(pool).length && !state.loading && !state.error) this.refill();
     }, 1000);
   },
   persistPreferences() {
     if (!this.user) return;
-    const preferences = {surname: this.data.surname, gender: this.data.gender};
+    const preferences = {...(wx.getStorageSync(preferenceKey(this.user)) || {}), surname: this.data.surname, gender: this.data.gender};
     getApp().namePreferences = preferences;
     wx.setStorageSync(preferenceKey(this.user), preferences);
   },
@@ -115,33 +141,52 @@ Page({
     const pools = {};
     for (const key of Object.keys(this.pools)) {
       const pool = this.pools[key];
-      pools[key] = {cards: pool.cards, pending: pool.pending, retryAt: pool.retryAt};
+      const requests = {};
+      for (const signature of Object.keys(pool.requests)) {
+        const state = pool.requests[signature];
+        // Successful requests need no retained receipt; uncertain failures must replay.
+        if (state.pending || state.retryAt > Date.now()) requests[signature] = {pending: state.pending, retryAt: state.retryAt};
+      }
+      pools[key] = {cards: pool.cards, requests};
     }
-    wx.setStorageSync(storageKey(this.user), {version: 3, selectedLength: this.data.nameLength, pools});
+    wx.setStorageSync(storageKey(this.user), {version: 4, selectedLength: this.data.nameLength, pools});
   },
   render() {
     if (this.closed) return;
     const pool = this.pools[this.activeKey()];
+    const state = this.requestState(pool);
+    const cards = this.matchingCards(pool);
+    const filterMessage = filterError(this.filters) || (this.filters.required.length > this.data.nameLength ? '必含字有两个，请切换双字名或调整用字' : '');
     this.setData({
-      current: normalizeCard(pool.cards[0] || null, this.data.surname),
-      next: normalizeCard(pool.cards[1] || null, this.data.surname),
-      loading: pool.loading, error: pool.error,
-      cooldown: Math.max(0, Math.ceil((pool.retryAt - Date.now()) / 1000))
+      current: normalizeCard(cards[0] || null, this.data.surname),
+      next: normalizeCard(cards[1] || null, this.data.surname),
+      loading: state.loading, error: state.error, filterMessage,
+      hasFilters: !!(this.filters.required || this.filters.excluded || this.filters.excluded_sources.length),
+      cooldown: Math.max(0, Math.ceil((state.retryAt - Date.now()) / 1000))
     });
   },
 
   refill(length = this.data.nameLength, gender = this.data.gender, force = false) {
     if (!this.user || this.closed) return Promise.resolve();
+    if (filterError(this.filters) || this.filters.required.length > length) return Promise.resolve();
     const key = this.activeKey(length, gender);
-    if (this.pulls[key]) return this.pulls[key];
+    const signature = filterKey(this.filters);
+    const pullKey = key + '|' + signature;
+    if (this.pulls[pullKey]) return this.pulls[pullKey];
     const pool = this.pools[key];
-    if (!force && (pool.cards.length > 3 || pool.retryAt > Date.now() || pool.error)) return Promise.resolve();
-    pool.loading = true;
-    pool.error = '';
-    if (!pool.pending) pool.pending = {name_length: length, gender, count: 8, request_id: requestId()};
+    const state = this.requestState(pool);
+    if (!force && (this.matchingCards(pool).length > 3 || state.retryAt > Date.now() || state.error)) return Promise.resolve();
+    state.loading = true;
+    state.error = '';
+    if (!state.pending) {
+      state.pending = {name_length: length, gender, count: 8, request_id: requestId()};
+      for (const field of ['required', 'excluded', 'excluded_sources']) {
+        if (this.filters[field].length) state.pending[field] = this.filters[field];
+      }
+    }
     this.persist();
     if (key === this.activeKey()) this.render();
-    const request = pool.pending;
+    const request = state.pending;
     const pending = Promise.resolve().then(async () => {
       try {
         const result = await call('feed.pull', request);
@@ -150,14 +195,14 @@ Page({
         for (const card of received) {
           if (!ids.has(card.id)) { pool.cards.push(card); ids.add(card.id); }
         }
-        pool.pending = null;
-        pool.retryAt = received.length ? 0 : Date.now() + Math.max(5, Math.min(60, result.retry_after || 15)) * 1000;
+        state.pending = null;
+        state.retryAt = received.length ? 0 : Date.now() + Math.max(5, Math.min(60, result.retry_after || 15)) * 1000;
       } catch (error) {
-        if (error.status === 409 || error.status === 422) pool.pending = null;
-        pool.error = error.message || '新名字暂时没送到，点一下重试';
+        if (error.status === 409 || error.status === 422) state.pending = null;
+        state.error = error.message || '新名字暂时没送到，点一下重试';
       } finally {
-        pool.loading = false;
-        delete this.pulls[key];
+        state.loading = false;
+        delete this.pulls[pullKey];
         this.persist();
         if (key === this.activeKey() && !this.data.animating) {
           this.render();
@@ -165,7 +210,7 @@ Page({
         }
       }
     });
-    this.pulls[key] = pending;
+    this.pulls[pullKey] = pending;
     return pending;
   },
   async retry() {
@@ -240,7 +285,7 @@ Page({
   next() { return this.dismiss(1, false); },
   async dismiss(direction, shouldFavorite) {
     if (this.data.animating || !this.data.current) return;
-    const key = this.activeKey(), pool = this.pools[key], card = pool.cards[0];
+    const key = this.activeKey(), pool = this.pools[key], card = this.data.current;
     this.touch = null;
     const outgoingStyle = `transform:translate3d(${direction * this.windowWidth * 1.35}px,-24px,0) rotate(${direction * 23}deg);transition:transform 280ms cubic-bezier(.2,.65,.25,1);`;
     this.setData({animating: true, saving: shouldFavorite, error: '',
@@ -259,7 +304,8 @@ Page({
         this.setData({cardStyle: outgoingStyle, stackStyle: 'opacity:0;'});
         await new Promise(resolve => setTimeout(resolve, 290));
       }
-      if (pool.cards[0] && pool.cards[0].id === card.id) pool.cards.shift();
+      const index = pool.cards.findIndex(item => item.id === card.id);
+      if (index >= 0) pool.cards.splice(index, 1);
       this.persist();
       this.resetDrag();
       this.render();
@@ -285,13 +331,14 @@ Page({
     if (!target) return false;
     target.pool.cards.splice(target.index, 1);
     this.persist();
-    if (target.key === this.activeKey() && target.index === 0) {
+    if (target.key === this.activeKey()) {
       this.resetDrag();
       this.render();
       this.refill();
     }
     return true;
   },
+  editFilters() { wx.switchTab({url: '/pages/profile/index'}); },
   detail() {
     if (!this.data.current || this.data.animating || Date.now() < (this.ignoreTapUntil || 0)) return;
     getApp().selectedCard = this.data.current;

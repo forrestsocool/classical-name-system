@@ -1,14 +1,40 @@
 <view class="profile-page">
-  <view class="profile-head"><view class="profile-seal">寻</view><view><view class="profile-title">个人中心</view><view class="profile-subtitle">你的寻名偏好与使用说明</view></view></view>
-  <view class="profile-panel">
-    <view class="profile-row"><text>当前姓氏</text><text class="profile-value">{{surname}}</text></view>
-    <view class="profile-row"><text>性别筛选</text><text class="profile-value">{{gender}}</text></view>
-    <view class="profile-row profile-openid-row"><text>OpenID</text><text class="profile-value profile-openid" selectable="true">{{openid}}</text></view>
-    <view class="profile-note">姓氏和筛选都可以在千千嘉名首页随时修改。</view>
-    <button class="profile-button" bindtap="chooseNames">继续寻名</button>
+  <view class="profile-panel character-panel">
+    <view class="section-head"><image class="section-icon" src="/assets/icons/leaf.svg" mode="aspectFit" /><text class="section-title">名字用字</text><text class="section-caption">选填</text></view>
+    <view class="character-field">
+      <view class="field-heading"><text>必须包含的字</text><text class="field-limit">{{required.length}} / 2</text></view>
+      <input class="character-input" value="{{required}}" data-field="required" bindinput="characterInput" maxlength="2" placeholder="如：清宁" placeholder-class="input-placeholder" disabled="{{!ready}}" />
+      <view class="field-hint">每个字都要出现在名字中，顺序不限</view>
+    </view>
+    <view class="character-field">
+      <view class="field-heading"><text>避开的字</text><text class="field-limit">{{excluded.length}} / 32</text></view>
+      <input class="character-input" value="{{excluded}}" data-field="excluded" bindinput="characterInput" maxlength="32" placeholder="填入不希望出现的字" placeholder-class="input-placeholder" disabled="{{!ready}}" />
+      <view class="field-hint">名字含有其中任一字，就不会推荐</view>
+    </view>
+    <view class="input-error" wx:if="{{inputError}}">{{inputError}}，本次用字修改未保存</view>
+    <view class="section-note" wx:else>留空即不限 · 只筛选名字，不包含姓氏</view>
   </view>
-  <view class="profile-panel privacy-panel" bindtap="showPrivacy">
-    <view><view class="privacy-title">隐私与同步</view><view class="profile-note">免注册使用，收藏通过微信身份跨设备同步</view></view><text class="profile-arrow">›</text>
+
+  <view class="profile-panel source-panel">
+    <view class="section-head"><image class="section-icon" src="/assets/icons/book-open.svg" mode="aspectFit" /><text class="section-title">名字来源</text><text class="section-caption" wx:if="{{sourceCount > 0}}">已开启 {{enabledCount}} / {{sourceCount}}</text></view>
+    <view class="source-intro">从喜欢的典籍与年号中寻找名字</view>
+    <view class="source-toolbar" wx:if="{{sourceCount > 0}}"><text>默认全部开启</text><view class="source-tools"><button bindtap="enableAllSources" disabled="{{enabledCount === sourceCount}}">全开</button><text>·</text><button bindtap="disableAllSources" disabled="{{enabledCount === 0}}">全关</button></view></view>
+    <view class="source-status" wx:if="{{sourceLoading && sourceCount === 0}}">正在翻阅来源目录…</view>
+    <view class="source-error" wx:if="{{sourceError}}"><text>{{sourceError}}</text><button bindtap="loadSources">重新加载</button></view>
+    <view class="source-row" wx:for="{{sources}}" wx:key="name">
+      <view class="source-info"><text class="source-name">{{item.name}}</text><text class="source-kind">{{item.kind}}</text></view>
+      <switch class="source-switch" color="#216255" checked="{{item.enabled}}" data-name="{{item.name}}" bindchange="sourceChange" aria-label="{{item.name}}，{{item.enabled ? '已开启' : '已关闭'}}" />
+    </view>
+    <view class="section-note" wx:if="{{sourceCount > 0 && enabledCount === 0}}">所有来源已关闭，开启至少一种才能推荐名字</view>
+  </view>
+
+  <view class="save-notice" aria-live="polite">{{inputError ? '请先调整有冲突的用字' : (savedNotice || '设置自动保存，返回首页即可继续挑选')}}</view>
+  <button class="profile-button" bindtap="chooseNames" disabled="{{!ready || !!inputError}}">继续寻名<image src="/assets/icons/arrow-right.svg" mode="aspectFit" /></button>
+
+  <view class="profile-panel account-panel">
+    <view class="profile-row"><text>当前偏好</text><text class="profile-value">{{surname === '未设置' ? '姓氏未填' : surname + '姓'}} · {{gender}}</text></view>
+    <view class="profile-row profile-openid-row"><text>OpenID</text><text class="profile-value profile-openid" selectable="true">{{openid}}</text></view>
+    <view class="profile-row privacy-row" bindtap="showPrivacy"><text>隐私与同步</text><image src="/assets/icons/arrow-right-green.svg" mode="aspectFit" /></view>
   </view>
   <view class="profile-foot">名字释义由模型辅助整理，重要出处请结合原典核对</view>
   <view class="profile-version">千千嘉名 {{buildVersion}}</view>

@@ -1,10 +1,11 @@
 import hashlib
 import json
-from typing import Literal
+import re
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 from psycopg.types.json import Jsonb
 
 from .数据库 import 连接数据库
@@ -19,11 +20,29 @@ class 拉卡参数(严格参数):
     name_length: Literal[1, 2] = 2
     gender: Literal["any", "male", "female"] = "any"
     count: int = Field(default=8, ge=1, le=8)
-    # Rolling-deploy compatibility for the previous experience build. These
-    # fields are intentionally ignored by the shared inventory contract.
+    # Surname affects display only; character filters apply to the given name.
     surname: str = Field(default="", max_length=2)
     required: str = Field(default="", max_length=2)
     excluded: str = Field(default="", max_length=32)
+    excluded_sources: list[Annotated[str, StringConstraints(min_length=1, max_length=100)]] = Field(default_factory=list, max_length=256)
+
+    @field_validator("required", "excluded")
+    @classmethod
+    def 校验用字(cls, value):
+        if not re.fullmatch(r"[\u3400-\u9fff]*", value):
+            raise ValueError("筛选用字仅支持汉字")
+        return "".join(sorted(set(value)))
+
+    @field_validator("excluded_sources")
+    @classmethod
+    def 整理来源(cls, value):
+        return sorted(set(value))
+
+    @model_validator(mode="after")
+    def 校验冲突(self):
+        if set(self.required) & set(self.excluded):
+            raise ValueError("必须包含和避开的字不能重复")
+        return self
 
 
 class 名字参数(严格参数):
@@ -51,8 +70,11 @@ def 卡片(row):
 
 
 def 拉卡(owner, p):
-    指纹条件 = p.model_dump(mode="json", exclude={"request_id","surname","required","excluded"})
-    # Keep old "any" request receipts replayable across the rolling upgrade.
+    指纹条件 = p.model_dump(mode="json", exclude={"request_id", "surname"})
+    # Empty defaults retain the fingerprint of requests from older builds.
+    for key in ("required", "excluded", "excluded_sources"):
+        if not 指纹条件[key]:
+            指纹条件.pop(key)
     if p.gender == "any":
         指纹条件.pop("gender", None)
     指纹 = hashlib.sha256(json.dumps(指纹条件, sort_keys=True).encode()).hexdigest()
@@ -67,10 +89,19 @@ def 拉卡(owner, p):
         档案 = c.execute("SELECT id FROM app_profiles WHERE surname='' AND name_length=%s", (p.name_length,)).fetchone()
         if not 档案:
             raise HTTPException(503, "名字正在准备中，请稍后再试")
-        条件 = ["m.profile_id=%s", "p.can_generate=1", "m.book<>'东亚年号'",
+        条件 = ["m.profile_id=%s", "p.can_generate=1",
               "COALESCE((m.payload->>'基础分')::int,0)>=85",
               "NOT EXISTS (SELECT 1 FROM app_seen_names d WHERE d.owner=%s AND d.given_name=m.given_name)"]
         参数 = [档案["id"], owner]
+        if p.excluded_sources:
+            条件.append("NOT (m.book=ANY(%s))")
+            参数.append(p.excluded_sources)
+        for 字 in p.required:
+            条件.append("strpos(m.given_name,%s)>0")
+            参数.append(字)
+        for 字 in p.excluded:
+            条件.append("strpos(m.given_name,%s)=0")
+            参数.append(字)
         if p.gender == "male":
             条件.append("COALESCE((m.payload->>'男孩适配分')::int,50)>=COALESCE((m.payload->>'女孩适配分')::int,50)")
         elif p.gender == "female":
@@ -85,10 +116,17 @@ def 拉卡(owner, p):
             c.execute("INSERT INTO app_deliveries(owner,full_name,material_id) VALUES (%s,%s,%s)",
                       (owner, 项["full_name"], 项["id"]))
         结果 = {"cards": [卡片(x) for x in 行], "status": "ready" if 行 else "preparing",
-              "message": "" if 行 else "这一叠已看完，新名字正在陆续准备。可以换个字数，或稍后再来。", "retry_after": 15}
+              "message": "" if 行 else "暂时没有符合当前条件的新名字，可以调整筛选，或稍后再来。", "retry_after": 15}
         c.execute("INSERT INTO app_receipts(owner,request_id,fingerprint,response) VALUES (%s,%s,%s,%s)",
                   (owner, p.request_id, 指纹, Jsonb(结果)))
         return 结果
+
+
+def 来源列表(owner, p):
+    with 连接数据库() as c:
+        # Include sources without inventory, so switches remain stable as production runs.
+        行 = c.execute("SELECT DISTINCT name FROM books ORDER BY name").fetchall()
+        return {"sources": [{"name": x["name"], "kind": "年号" if x["name"] == "东亚年号" else "古籍"} for x in 行]}
 
 
 def 收藏列表(owner, p):
@@ -135,6 +173,7 @@ def 反馈(owner, p):
 
 
 动作 = {"session.get": (严格参数, lambda owner, p: {"user_id": owner}),
+      "sources.list": (严格参数, 来源列表),
       "feed.pull": (拉卡参数, 拉卡), "favorites.list": (列表参数, 收藏列表),
       "favorites.add": (名字参数, 收藏), "favorites.remove": (名字参数, 取消收藏),
       "favorites.compare": (比较参数, 比较), "feedback.save": (反馈参数, 反馈)}

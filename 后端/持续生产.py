@@ -38,7 +38,7 @@ def 生产一次():
     with 连接数据库() as c:
         档案 = c.execute("""SELECT f.id,f.surname,f.name_length,b.name AS book FROM app_profiles f
             CROSS JOIN (SELECT DISTINCT b.name FROM books b JOIN passages p ON p.book_id=b.id
-                WHERE p.can_generate=1 AND b.name<>'东亚年号') b
+                WHERE p.can_generate=1) b
             LEFT JOIN app_source_progress s ON s.profile_id=f.id AND s.book=b.name
             WHERE f.enabled AND f.surname='' AND (s.retry_at IS NULL OR s.retry_at<=now())
             ORDER BY f.last_scheduled,COALESCE(s.last_started,'epoch'::timestamptz),f.id,b.name LIMIT 1""").fetchone()
