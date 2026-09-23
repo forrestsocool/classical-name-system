@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_vali
 from psycopg.types.json import Jsonb
 
 from .数据库 import 连接数据库
+from .姓名五行 import 分析姓名, 逐字出处
 
 
 # PostgreSQL identifiers are signed bigint; reject overflow before executing SQL.
@@ -66,11 +67,65 @@ class 比较参数(严格参数):
     material_ids: list[名字编号] = Field(min_length=2, max_length=4)
 
 
-def 卡片(row):
+class 姓名分析参数(严格参数):
+    material_ids: list[名字编号] = Field(min_length=1, max_length=2)
+    surname: str = Field(default="", max_length=4, pattern=r"^[\u3400-\u9fff]*$")
+
+
+class 姓名详情参数(名字参数):
+    surname: str = Field(default="", max_length=4, pattern=r"^[\u3400-\u9fff]*$")
+
+
+def 卡片(row, include_wuxing=False):
     内容 = dict(row["payload"])
     内容.setdefault("男孩适配分", 50)
     内容.setdefault("女孩适配分", 50)
+    内容.pop("五行匹配", None)
+    if include_wuxing:
+        内容["wuxing"] = 分析姓名(内容.get("姓名", ""))
     return {"id": row["id"], "item": 内容}
+
+
+def 已投递名字(owner, ids):
+    if len(set(ids)) != len(ids):
+        raise HTTPException(422, "名字编号不能重复")
+    with 连接数据库() as c:
+        rows = c.execute("""SELECT DISTINCT m.id,m.given_name FROM app_materials m
+            JOIN app_deliveries d ON d.material_id=m.id
+            WHERE d.owner=%s AND m.id=ANY(%s)""", (owner, ids)).fetchall()
+    found = {row["id"]: row["given_name"] for row in rows}
+    if len(found) != len(ids):
+        raise HTTPException(404, "名字不存在")
+    return found
+
+
+def 记录姓氏(owner, surname):
+    if not surname:
+        return
+    with 连接数据库() as c:
+        # Serialize one user's new surnames across workers; existing surnames cost no quota.
+        c.execute("SELECT id FROM app_users WHERE id=%s FOR UPDATE", (owner,))
+        if c.execute("SELECT 1 FROM app_surname_queries WHERE owner=%s AND query_day=CURRENT_DATE AND surname=%s",
+                     (owner, surname)).fetchone():
+            return
+        used = c.execute("SELECT count(*) AS n FROM app_surname_queries WHERE owner=%s AND query_day=CURRENT_DATE",
+                         (owner,)).fetchone()["n"]
+        if used >= 16:
+            raise HTTPException(429, "今天更换姓氏过于频繁，请明天再试")
+        c.execute("INSERT INTO app_surname_queries(owner,query_day,surname) VALUES (%s,CURRENT_DATE,%s)",
+                  (owner, surname))
+
+
+def 姓名分析(owner, p):
+    names = 已投递名字(owner, p.material_ids)
+    记录姓氏(owner, p.surname)
+    return {"results": [{"id": id, "wuxing": 分析姓名(p.surname + names[id])} for id in p.material_ids]}
+
+
+def 姓名详情(owner, p):
+    name = p.surname + 已投递名字(owner, [p.material_id])[p.material_id]
+    记录姓氏(owner, p.surname)
+    return {"wuxing": 分析姓名(name), "elements": 逐字出处(name)}
 
 
 def 拉卡(owner, p):
@@ -119,7 +174,7 @@ def 拉卡(owner, p):
             c.execute("INSERT INTO app_seen_names(owner,given_name) VALUES (%s,%s)", (owner, 项["given_name"]))
             c.execute("INSERT INTO app_deliveries(owner,full_name,material_id) VALUES (%s,%s,%s)",
                       (owner, 项["full_name"], 项["id"]))
-        结果 = {"cards": [卡片(x) for x in 行], "status": "ready" if 行 else "preparing",
+        结果 = {"cards": [卡片(x, include_wuxing=True) for x in 行], "status": "ready" if 行 else "preparing",
               "message": "" if 行 else "暂时没有符合当前条件的新名字，可以调整筛选，或稍后再来。", "retry_after": 15}
         c.execute("INSERT INTO app_receipts(owner,request_id,fingerprint,response) VALUES (%s,%s,%s,%s)",
                   (owner, p.request_id, 指纹, Jsonb(结果)))
@@ -179,5 +234,6 @@ def 反馈(owner, p):
 动作 = {"session.get": (严格参数, lambda owner, p: {"user_id": owner}),
       "sources.list": (严格参数, 来源列表),
       "feed.pull": (拉卡参数, 拉卡), "favorites.list": (列表参数, 收藏列表),
+      "names.analyze": (姓名分析参数, 姓名分析), "names.detail": (姓名详情参数, 姓名详情),
       "favorites.add": (名字参数, 收藏), "favorites.remove": (名字参数, 取消收藏),
       "favorites.compare": (比较参数, 比较), "feedback.save": (反馈参数, 反馈)}

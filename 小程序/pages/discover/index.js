@@ -31,6 +31,8 @@ Page({
 
   async onLoad() {
     this.pools = newPools();
+    this.analysisCache = Object.create(null);
+    this.analysisRequests = new Set();
     this.filters = normalizeFilters();
     this.pulls = {};
     this.visible = true;
@@ -48,6 +50,11 @@ Page({
     this.setData({statusBarHeight, navHeight});
   },
   onResize() { this.updateLayout(); },
+  showWuxing() {
+    if (this.data.saving || this.data.animating || !this.data.current) return;
+    wx.showModal({title: '姓名五行画像', content: this.data.current.item.wuxing.explanation,
+      showCancel: false, confirmText: '知道了', confirmColor: '#0b584b'});
+  },
   onShow() {
     this.visible = true;
     if (this.getTabBar && this.getTabBar()) this.getTabBar().setData({selected: 0});
@@ -60,7 +67,7 @@ Page({
     clearInterval(this.ticker);
     if (!this.data.animating) this.resetDrag();
   },
-  onUnload() { this.closed = true; clearInterval(this.ticker); },
+  onUnload() { this.closed = true; clearInterval(this.ticker); clearTimeout(this.surnameTimer); },
 
   activeKey(length = this.data.nameLength, gender = this.data.gender) { return poolKey(length, gender); },
   requestState(pool, filters = this.filters) {
@@ -158,14 +165,48 @@ Page({
     const pool = this.pools[this.activeKey()];
     const state = this.requestState(pool);
     const cards = this.matchingCards(pool);
+    const surname = this.data.surname;
+    const visible = cards.slice(0, 2).map(card => {
+      const analysis = this.analysisCache[`${card.id}|${surname}`];
+      return normalizeCard(analysis ? {...card, item: {...card.item, wuxing: analysis}} : card, surname);
+    });
     const filterMessage = filterError(this.filters) || (this.filters.required.length > this.data.nameLength ? '必含字有两个，请切换双字名或调整用字' : '');
     this.setData({
-      current: normalizeCard(cards[0] || null, this.data.surname),
-      next: normalizeCard(cards[1] || null, this.data.surname),
+      current: visible[0] || null,
+      next: visible[1] || null,
       loading: state.loading, error: state.error, filterMessage,
       hasFilters: !!(this.filters.required || this.filters.excluded || this.filters.excluded_sources.length),
       cooldown: Math.max(0, Math.ceil((state.retryAt - Date.now()) / 1000))
     });
+    const missing = visible.filter(card => card.item.wuxing.version !== 'server-v1' &&
+      !this.analysisRequests.has(`${card.id}|${surname}`));
+    if (missing.length && this.user && !this.analysisSuspended) this.refreshAnalysis(missing, surname);
+  },
+
+  async refreshAnalysis(cards, surname) {
+    const ids = cards.map(card => card.id);
+    const keys = ids.map(id => `${id}|${surname}`);
+    keys.forEach(key => this.analysisRequests.add(key));
+    try {
+      const response = await call('names.analyze', {material_ids: ids, surname});
+      const results = Array.isArray(response.results) ? response.results : [];
+      for (const card of cards) {
+        const found = results.find(item => String(item.id) === String(card.id));
+        if (found && found.wuxing && found.wuxing.analyzed_name === card.item.displayName) {
+          this.analysisCache[`${card.id}|${surname}`] = found.wuxing;
+        } else {
+          this.analysisCache[`${card.id}|${surname}`] = {...card.item.wuxing, version: 'server-v1',
+            status: '五行资料暂不可用', explanation: '五行资料暂时无法读取，请稍后重新打开小程序。'};
+        }
+      }
+    } catch (error) {
+      for (const card of cards) this.analysisCache[`${card.id}|${surname}`] = {
+        ...card.item.wuxing, version: 'server-v1', status: '五行资料暂不可用',
+        explanation: '五行资料暂时无法读取，请稍后重新打开小程序。'};
+    } finally {
+      keys.forEach(key => this.analysisRequests.delete(key));
+      if (!this.closed) this.render();
+    }
   },
 
   refill(length = this.data.nameLength, gender = this.data.gender, force = false) {
@@ -223,7 +264,13 @@ Page({
     const surname = cleanSurname(event.detail.value);
     this.setData({surname});
     this.persistPreferences();
+    this.analysisSuspended = true;
     this.render();
+    clearTimeout(this.surnameTimer);
+    this.surnameTimer = setTimeout(() => {
+      this.analysisSuspended = false;
+      if (!this.closed) this.render();
+    }, 400);
     return surname;
   },
   async genderChange(event) {

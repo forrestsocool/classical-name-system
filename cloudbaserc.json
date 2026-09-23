@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.cloudbase.net/cli/cloudbaserc.schema.json",
-  "envId": "cloud1-d8gsdbw0983b1cb3c",
+  "envId": "wxapp-backend-test-d5c9k701c7cf2",
   "functionRoot": "云函数",
   "functions": [
     {
@@ -9,9 +9,13 @@
       "runtime": "Nodejs18.15",
       "handler": "index.main",
       "installDependency": true,
-      "ignore": ["node_modules", ".git"],
+      "ignore": [
+        "node_modules",
+        ".git"
+      ],
       "envVariables": {
         "WECHAT_APP_ID": "wx3d9171fa1ecde642",
+        "WECHAT_APP_SECRET": "{{env.WECHAT_APP_SECRET}}",
         "CORE_API_URL": "https://name.sensen.li",
         "GATEWAY_SECRET": "{{env.GATEWAY_SECRET}}"
       }

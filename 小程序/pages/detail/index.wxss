@@ -30,8 +30,25 @@
 .section-note { margin-top: 16rpx; color: #89938f; font-size: 20rpx; line-height: 1.7; }
 .section-copy { margin-top: 19rpx; color: #465954; font-size: 25rpx; line-height: 1.82; }
 .muted-copy { color: #7f8985; }
-.element-row { margin-top: 17rpx; display: flex; flex-wrap: wrap; gap: 12rpx; }
-.element-row text { padding: 7rpx 16rpx; border-radius: 999rpx; color: #326457; background: #edf4eb; font-size: 22rpx; }
+.element-entry { margin-top: 26rpx; padding-top: 26rpx; border-top: 1rpx solid #e7ebe3; }
+.element-heading { display: flex; align-items: center; gap: 17rpx; }
+.element-character { width: 70rpx; height: 70rpx; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 18rpx; font-size: 40rpx; font-weight: 600; line-height: 1; }
+.element-jin { color: #ad792b; background: #f8f1e6; }
+.element-mu { color: #238069; background: #edf6ef; }
+.element-shui { color: #34759b; background: #edf4f9; }
+.element-huo { color: #b85160; background: #fbf0f1; }
+.element-tu { color: #966e52; background: #f5efea; }
+.element-unknown { color: #65766f; background: #eff2ec; }
+.element-classification { color: #577369; font-size: 24rpx; }
+.element-citations { margin-top: 20rpx; padding: 18rpx 20rpx; border-left: 3rpx solid #a9c4b3; border-radius: 2rpx 12rpx 12rpx 2rpx; background: #f4f6ef; }
+.element-citation + .element-citation { margin-top: 14rpx; }
+.element-book { color: #40665a; font-size: 22rpx; line-height: 1.7; overflow-wrap: break-word; }
+.element-book text { color: #7c8a82; font-size: 20rpx; }
+.element-quote { margin-top: 6rpx; color: #3c5049; font-size: 24rpx; line-height: 1.8; white-space: pre-wrap; overflow-wrap: break-word; }
+.element-explanation { margin-top: 20rpx; }
+.element-label { margin-bottom: 6rpx; color: #718479; font-size: 21rpx; }
+.element-prose { color: #465954; font-size: 24rpx; line-height: 1.85; white-space: pre-wrap; overflow-wrap: break-word; }
+.elements-footnote { margin-top: 26rpx; padding-top: 20rpx; border-top: 1rpx solid #e7ebe3; }
 .section-title-hot { color: #765113; }
 .feedback-link { padding: 16rpx 0 25rpx; color: #6d7e78; text-align: center; font-size: 22rpx; text-decoration: underline; }
 .detail-error { margin-bottom: 20rpx; color: #a44f43; text-align: center; font-size: 22rpx; }

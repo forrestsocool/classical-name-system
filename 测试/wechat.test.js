@@ -13,7 +13,8 @@ const filters = require('../小程序/utils/filters');
 const env = {
   CORE_API_URL: 'https://core.example.com',
   GATEWAY_SECRET: 'test-gateway-secret-2026-32-characters',
-  WECHAT_APP_ID: 'wx1234567890abcdef'
+  WECHAT_APP_ID: 'wx1234567890abcdef',
+  WECHAT_APP_SECRET: 'test-wechat-secret-2026-32-characters'
 };
 const context = {APPID: env.WECHAT_APP_ID, OPENID: 'trusted-user'};
 
@@ -127,11 +128,13 @@ function pageHarness(call, user = 'user-A', saved = {}) {
       if (modulePath.includes('/utils/view')) return view;
       if (modulePath.includes('/utils/swipe')) return swipe;
       if (modulePath.includes('/utils/filters')) return filters;
-      return {call, requestId: () => crypto.randomUUID(), storageKey: value => `cache:${value}`, preferenceKey: value => `prefs:${value}`};
+      return {call: (action, data) => action === 'names.analyze' ? Promise.resolve({results: []}) : call(action, data),
+        requestId: () => crypto.randomUUID(), storageKey: value => `cache:${value}`, preferenceKey: value => `prefs:${value}`};
     },
     setInterval: () => 1,
     clearInterval() {},
     setTimeout: callback => { queueMicrotask(callback); return 1; },
+    clearTimeout() {},
     Date,
     Promise,
     Set,

@@ -36,7 +36,7 @@
       <view class="next-name">{{next.item.displayName}}</view>
     </view>
     <view
-      class="name-card card-current"
+      class="name-card card-current {{current.item.wuxing.status ? 'card-has-wuxing-note' : ''}}"
       style="{{cardStyle}}"
       wx:if="{{current}}"
       bindtouchstart="touchStart"
@@ -63,6 +63,17 @@
             <view class="score-pill score-male"><image src="/assets/icons/male.svg" mode="aspectFit" /><text>{{current.item.maleScore}}%</text></view>
             <view class="score-divider"></view>
             <view class="score-pill score-female"><image src="/assets/icons/female.svg" mode="aspectFit" /><text>{{current.item.femaleScore}}%</text></view>
+          </view>
+          <view class="wuxing-panel" catchtap="showWuxing" role="button" aria-label="查看姓名五行取象强度与计算说明">
+            <view class="wuxing-grid {{current.item.wuxing.available ? '' : 'wuxing-unavailable'}}">
+              <view class="wuxing-tile wuxing-{{element.key}}" wx:for="{{current.item.wuxing.items}}" wx:for-item="element" wx:key="key" aria-label="{{element.description}}">
+                <text class="wuxing-label">{{element.label}}</text>
+                <view class="wuxing-meter" aria-hidden="true">
+                  <view class="wuxing-cell" wx:for="{{element.cells}}" wx:for-item="cell" wx:key="id"><view class="wuxing-fill" style="width:{{cell.fill}}%"></view></view>
+                </view>
+              </view>
+            </view>
+            <view class="wuxing-status" wx:if="{{current.item.wuxing.status}}">{{current.item.wuxing.status}}</view>
           </view>
         </view>
         <view class="card-story">

@@ -1,5 +1,6 @@
-// Native WeChat CloudBase calls; no server URL or secret belongs in this bundle.
 module.exports = {
-  envId: 'cloud1-d8gsdbw0983b1cb3c',
-  gateway: 'nameGateway'
+  envId: 'wxapp-backend-test-d5c9k701c7cf2',
+  gateway: 'nameGateway',
+  httpUrl: 'https://wxapp-backend-test-d5c9k701c7cf2-1308467884.ap-shanghai.app.tcloudbase.com/nameGateway',
+  mode: 'http'
 };

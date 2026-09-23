@@ -4,25 +4,30 @@ const {highlightText} = require('../../utils/richText');
 
 Page({
   data: {
-    statusBarHeight: 0, card: null, elements: [], unknown: '', showElements: false,
+    statusBarHeight: 0, card: null, elements: [], showElements: false,
     popularity: '未命中已收录的历史热门资料，不代表实时重名率。',
     busy: false, error: ''
   },
-  onLoad() {
+  async onLoad() {
     const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
     const card = normalizeCard(getApp().selectedCard, getApp().selectedSurname || '');
     this.setData({statusBarHeight: info.statusBarHeight || 0});
     if (!card) return;
-    const elements = card.item.elements || {};
     const hot = card.item.popularity || {};
     const rawHints = hot.hints || hot['提示'];
     const hints = Array.isArray(rawHints) ? rawHints.join('；') : rawHints;
     this.setData({
       card: {...card, item: {...card.item, originalNodes: highlightText(card.item.original, card.item.name)}},
-      elements: Object.entries(elements.known || elements['已知字符'] || {}).map(([char, element]) => ({char, element})),
-      unknown: (elements.unknown || elements['未知字符'] || []).join('、'),
       popularity: hints ? hints + '。' + (hot.note || hot['说明'] || '') : this.data.popularity
     });
+    try {
+      const result = await call('names.detail', {material_id: card.id, surname: getApp().selectedSurname || ''});
+      const elements = Array.isArray(result.elements) ? result.elements : [];
+      this.setData({elements, showElements: elements.length > 0,
+        card: {...this.data.card, item: {...this.data.card.item, wuxing: result.wuxing}}});
+    } catch (error) {
+      this.setData({error: '五行资料暂时无法读取：' + (error.message || '请稍后重试')});
+    }
   },
   goBack() {
     if (getCurrentPages().length > 1) wx.navigateBack();

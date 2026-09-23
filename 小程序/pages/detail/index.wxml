@@ -42,11 +42,28 @@
 
     <view class="detail-section elements-section" wx:if="{{showElements}}">
       <view class="section-title"><image src="/assets/icons/yinyang.svg" mode="aspectFit" />五行参考</view>
-      <view class="element-row" wx:if="{{elements.length}}">
-        <text wx:for="{{elements}}" wx:key="char">{{item.char}}：{{item.element}}</text>
+      <view class="section-note">字源归类与首页五维取象分别参考，以下为姓名逐字的收录资料。</view>
+      <view class="element-entry" wx:for="{{elements}}" wx:key="id" wx:for-item="entry">
+        <view class="element-heading">
+          <view class="element-character element-{{entry.tone}}">{{entry.char}}</view>
+          <view class="element-classification">{{entry.element ? '字源 · ' + entry.element : '字源未定'}}</view>
+        </view>
+        <view class="element-citations" wx:if="{{entry.citations.length}}">
+          <view class="element-citation" wx:for="{{entry.citations}}" wx:key="id" wx:for-item="citation">
+            <view class="element-book">《{{citation.book}}》<text wx:if="{{citation.reference}}"> · {{citation.reference}}</text></view>
+            <view class="element-quote" wx:if="{{citation.quote}}">{{citation.quote}}</view>
+          </view>
+        </view>
+        <view class="element-explanation" wx:if="{{entry.reason}}">
+          <view class="element-label">归类说明</view>
+          <view class="element-prose">{{entry.reason}}</view>
+        </view>
+        <view class="element-explanation" wx:if="{{entry.notes}}">
+          <view class="element-label">取象说明</view>
+          <view class="element-prose">{{entry.notes}}</view>
+        </view>
       </view>
-      <view class="section-copy muted-copy" wx:if="{{unknown}}">资料不足：{{unknown}}</view>
-      <view class="section-note">仅为传统取名参考，不据此判断宝宝八字或应补五行。</view>
+      <view class="section-note elements-footnote">资料来自汉字五行知识库，仅作传统用字参考，不据此判断八字或应补五行。</view>
     </view>
 
     <view class="detail-section popularity-section">

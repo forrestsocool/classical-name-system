@@ -64,6 +64,22 @@
 .score-female { color: #ac6270; background: #fcf1f2; }
 .score-divider { width: 1rpx; height: 23rpx; background: #e0e4dc; }
 
+/* Five soft ink palettes and fractional cells mirror the approved reference. */
+.wuxing-panel { margin: 26rpx -6rpx 0; }
+.wuxing-grid { display: flex; align-items: stretch; gap: 9rpx; }
+.wuxing-tile { flex: 1; min-width: 0; height: 78rpx; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8rpx; border-radius: 24rpx; }
+.wuxing-label { font-size: 27rpx; font-weight: 600; line-height: 30rpx; }
+.wuxing-meter { display: flex; justify-content: center; gap: 4rpx; }
+.wuxing-cell { position: relative; width: 13rpx; height: 13rpx; border-radius: 4rpx; overflow: hidden; background: var(--element-track); }
+.wuxing-fill { position: absolute; top: 0; bottom: 0; left: 0; background: currentColor; border-radius: inherit; }
+.wuxing-jin { color: #c48e36; background: #faf5ea; --element-track: #eadfc9; }
+.wuxing-mu { color: #21987a; background: #edf7f1; --element-track: #d2e6dc; }
+.wuxing-shui { color: #357897; background: #eef5fa; --element-track: #d2dee6; }
+.wuxing-huo { color: #b95961; background: #fcf1f3; --element-track: #ecd7da; }
+.wuxing-tu { color: #9d765a; background: #f7f1ec; --element-track: #e4d6cb; }
+.wuxing-unavailable { opacity: .55; }
+.wuxing-status { margin-top: 8rpx; color: #909a8e; font-size: 18rpx; line-height: 24rpx; text-align: center; }
+
 /* Give meaning a place of its own, with provenance anchoring the bottom edge. */
 .card-story { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; padding: 24rpx 0; }
 .candidate-meaning { flex: none; display: -webkit-box; overflow: hidden; color: #3c5147; text-align: center; font-weight: 400; font-size: 29rpx; line-height: 1.85; letter-spacing: .5rpx; -webkit-line-clamp: 4; -webkit-box-orient: vertical; }
@@ -113,7 +129,10 @@
   .candidate-name { font-size: 92rpx; }
   .candidate-name-long { font-size: 80rpx; }
   .gender-scores { margin-top: 14rpx; }
+  .wuxing-panel { margin-top: 20rpx; }
+  .wuxing-tile { height: 70rpx; border-radius: 20rpx; gap: 6rpx; }
   .candidate-meaning { font-size: 28rpx; line-height: 1.75; -webkit-line-clamp: 3; }
+  .card-has-wuxing-note .candidate-meaning { -webkit-line-clamp: 2; }
   .card-story { padding: 18rpx 0; }
   .tags { margin-top: 18rpx; }
 }
@@ -125,6 +144,10 @@
   .candidate-name-long { font-size: 74rpx; }
   .candidate-pinyin { margin-top: 4rpx; font-size: 21rpx; }
   .gender-scores { margin-top: 10rpx; }
+  .wuxing-panel { margin-top: 14rpx; }
+  .wuxing-tile { height: 62rpx; gap: 4rpx; border-radius: 18rpx; }
+  .wuxing-label { font-size: 24rpx; line-height: 27rpx; }
+  .wuxing-cell { width: 12rpx; height: 12rpx; }
   .card-story { padding: 12rpx 0; }
   .candidate-meaning { -webkit-line-clamp: 2; }
   .tags { margin-top: 12rpx; }

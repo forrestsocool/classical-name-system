@@ -3,7 +3,9 @@ App({
   onLaunch() {
     this.selectedCard = null;
     this.namePreferences = {surname: '', gender: 'any'};
-    if (wx.cloud && config.envId) wx.cloud.init({env:config.envId, traceUser:true});
+    if (config.mode === 'cloud' && wx.cloud && config.envId) {
+      wx.cloud.init({env:config.envId, traceUser:true});
+    }
   },
   async session() {
     if (!this.sessionPromise) {
