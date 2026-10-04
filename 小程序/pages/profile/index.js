@@ -5,7 +5,7 @@ const build = require('../../utils/build');
 Page({
   data: {
     required: '', excluded: '', sources: [], sourceCount: 0, enabledCount: 0, sourceLoading: true,
-    sourceError: '', inputError: '', savedNotice: '', ready: false, showCharacterFilters: false, buildVersion: build.version
+    sourceError: '', inputError: '', savedNotice: '', ready: false, showCharacterFilters: true, buildVersion: build.version
   },
   async onShow() {
     if (this.getTabBar && this.getTabBar()) this.getTabBar().setData({selected: 2});

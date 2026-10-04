@@ -50,11 +50,6 @@ Page({
     this.setData({statusBarHeight, navHeight});
   },
   onResize() { this.updateLayout(); },
-  showWuxing() {
-    if (this.data.saving || this.data.animating || !this.data.current) return;
-    wx.showModal({title: '姓名五行画像', content: this.data.current.item.wuxing.explanation,
-      showCancel: false, confirmText: '知道了', confirmColor: '#0b584b'});
-  },
   onShow() {
     this.visible = true;
     if (this.getTabBar && this.getTabBar()) this.getTabBar().setData({selected: 0});

@@ -3,8 +3,7 @@
   <image class="footer-landscape" src="/assets/footer-mountains.svg" mode="scaleToFill" aria-hidden="true" />
   <view class="hero" style="height:{{navHeight}}px">
     <view class="brand-row">
-      <view class="brand-name">千千嘉名</view>
-      <view class="brand-seal" aria-label="小程序"><text>小</text><text>程</text><text>序</text></view>
+      <view class="brand-name">好名书中来</view>
     </view>
   </view>
   <view class="brand-copy">
@@ -64,7 +63,7 @@
             <view class="score-divider"></view>
             <view class="score-pill score-female"><image src="/assets/icons/female.svg" mode="aspectFit" /><text>{{current.item.femaleScore}}%</text></view>
           </view>
-          <view class="wuxing-panel" catchtap="showWuxing" role="button" aria-label="查看姓名五行取象强度与计算说明">
+          <view class="wuxing-panel" aria-label="姓名五行取象强度">
             <view class="wuxing-grid {{current.item.wuxing.available ? '' : 'wuxing-unavailable'}}">
               <view class="wuxing-tile wuxing-{{element.key}}" wx:for="{{current.item.wuxing.items}}" wx:for-item="element" wx:key="key" aria-label="{{element.description}}">
                 <text class="wuxing-label">{{element.label}}</text>
@@ -91,7 +90,6 @@
             <text>查看出处</text><image src="/assets/icons/arrow-right-green.svg" mode="aspectFit" />
           </view>
         </view>
-        <view class="card-seal">寻</view>
       </block>
     </view>
 
@@ -105,7 +103,7 @@
   </view>
 
   <view class="deck deck-loading" wx:else>
-    <view class="deck-empty"><view class="loading-mark"><view></view><view></view><view></view></view><view class="empty-title">正在进入千千嘉名</view></view>
+    <view class="deck-empty"><view class="loading-mark"><view></view><view></view><view></view></view><view class="empty-title">正在进入好名书中来</view></view>
   </view>
 
   <view class="action-bar" wx:if="{{current}}">

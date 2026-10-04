@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 import os
+import shutil
 import sqlite3
 import subprocess
 import tempfile
@@ -21,9 +22,10 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from 后端 import 持续生产 as producer
-from 后端.数据库 import 连接数据库
+from 后端.数据库 import 连接数据库, 资料查询
+from 后端.智能筛选 import 批量召回
 from 后端.小程序服务 import 应用
-from 后端.网关鉴权 import 签名原文
+from 后端.网关鉴权 import 签名原文, 用户身份
 from 后端.模型接口 import 模型配置
 from 脚本.迁移PostgreSQL import 迁移
 from 脚本.升级共享名字队列 import 升级
@@ -76,7 +78,7 @@ class PostgreSQLTests(unittest.TestCase):
             self.single_profile = c.execute("INSERT INTO app_profiles(surname,name_length) VALUES ('',1) RETURNING id").fetchone()["id"]
             self.double_profile = c.execute("INSERT INTO app_profiles(surname,name_length) VALUES ('',2) RETURNING id").fetchone()["id"]
             p = c.execute("""SELECT p.id,p.text,p.section_title,b.name AS book FROM passages p
-                JOIN books b ON b.id=p.book_id WHERE p.can_generate=1 AND b.name<>'东亚年号'
+                JOIN books b ON b.id=p.book_id WHERE p.can_generate=1 AND p.active_for_recall AND b.name<>'东亚年号'
                 ORDER BY p.id LIMIT 1""").fetchone()
             self.passage = p
             names = ((self.single_profile, ("宁", "安", "和", "清", "嘉", "远")),
@@ -117,6 +119,45 @@ class PostgreSQLTests(unittest.TestCase):
             sequence = c.execute("SELECT last_value FROM books_id_seq").fetchone()["last_value"]
             self.assertEqual(maximum, sequence)
 
+    def test_recall_migration_is_repeatable_and_pending_years_use_only_era_name(self):
+        migration = (ROOT / '后端/迁移/005_召回恢复.sql').read_text(encoding='utf-8')
+        with self.connect() as c:
+            before = c.execute('SELECT count(*) AS n FROM app_materials').fetchone()['n']
+            c.execute(migration)
+            c.execute(migration)
+            self.assertEqual(c.execute('SELECT count(*) AS n FROM app_materials').fetchone()['n'], before)
+            pending = c.execute("""SELECT p.text FROM passages p JOIN books b ON b.id=p.book_id
+                WHERE b.name='东亚年号' AND p.status='待核验' AND p.active_for_recall LIMIT 1""").fetchone()
+            self.assertIsNotNone(pending)
+            items = 批量召回(资料查询(c), {'姓氏':'', '名字长度':1,
+                '来源书名':'东亚年号', '随机种子':23}, 100)
+            self.assertTrue(items)
+            self.assertTrue(all(item['名字'] == item['原文'][item['原文位置']] for item in items))
+            self.assertTrue(all(item['原文位置'] < item['原文'].find('：') if '：' in item['原文']
+                else item['原文位置'] < item['原文'].find(':') for item in items))
+
+    def test_two_sources_can_store_same_name_but_one_user_sees_it_once(self):
+        with self.connect() as c:
+            year = c.execute("""SELECT p.id FROM passages p JOIN books b ON b.id=p.book_id
+                WHERE b.name='东亚年号' AND p.status='待核验' AND p.active_for_recall LIMIT 1""").fetchone()
+            self.assertIsNotNone(year)
+            original = c.execute("SELECT payload FROM app_materials WHERE profile_id=%s AND given_name='清和'",
+                (self.double_profile,)).fetchone()['payload']
+            second = c.execute("""INSERT INTO app_materials(profile_id,given_name,full_name,book,passage_id,payload)
+                VALUES (%s,'清和','清和','东亚年号',%s,%s) RETURNING id""",
+                (self.double_profile,year['id'],Jsonb(original))).fetchone()['id']
+            self.assertIsInstance(second, int)
+        names = []
+        for _ in range(3):
+            cards = self.request('feed.pull',self.pull(count=8),user='two-source-user')
+            self.assertEqual(cards.status_code,200,cards.text)
+            names.extend(card['item']['名字'] for card in cards.json()['cards'])
+        self.assertEqual(len(names), len(set(names)))
+        self.assertIn('清和', names, names)
+        with self.connect() as c:
+            self.assertEqual(c.execute("SELECT count(*) AS n FROM app_seen_names WHERE owner=%s AND given_name='清和'",
+                (用户身份(APPID, 'two-source-user'),)).fetchone()['n'],1)
+
     def test_signature_replay_expiry_and_tampering(self):
         nonce = uuid.uuid4().hex
         self.assertEqual(self.request("session.get", nonce=nonce).status_code,200)
@@ -126,6 +167,7 @@ class PostgreSQLTests(unittest.TestCase):
         self.assertEqual(self.client.post('/internal/v1/dispatch',json={}).status_code,401)
         self.assertEqual(self.client.post('/internal/v1/dispatch',content=b'x'*17000).status_code,413)
 
+    @unittest.skipUnless(shutil.which('node'), 'Node.js is not installed in the Python test image')
     def test_node_gateway_signature_matches_python_for_unicode_payload(self):
         body=json.dumps({'appid':APPID,'openid':'unicode-user','action':'feed.pull','data':self.pull()},ensure_ascii=False).encode()
         script="const fs=require('node:fs');const {signedHeaders}=require('./云函数/nameGateway/gateway');const body=fs.readFileSync(0);process.stdout.write(JSON.stringify(signedHeaders(body,process.env.GATEWAY_SECRET)));"
@@ -288,7 +330,11 @@ class PostgreSQLTests(unittest.TestCase):
         config=模型配置(地址='https://example.com/v1/chat/completions',密钥='test-only',模型='test')
         sequence = {1: iter(("澄", "晏", "昭")), 2: iter(("澄明", "晏清", "昭华"))}
         requested_lengths=[]
+        seeds=set()
         def recall(_, request, __):
+            if request['随机种子'] in seeds:
+                return []
+            seeds.add(request['随机种子'])
             requested_lengths.append(request['名字长度'])
             name=next(sequence[request['名字长度']])
             return [{"姓名":name,"名字":name,"书名":request['来源书名'],"篇章":self.passage['section_title'],
@@ -331,6 +377,62 @@ class PostgreSQLTests(unittest.TestCase):
             self.assertEqual(row['failures'],1)
             self.assertTrue(row['delayed'])
             self.assertNotIn('secret',row['last_error'])
+
+    def test_worker_prefers_new_then_retries_rejected_after_one_hour(self):
+        book = self.passage['book']
+        with self.connect() as c:
+            c.execute('UPDATE app_profiles SET enabled=false WHERE id=%s', (self.double_profile,))
+            c.execute("""INSERT INTO app_source_progress(profile_id,book,retry_at)
+                SELECT %s,b.name,now()+interval '1 day' FROM books b WHERE b.name<>%s GROUP BY b.name""",
+                (self.single_profile,book))
+            c.execute("""INSERT INTO app_attempts(profile_id,book,given_name,last_attempt_at)
+                VALUES (%s,%s,'晏','epoch')""", (self.single_profile,book))
+        config=模型配置(地址='https://example.com/v1/chat/completions',密钥='test-only',模型='test')
+        def candidate(name):
+            return {'姓名':name,'名字':name,'书名':book,'篇章':self.passage['section_title'],
+                '原文':self.passage['text'],'来源片段编号':self.passage['id'],
+                '原文位置':0,'取字方式':'原文连取','出处核验状态':'已核验'}
+        def recall(_, request, __):
+            excluded = set(request['排除名字'])
+            if '澄' not in excluded:
+                return [candidate('澄')]
+            if '晏' not in excluded:
+                return [candidate('晏')]
+            return []
+        batches=[]
+        def reject(items, *_):
+            batches.append([x['名字'] for x in items])
+            return []
+        with patch.object(producer,'读取环境配置',return_value=config), patch.object(producer,'验证模型地址'), \
+             patch.object(producer,'批量召回',side_effect=recall), patch.object(producer,'补充解释',side_effect=lambda _,items,__:items), \
+             patch.object(producer,'模型筛选单批',side_effect=reject):
+            self.assertTrue(producer.生产一次())
+            self.assertEqual(batches[0], ['澄','晏'])
+            self.assertFalse(producer.生产一次())
+            self.assertEqual(len(batches),1)
+            with self.connect() as c:
+                c.execute("UPDATE app_attempts SET last_attempt_at=now()-interval '61 minutes' WHERE profile_id=%s AND book=%s",
+                    (self.single_profile,book))
+                c.execute("UPDATE app_source_progress SET retry_at=now() WHERE profile_id=%s AND book=%s",
+                    (self.single_profile,book))
+            self.assertTrue(producer.生产一次())
+            self.assertEqual(len(batches),2)
+
+    def test_model_call_limits_are_atomic_and_rolling(self):
+        def reserve():
+            with self.connect() as c:
+                return producer.预留模型调用(c, (5000, 480, 4))
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            results = list(executor.map(lambda _: reserve(), range(8)))
+        self.assertEqual(results.count(None), 4)
+        self.assertEqual(results.count('30秒额度已用完'), 4)
+        with self.connect() as c:
+            self.assertEqual(c.execute('SELECT batches FROM app_budget').fetchone()['batches'], 4)
+            c.execute("UPDATE app_model_call_reservations SET reserved_at=now()-interval '31 seconds'")
+            self.assertEqual(producer.预留模型调用(c, (5000, 4, 4)), '小时额度已用完')
+            c.execute("UPDATE app_model_call_reservations SET reserved_at=now()-interval '61 minutes'")
+            self.assertIsNone(producer.预留模型调用(c, (5, 480, 4)))
+            self.assertEqual(producer.预留模型调用(c, (5, 480, 4)), '今日额度已用完')
 
     def test_producer_singleton_lock(self):
         with self.connect() as a,self.connect() as b:

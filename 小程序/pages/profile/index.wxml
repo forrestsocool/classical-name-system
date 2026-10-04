@@ -27,5 +27,5 @@
 
   <view class="save-notice" aria-live="polite">{{inputError ? '请先调整有冲突的用字' : (savedNotice || '设置自动保存，返回首页即可继续挑选')}}</view>
   <button class="profile-button" bindtap="chooseNames" disabled="{{!ready || !!inputError}}">继续寻名<image src="/assets/icons/arrow-right.svg" mode="aspectFit" /></button>
-  <view class="profile-version">千千嘉名 {{buildVersion}}</view>
+  <view class="profile-version">好名书中来 {{buildVersion}}</view>
 </view>

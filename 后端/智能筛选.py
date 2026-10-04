@@ -2,6 +2,7 @@
 import json
 import random
 import re
+import sqlite3
 import urllib.request
 import urllib.error
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -17,6 +18,24 @@ from .模型接口 import 读取环境配置, 模型已配置, 验证模型地�
 单批数量 = 25
 模型并发数量 = 8
 模型请求槽 = BoundedSemaphore(8)
+
+
+def 原文可用(行):
+    return (行["active_for_recall"] and (行["status"] == "待核验" or
+            (行["status"] == "已核验" and 行["can_generate"] == 1)))
+
+
+def 可召回正文(行):
+    原文 = 行["text"].strip()
+    if not 原文可用(行) or not 原文:
+        return None
+    if 行["book"] == "东亚年号":
+        匹配 = re.match(r"^\s*([\u4e00-\u9fff]{2,4})[：:]", 行["text"])
+        return (匹配.group(1), 匹配.start(1)) if 匹配 else None
+    # Short labels and bare section headings are not source prose.
+    if len(原文) < 8 or (len(原文) < 20 and not re.search(r"[，。；：、,.!?！？]", 原文)):
+        return None
+    return 行["text"], 0
 
 class 筛选项(BaseModel):
     编号: int
@@ -54,10 +73,13 @@ def 归一化性别评分(男孩分, 女孩分):
 def 批量召回(连接, 请求, 数量=召回数量):
     随机 = random.Random(请求.get("随机种子"))
     来源 = 请求.get("来源书名")
-    查询 = """
-        SELECT p.id,p.text,p.section_title,p.status,b.name AS book
+    # The archived personal SQLite edition has no active_for_recall column.
+    旧版 = isinstance(连接, sqlite3.Connection)
+    准入 = "p.can_generate=1" if 旧版 else "p.active_for_recall AND (p.status='待核验' OR (p.status='已核验' AND p.can_generate=1))"
+    查询 = f"""
+        SELECT p.id,p.text,p.section_title,p.status,p.can_generate,{1 if 旧版 else 'p.active_for_recall'} AS active_for_recall,b.name AS book
         FROM passages p JOIN books b ON b.id=p.book_id
-        WHERE p.can_generate = 1
+        WHERE {准入}
     """
     if 来源 is not None:
         查询 += " AND b.name = ?"
@@ -82,14 +104,18 @@ def 批量召回(连接, 请求, 数量=召回数量):
     排除名字 = set(请求.get("排除名字", []))
     校验请求 = {**请求, "排除名字": []}
     for 行 in 行列表:
+        正文 = 可召回正文(行)
+        if 正文 is None:
+            continue
+        文本, 偏移 = 正文
         当前 = []
-        for 匹配 in re.finditer(r"[\u4e00-\u9fff]+", 行["text"]):
+        for 匹配 in re.finditer(r"[\u4e00-\u9fff]+", 文本):
             for i in range(len(匹配[0]) - 长度 + 1):
                 名字 = 匹配[0][i:i+长度]
                 if (名字 in {"父母", "岂曰", "淑女", "丈夫"} or 名字 in 排除名字
                     or 请求["姓氏"] + 名字 in 排除名字 or not 满足约束(名字, 校验请求)):
                     continue
-                当前.append((名字, 匹配.start()+i))
+                当前.append((名字, 偏移+匹配.start()+i))
         随机.shuffle(当前)
         if 当前:
             队列.append((行, 当前))

@@ -31,7 +31,7 @@
 .section-copy { margin-top: 19rpx; color: #465954; font-size: 25rpx; line-height: 1.82; }
 .muted-copy { color: #7f8985; }
 .element-entry { margin-top: 26rpx; padding-top: 26rpx; border-top: 1rpx solid #e7ebe3; }
-.element-heading { display: flex; align-items: center; gap: 17rpx; }
+.element-heading { display: flex; align-items: center; gap: 17rpx; min-height: 76rpx; }
 .element-character { width: 70rpx; height: 70rpx; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 18rpx; font-size: 40rpx; font-weight: 600; line-height: 1; }
 .element-jin { color: #ad792b; background: #f8f1e6; }
 .element-mu { color: #238069; background: #edf6ef; }
@@ -39,7 +39,11 @@
 .element-huo { color: #b85160; background: #fbf0f1; }
 .element-tu { color: #966e52; background: #f5efea; }
 .element-unknown { color: #65766f; background: #eff2ec; }
-.element-classification { color: #577369; font-size: 24rpx; }
+.element-classification { display: flex; align-items: center; gap: 10rpx; min-height: 54rpx; padding: 5rpx 16rpx 5rpx 10rpx; border-radius: 999rpx; color: #315b50; background: #f3f6f0; font-size: 24rpx; }
+.element-emoji { width: 34rpx; height: 34rpx; flex: none; }
+.element-name { color: #173f36; font-weight: 600; }
+.element-basis { padding-left: 10rpx; border-left: 1rpx solid #c9d8cd; color: #718479; font-size: 20rpx; }
+.element-unavailable { color: #7c8a82; background: #f5f5f0; font-size: 21rpx; }
 .element-citations { margin-top: 20rpx; padding: 18rpx 20rpx; border-left: 3rpx solid #a9c4b3; border-radius: 2rpx 12rpx 12rpx 2rpx; background: #f4f6ef; }
 .element-citation + .element-citation { margin-top: 14rpx; }
 .element-book { color: #40665a; font-size: 22rpx; line-height: 1.7; overflow-wrap: break-word; }

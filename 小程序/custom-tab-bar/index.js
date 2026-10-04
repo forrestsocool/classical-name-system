@@ -2,7 +2,7 @@ Component({
   data: {
     selected: 0,
     items: [
-      {path: '/pages/discover/index', text: '千千嘉名', icon: '/assets/icons/tab-discover.svg', activeIcon: '/assets/icons/tab-discover-active.svg'},
+      {path: '/pages/discover/index', text: '好名书中来', icon: '/assets/icons/tab-discover.svg', activeIcon: '/assets/icons/tab-discover-active.svg'},
       {path: '/pages/favorites/index', text: '我的收藏', icon: '/assets/icons/tab-heart.svg', activeIcon: '/assets/icons/tab-heart-active.svg'},
       {path: '/pages/profile/index', text: '个人中心', icon: '/assets/icons/tab-user.svg', activeIcon: '/assets/icons/tab-user-active.svg'}
     ]

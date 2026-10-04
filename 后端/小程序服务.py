@@ -1,6 +1,9 @@
 from pathlib import Path
+import logging
+import time
 
 import psycopg
+from psycopg_pool import PoolTimeout
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
@@ -8,13 +11,14 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import Field, ValidationError
 from starlette.concurrency import run_in_threadpool
 
-from .数据库 import 连接数据库
+from .数据库 import 连接数据库, 使用请求连接池
 from .网关鉴权 import 校验签名, 用户身份, 登记与限流
 from .小程序业务 import 严格参数, 动作
 from .测试直连 import 已启用, 测试分发, 测试分发请求, 测试登录请求, 换取开放身份, 签发令牌
 from .管理接口 import 路由 as 管理路由, 管理权限
 
 应用 = FastAPI(title="古籍起名管理与小程序内部服务", version="1.0.0", docs_url=None, redoc_url=None, openapi_url=None)
+性能日志 = logging.getLogger("name_system.dispatch")
 应用.include_router(管理路由)
 目录 = Path(__file__).resolve().parents[1] / "管理前端"
 应用.mount("/admin/static", StaticFiles(directory=目录), name="admin-static")
@@ -43,6 +47,7 @@ async def 参数异常(request, exc):
 
 
 @应用.exception_handler(psycopg.Error)
+@应用.exception_handler(PoolTimeout)
 async def 数据库异常(request, exc):
     return JSONResponse({"detail": "服务暂时不可用，请稍后重试"}, status_code=503)
 
@@ -90,15 +95,30 @@ def 监控指标():
 
 
 def 分发(headers, body):
-    校验签名(headers, body)
-    请求 = 网关请求.model_validate_json(body)
-    owner = 用户身份(请求.appid, 请求.openid)
-    if 请求.action not in 动作:
-        raise HTTPException(404, "操作不存在")
-    类型, 函数 = 动作[请求.action]
-    参数 = 类型.model_validate(请求.data)
-    登记与限流(owner)
-    return 函数(owner, 参数)
+    started = time.perf_counter()
+    authenticated = limited = started
+    action = "unknown"
+    with 使用请求连接池():
+        try:
+            校验签名(headers, body)
+            请求 = 网关请求.model_validate_json(body)
+            owner = 用户身份(请求.appid, 请求.openid)
+            if 请求.action not in 动作:
+                raise HTTPException(404, "操作不存在")
+            action = 请求.action
+            类型, 函数 = 动作[action]
+            参数 = 类型.model_validate(请求.data)
+            authenticated = time.perf_counter()
+            登记与限流(owner)
+            limited = time.perf_counter()
+            return 函数(owner, 参数)
+        finally:
+            finished = time.perf_counter()
+            # No user id, request parameters or response payload in logs.
+            if finished - started >= 0.5:
+                性能日志.info("action=%s auth_ms=%.0f rate_ms=%.0f business_ms=%.0f total_ms=%.0f",
+                    action, (authenticated-started)*1000, (limited-authenticated)*1000,
+                    (finished-limited)*1000, (finished-started)*1000)
 
 
 @应用.post("/internal/v1/dispatch")

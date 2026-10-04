@@ -42,11 +42,12 @@
 
     <view class="detail-section elements-section" wx:if="{{showElements}}">
       <view class="section-title"><image src="/assets/icons/yinyang.svg" mode="aspectFit" />五行参考</view>
-      <view class="section-note">字源归类与首页五维取象分别参考，以下为姓名逐字的收录资料。</view>
+      <view class="section-note">逐字展示五行归类或五维画像中的主象；主象不等于确定的字源归类。</view>
       <view class="element-entry" wx:for="{{elements}}" wx:key="id" wx:for-item="entry">
         <view class="element-heading">
           <view class="element-character element-{{entry.tone}}">{{entry.char}}</view>
-          <view class="element-classification">{{entry.element ? '字源 · ' + entry.element : '字源未定'}}</view>
+          <view class="element-classification" wx:if="{{entry.display_element}}"><image class="element-emoji" src="/assets/elements/{{entry.tone}}.svg" mode="aspectFit" aria-label="{{entry.emoji}}" /><text class="element-name">{{entry.display_element}}</text><text class="element-basis">{{entry.element_basis}}</text></view>
+          <view class="element-classification element-unavailable" wx:else>暂无五行画像</view>
         </view>
         <view class="element-citations" wx:if="{{entry.citations.length}}">
           <view class="element-citation" wx:for="{{entry.citations}}" wx:key="id" wx:for-item="citation">
@@ -79,4 +80,4 @@
     <button class="continue-button" disabled="{{busy}}" bindtap="continueChoosing">继续挑选<image src="/assets/icons/arrow-right.svg" mode="aspectFit" /></button>
   </view>
 </view>
-<view class="empty" wx:else>请从千千嘉名或收藏页打开一个名字。</view>
+<view class="empty" wx:else>请从好名书中来或收藏页打开一个名字。</view>

@@ -73,7 +73,7 @@ test('profile markup keeps only individual source switches and puts name filters
   const markup = fs.readFileSync(path.join(__dirname, '../小程序/pages/profile/index.wxml'), 'utf8');
   assert.ok(markup.indexOf('名字来源') < markup.indexOf('名字用字'));
   assert.ok(markup.indexOf('名字用字') < markup.indexOf('继续寻名'));
-  assert.ok(markup.indexOf('继续寻名') < markup.indexOf('千千嘉名'));
+  assert.ok(markup.indexOf('继续寻名') < markup.indexOf('好名书中来'));
   for (const hidden of ['全开', '全关', '默认全部开启', '从喜欢的典籍与年号中寻找名字', '当前偏好', 'OpenID', '隐私与同步', '名字释义由模型辅助整理']) {
     assert.doesNotMatch(markup, new RegExp(hidden));
   }
@@ -81,5 +81,5 @@ test('profile markup keeps only individual source switches and puts name filters
   assert.match(markup, /class="profile-panel character-panel" wx:if="\{\{showCharacterFilters\}\}"/);
   assert.match(markup, /data-field="required"[^>]*maxlength="64"/);
   assert.match(markup, /data-field="excluded"[^>]*maxlength="128"/);
-  assert.match(fs.readFileSync(path.join(__dirname, '../小程序/pages/profile/index.js'), 'utf8'), /showCharacterFilters: false/);
+  assert.match(fs.readFileSync(path.join(__dirname, '../小程序/pages/profile/index.js'), 'utf8'), /showCharacterFilters: true/);
 });

@@ -1,6 +1,7 @@
 'use strict';
 const crypto = require('node:crypto');
 const https = require('node:https');
+const upstreamAgent = new https.Agent({ keepAlive: true, maxSockets: 8, maxFreeSockets: 2, timeout: 5000 });
 const ACTIONS = new Set([
   'session.get', 'sources.list', 'feed.pull', 'names.analyze', 'names.detail',
   'favorites.list', 'favorites.add', 'favorites.remove', 'feedback.save'
@@ -27,7 +28,7 @@ function forward(url, body, headers = {}, method = 'POST') {
       'Content-Length': Buffer.byteLength(body),
       ...headers
     };
-    const request = https.request(url, { method: isGet ? 'GET' : 'POST', headers: reqHeaders }, response => {
+    const request = https.request(url, { method: isGet ? 'GET' : 'POST', headers: reqHeaders, agent: upstreamAgent }, response => {
       let size = 0;
       const chunks = [];
       response.on('data', chunk => {

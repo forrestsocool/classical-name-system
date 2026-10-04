@@ -38,6 +38,8 @@ test('detail loads only delivered name sources from server and keeps meaning sep
   const markup = fs.readFileSync(path.join(__dirname, '../小程序/pages/detail/index.wxml'), 'utf8');
   assert.match(markup, /释义与寓意/);
   assert.match(markup, /elements-section/);
+  assert.doesNotMatch(markup, /字源未定|字源 ·/);
+  assert.match(markup, /assets\/elements\/\{\{entry\.tone\}\}\.svg/);
   const elements = [{id:0, char:'李', element:'木', citations:[{book:'说文解字',quote:'李，果也。'}]}];
   const {data, requested} = await openDetail({elements, wuxing: {version:'server-v1', analyzed_name:'李清熙'}}, '李');
   assert.deepEqual(JSON.parse(JSON.stringify(requested)), {action:'names.detail', data:{material_id:1,surname:'李'}});

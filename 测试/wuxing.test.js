@@ -32,3 +32,9 @@ test('only current-name server analysis is displayed; stale local cache is ignor
   assert.equal(normalizeCard(card, '李').item.wuxing.available, false);
   assert.equal(original.item.wuxing.version, 'old-digest');
 });
+
+test('home five-element meter is informational and opens no modal', () => {
+  const root = path.join(__dirname, '../小程序/pages/discover/index');
+  assert.doesNotMatch(fs.readFileSync(root + '.wxml', 'utf8'), /catchtap="showWuxing"|role="button" aria-label="查看姓名五行/);
+  assert.doesNotMatch(fs.readFileSync(root + '.js', 'utf8'), /showWuxing\(\)/);
+});

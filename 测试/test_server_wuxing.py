@@ -5,9 +5,26 @@ from fastapi import HTTPException
 
 from 后端 import 小程序业务
 from 后端.姓名五行 import 分析姓名, 逐字出处, 知识库
+from 后端 import 姓名五行
 
 
 class ServerWuxingTests(unittest.TestCase):
+    def test_character_uses_explicit_element_or_profile_dominant_without_claiming_source(self):
+        corpus = {
+            '清': {'energy_profile': {'supported': True, 'scores': {'金': 1, '木': 2, '水': 70, '火': 3, '土': 4}}},
+            '熙': {'element': '火', 'energy_profile': {'supported': True, 'scores': {'金': 1, '木': 2, '水': 3, '火': 60, '土': 4}}},
+        }
+        with patch.object(姓名五行, '知识库', return_value=(corpus, 'digest')):
+            rows = 逐字出处('清熙未')
+            explanation = 分析姓名('清熙未')['explanation']
+        self.assertEqual(len(rows), 3)
+        self.assertEqual((rows[0]['display_element'], rows[0]['element_basis'], rows[0]['emoji']), ('水', '主象', '💧'))
+        self.assertEqual((rows[1]['display_element'], rows[1]['element_basis'], rows[1]['emoji']), ('火', '字源', '🔥'))
+        self.assertEqual(rows[2]['display_element'], '')
+        self.assertIn('清·水（主象）', explanation)
+        self.assertIn('熙·火（字源）', explanation)
+        self.assertNotIn('字源归类', explanation)
+
     def test_overlay_loaded_and_each_dimension_summed_then_capped(self):
         merged, _ = 知识库()
         self.assertTrue(merged['鸿']['energy_profile']['supported'])

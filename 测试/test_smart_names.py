@@ -12,7 +12,7 @@ from 后端.模型接口 import 模型配置, 验证模型地址
 
 
 class 智能流程测试(unittest.TestCase):
-    def test召回不会使用待核验片段(self):
+    def test旧版召回仍要求核验(self):
         with tempfile.TemporaryDirectory() as d:
             数据库 = Path(d) / "测试.sqlite3"
             with closing(sqlite3.connect(服务.数据库路径)) as 源, closing(sqlite3.connect(数据库)) as 目标:
@@ -37,6 +37,14 @@ class 智能流程测试(unittest.TestCase):
                     {"姓氏": "李", "名字长度": 2, "随机种子": 77, "来源书名": "论语"},
                 )
             self.assertTrue(all(项目["来源片段编号"] != 片段["id"] for 项目 in 召回))
+
+    def test年号只从名称取字(self):
+        from 后端.智能筛选 import 可召回正文
+        行 = {"text": "建元：西汉年号，汉武帝时期。", "book": "东亚年号",
+              "status": "待核验", "can_generate": 0, "active_for_recall": True}
+        self.assertEqual(可召回正文(行), ("建元", 0))
+        self.assertIsNone(可召回正文({**行, "status": "不采用"}))
+        self.assertIsNone(可召回正文({**行, "status": "已核验"}))
 
     def test召回规模出处与排除(self):
         请求 = {"姓氏":"李", "名字长度":2, "随机种子":77, "必须包含":"", "排除名字":[]}

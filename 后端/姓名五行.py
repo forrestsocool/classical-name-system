@@ -5,6 +5,7 @@ from pathlib import Path
 
 元素 = ("金", "木", "水", "火", "土")
 键 = ("jin", "mu", "shui", "huo", "tu")
+五行符号 = {"金": "🪙", "木": "🌳", "水": "💧", "火": "🔥", "土": "🪨"}
 根 = Path(__file__).resolve().parents[1] / "汉字五行知识库"
 
 
@@ -25,15 +26,19 @@ def 分析姓名(姓名):
     for char in 姓名:
         entry = data.get(char) or {}
         element = entry.get("element")
-        sources.append(f"{char}·{element if element in 元素 else '未定'}")
         profile = entry.get("energy_profile") or {}
         scores = profile.get("scores") or {}
         if profile.get("supported") and all(isinstance(scores.get(e), (int, float)) for e in 元素):
             supported += 1
             for e in 元素:
                 totals[e] += scores[e]
-        elif char not in missing:
-            missing.append(char)
+            dominant = max(元素, key=lambda e: scores[e]) if max(scores[e] for e in 元素) > 0 else ""
+            sources.append(f"{char}·{element}（字源）" if element in 元素 else
+                           f"{char}·{dominant}（主象）" if dominant else f"{char}·暂无画像")
+        else:
+            if char not in missing:
+                missing.append(char)
+            sources.append(f"{char}·暂无画像")
     available = supported > 0
     items = []
     for e, key in zip(元素, 键):
@@ -47,7 +52,7 @@ def 分析姓名(姓名):
     coverage = f"\n暂无画像：{'、'.join(missing)}；未参与计算。" if missing else ""
     return {"version": "server-v1", "knowledge_version": digest[:16], "analyzed_name": 姓名,
             "available": available, "supported": supported, "total": len(姓名), "items": items, "status": status,
-            "explanation": summary + "\n\n字源归类：" + "、".join(sources) +
+            "explanation": summary + "\n\n逐字参考：" + "、".join(sources) +
             "\n\n按逐字五维取象分值分别加总，每项最高计 100；含已输入的姓氏。五格表示该项强度，五项不要求合计为 100。" + coverage +
             "\n\n仅作传统用字参考，不代表八字或五行缺失。"}
 
@@ -58,6 +63,8 @@ def 逐字出处(姓名):
     for position, char in enumerate(姓名):
         entry = data.get(char) or {}
         profile = entry.get("energy_profile") or {}
+        scores = profile.get("scores") or {}
+        supported = profile.get("supported") and all(isinstance(scores.get(e), (int, float)) for e in 元素)
         notes = profile.get("semantic_notes", "").strip() if profile.get("supported") else ""
         citations = []
         seen_citations = set()
@@ -70,11 +77,13 @@ def 逐字出处(姓名):
             if book and (quote or reference) and citation_key not in seen_citations:
                 citations.append(item)
                 seen_citations.add(citation_key)
-        if not citations and not notes:
-            continue
         element = entry.get("element")
-        index = 元素.index(element) if element in 元素 else -1
-        result.append({"id": position, "char": char, "element": element if index >= 0 else "",
+        explicit = element in 元素
+        dominant = element if explicit else max(元素, key=lambda e: scores[e]) if supported and max(scores.values()) > 0 else ""
+        index = 元素.index(dominant) if dominant else -1
+        result.append({"id": position, "char": char, "element": element if explicit else "",
+                       "display_element": dominant, "element_basis": "字源" if explicit else "主象" if dominant else "",
+                       "emoji": 五行符号.get(dominant, ""),
                        "tone": 键[index] if index >= 0 else "unknown", "citations": citations,
-                       "reason": (entry.get("reason") or "").strip() if index >= 0 else "", "notes": notes})
+                       "reason": (entry.get("reason") or "").strip() if explicit else "", "notes": notes})
     return result

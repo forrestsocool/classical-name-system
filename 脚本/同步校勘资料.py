@@ -69,7 +69,7 @@ def 同步(源路径, 目标, apply=False):
             if key in existing:
                 raise ValueError("目标存在重复原文定位，拒绝猜测历史编号")
             existing[key] = row["id"]
-        目标.execute("UPDATE passages SET can_generate=0 WHERE can_generate<>0")
+        目标.execute("UPDATE passages SET can_generate=0,active_for_recall=false WHERE can_generate<>0 OR active_for_recall")
         passages = {}
         for original in data["passages"]:
             row = {k: v for k, v in original.items() if k != "id"}
@@ -80,9 +80,11 @@ def 同步(源路径, 目标, apply=False):
                 columns = list(row)
                 目标.execute(sql.SQL("UPDATE passages SET {} WHERE id=%s").format(
                     sql.SQL(",").join(sql.SQL("{}=%s").format(sql.Identifier(k)) for k in columns)), [*row.values(), pid])
+                目标.execute("UPDATE passages SET active_for_recall=true WHERE id=%s", (pid,))
                 stats["reused_passages"] += 1
             else:
                 pid = insert("passages", row)
+                目标.execute("UPDATE passages SET active_for_recall=true WHERE id=%s", (pid,))
                 stats["inserted_passages"] += 1
             passages[original["id"]] = pid
         for table, conflict in (("characters", ("char",)), ("character_elements", ("char", "method")),

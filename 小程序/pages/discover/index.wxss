@@ -18,8 +18,6 @@
 .hero { position: relative; z-index: 1; flex: none; display: flex; align-items: flex-end; padding: 0 32rpx 8px; }
 .brand-row { display: flex; align-items: center; }
 .brand-name { color: #315c50; font-weight: 600; font-size: 42rpx; line-height: 43rpx; letter-spacing: 3rpx; }
-.brand-seal { width: 23rpx; height: 43rpx; margin-left: 12rpx; padding: 2rpx 0; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1rpx solid #be7768; border-radius: 3rpx; color: #be7768; font-weight: 400; font-size: 12rpx; line-height: 1; }
-.brand-seal text { display: block; flex: none; width: 100%; height: 12rpx; line-height: 12rpx; text-align: center; }
 .brand-copy { position: relative; z-index: 1; flex: none; margin: 0 32rpx 4rpx; }
 .brand-subtitle { color: #618176; font-weight: 400; font-size: 22rpx; line-height: 1.5; letter-spacing: 3rpx; }
 .brand-motto { width: 328rpx; margin: 6rpx 0 0 16rpx; display: flex; align-items: center; gap: 14rpx; color: #8b9b91; font-weight: 400; font-size: 18rpx; line-height: 1.4; letter-spacing: 4rpx; }
@@ -91,7 +89,6 @@
 .card-source > text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-detail { flex: none; margin-left: auto; display: flex; align-items: center; gap: 8rpx; color: #54765e; font-size: 21rpx; line-height: 40rpx; }
 .card-detail image { width: 25rpx; height: 25rpx; }
-.card-seal { position: absolute; right: 16rpx; bottom: 102rpx; width: 25rpx; height: 30rpx; border: 1rpx solid #e2a49a; border-radius: 3rpx; color: #d89487; text-align: center; font-weight: 400; font-size: 16rpx; line-height: 28rpx; opacity: .7; }
 .decision { position: absolute; z-index: 7; top: 36rpx; padding: 10rpx 15rpx; border: 5rpx double currentColor; border-radius: 7rpx; font-weight: 700; font-size: 28rpx; line-height: 1; letter-spacing: 3rpx; pointer-events: none; }
 .decision-skip { right: 32rpx; color: #b96156; transform: rotate(11deg); }
 .decision-like { left: 32rpx; color: #0b6855; transform: rotate(-11deg); }
