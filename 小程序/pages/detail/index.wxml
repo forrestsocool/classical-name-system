@@ -21,6 +21,10 @@
       <view class="detail-tags" wx:if="{{card.item.tags.length}}">
         <text wx:for="{{card.item.tags}}" wx:key="*this">{{item}}</text>
       </view>
+      <button class="share-name-button" wx:if="{{shareReady}}" open-type="share" aria-label="把{{card.item.name}}发给家人看看"><image src="/assets/icons/book-open.svg" mode="aspectFit" />发给家人看看</button>
+      <button class="share-name-button share-pending" wx:elif="{{shareLoading}}" disabled>正在准备分享…</button>
+      <button class="share-name-button share-pending" wx:elif="{{shareError}}" bindtap="retryShare">{{shareError}}</button>
+      <view class="share-unavailable" wx:elif="{{shareUnavailable}}">此名暂不可分享</view>
     </view>
 
     <view class="detail-section source-section">
@@ -72,7 +76,7 @@
       <view class="section-copy">{{popularity}}</view>
     </view>
 
-    <view class="feedback-link" bindtap="feedback">反馈出处或释义问题</view>
+    <view class="feedback-link" wx:if="{{!isShared}}" bindtap="feedback">反馈出处或释义问题</view>
     <view class="detail-error" wx:if="{{error}}">{{error}}</view>
   </view>
   <view class="detail-actions">
@@ -80,4 +84,7 @@
     <button class="continue-button" disabled="{{busy}}" bindtap="continueChoosing">继续挑选<image src="/assets/icons/arrow-right.svg" mode="aspectFit" /></button>
   </view>
 </view>
-<view class="empty" wx:else>请从好名书中来或收藏页打开一个名字。</view>
+<view class="empty" wx:else>
+  <view>{{loading ? '正在打开分享的名字…' : (loadError || '请从好名书中来或收藏页打开一个名字。')}}</view>
+  <button wx:if="{{!loading}}" bindtap="continueChoosing">去挑名字</button>
+</view>

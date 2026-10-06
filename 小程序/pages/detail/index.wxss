@@ -20,6 +20,11 @@
 .score-female { color: #aa4654; background: #fff0f1; }
 .detail-tags { margin-top: 25rpx; white-space: nowrap; overflow: hidden; }
 .detail-tags text { display: inline-block; margin-right: 12rpx; padding: 9rpx 20rpx; border-radius: 999rpx; color: #2f695c; background: #edf4eb; font-size: 22rpx; }
+.share-name-button { width: 100%; height: 70rpx; margin: 28rpx 0 0; display: flex; align-items: center; justify-content: center; gap: 10rpx; border: 1rpx solid #c8dbcc; border-radius: 14rpx; color: #125d4f; background: #f0f6ee; font-size: 25rpx; line-height: 70rpx; }
+.share-name-button::after { border: 0; }
+.share-name-button image { width: 30rpx; height: 30rpx; }
+.share-pending { color: #71817a; background: #f6f7f2; }
+.share-unavailable { margin-top: 20rpx; color: #89938f; font-size: 21rpx; text-align: center; }
 .section-head { display: flex; align-items: center; justify-content: space-between; gap: 18rpx; }
 .section-title { display: flex; align-items: center; gap: 13rpx; color: #0a594d; font-size: 29rpx; font-weight: 600; }
 .section-title image { width: 35rpx; height: 35rpx; }
@@ -64,3 +69,4 @@
 .continue-button { flex: 1; color: #fffefa; background: linear-gradient(145deg, #16705d, #075244); }
 .continue-button image { width: 37rpx; height: 37rpx; }
 .empty { padding: 150rpx 40rpx; color: #7f8a86; text-align: center; background: #f7f5ee; }
+.empty button { width: 240rpx; margin-top: 28rpx; border: 1rpx solid #c8dbcc; border-radius: 14rpx; color: #125d4f; background: #f0f6ee; font-size: 26rpx; }

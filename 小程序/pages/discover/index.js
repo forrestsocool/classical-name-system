@@ -388,5 +388,9 @@ Page({
     getApp().selectedCard = this.data.current;
     getApp().selectedSurname = this.data.surname;
     wx.navigateTo({url: '/pages/detail/index'});
+  },
+  onShareAppMessage() {
+    return {title: '从典籍里挑一个好名字｜好名书中来', path: '/pages/discover/index',
+      imageUrl: '/assets/share-cover.jpg'};
   }
 });

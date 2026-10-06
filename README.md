@@ -35,7 +35,7 @@ docker compose run --rm migrate
 docker compose up -d api producer
 ```
 
-管理后台：`http://127.0.0.1:8000/admin`。小程序使用正式 AppID `wx3d9171fa1ecde642` 和已关联的云环境 `cloud1-d8gsdbw0983b1cb3c`，只通过 `wx.cloud.callFunction` 调用 `nameGateway`；云函数再签名访问自有服务器。客户端已移除测试 HTTP 直连，开发者工具启用域名校验。AppSecret 不参与这条原生云开发身份链路，也不需要写入小程序或服务器配置。实际部署与体验版状态见上方体验文档。
+管理后台：`http://127.0.0.1:8000/admin`。小程序使用正式 AppID `wx3d9171fa1ecde642` 和已关联的云环境 `cloud1-d4g0by2075923531d`，只通过 `wx.cloud.callFunction` 调用 `nameGateway`；云函数再签名访问自有服务器。客户端已移除测试 HTTP 直连，开发者工具启用域名校验。AppSecret 不参与这条原生云开发身份链路，也不需要写入小程序或服务器配置。实际部署与体验版状态见上方体验文档。
 
 `https://<envId>.api.tcloudbasegateway.com/v1/ai/cloudbase` 是 CloudBase AI 模型的 Base URL，不是业务云函数入口；环境 API Key 只允许放在服务器或云函数环境变量中。
 
@@ -44,6 +44,8 @@ docker compose up -d api producer
 ## 生产行为
 
 生产器只维护单字名、双字名两份共享库存，与用户是否在线无关；管理员可以分别暂停。`PRODUCER_DAILY_BATCHES=0` 表示持续生产，正数表示 UTC 日批次上限，失败调用也计入。候选经过模型审稿，公开发卡要求评分不低于 85，并排除完整年号资料。
+
+名字详情支持通过微信发送给朋友或群聊。分享链接只含随机标识，不携带发送人的姓氏或筛选条件；收件人可直接查看出处和释义，点击收藏后该出处才写入自己的投递与收藏。朋友圈分享需另做无需登录的单页展示，当前版本未开启。
 
 新版本按 OPENID 派生的用户编号和名字记录曝光；同一个请求编号重试返回同一批。没有租约、活跃订阅、临时私有池或布隆过滤器。同一微信用户的收藏跨设备同步；旧浏览器匿名收藏只作为历史数据保存，不自动绑定微信用户。
 

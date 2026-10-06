@@ -68,6 +68,33 @@ test('gateway adds the trusted OpenID only to the caller session response', asyn
   assert.equal(feed.data.openid, undefined);
 });
 
+test('native cloud calls work without the HTTP bridge AppSecret', async () => {
+  const nativeEnv = {...env};
+  delete nativeEnv.WECHAT_APP_SECRET;
+  const handler = createHandler({
+    getContext: () => context,
+    env: nativeEnv,
+    transport: async () => ({status: 200, data: {user_id: 'hashed-user'}})
+  });
+  assert.equal((await handler({action: 'session.get'})).ok, true);
+  assert.equal((await handler({action: 'shares.get', data: {token: 'a'.repeat(32)}})).ok, true);
+  assert.equal((await createHandler({getContext: () => ({}), env: nativeEnv})({
+    action: 'session.get', code: 'test-code-1234'
+  })).status, 503);
+});
+
+test('gateway forwards share actions with platform identity and no sender preferences', async () => {
+  const forwarded = [];
+  const handler = createHandler({getContext: () => context, env,
+    transport: async (_url, body) => { forwarded.push(JSON.parse(body)); return {status: 200, data: {ok: true}}; }});
+  for (const action of ['shares.create', 'shares.get', 'shares.save']) {
+    const data = action === 'shares.create' ? {material_id: 4} : {token: 'a'.repeat(32)};
+    assert.equal((await handler({action, data, openid: 'forged', surname: '李'})).ok, true);
+  }
+  assert.deepEqual(forwarded.map(x => x.action), ['shares.create', 'shares.get', 'shares.save']);
+  assert.ok(forwarded.every(x => x.openid === context.OPENID && x.data.surname === undefined));
+});
+
 test('gateway rejects missing identity, unexpected app, admin actions and oversized input', async () => {
   const transport = () => { throw new Error('must not forward'); };
   assert.equal((await createHandler({getContext: () => ({}), env, transport})({action: 'session.get'})).status, 401);

@@ -4,6 +4,7 @@ const https = require('node:https');
 const upstreamAgent = new https.Agent({ keepAlive: true, maxSockets: 8, maxFreeSockets: 2, timeout: 5000 });
 const ACTIONS = new Set([
   'session.get', 'sources.list', 'feed.pull', 'names.analyze', 'names.detail',
+  'shares.create', 'shares.get', 'shares.save',
   'favorites.list', 'favorites.add', 'favorites.remove', 'feedback.save'
 ]);
 const SESSION_SECONDS = 12 * 60 * 60;
@@ -107,7 +108,6 @@ function createHandler({ getContext = () => ({}), transport = forward, env = pro
         return { ok: false, status: 422, message: '参数格式不正确' };
       }
       if (!/^wx[a-f0-9]{16}$/.test(env.WECHAT_APP_ID || '') ||
-          !/^[\x21-\x7e]{32,}$/.test(env.WECHAT_APP_SECRET || '') ||
           !/^[\x21-\x7e]{32,}$/.test(env.GATEWAY_SECRET || '')) throw new Error('configuration');
 
       let openid = null;
@@ -122,6 +122,7 @@ function createHandler({ getContext = () => ({}), transport = forward, env = pro
       const isLoginCode = req.action === 'session.get' && typeof req.code === 'string';
       if (!openid) {
         if (isLoginCode) {
+          if (!/^[\x21-\x7e]{32,}$/.test(env.WECHAT_APP_SECRET || '')) throw new Error('configuration');
           openid = await codeExchange(req.code, env, transport);
         } else if (req.sessionToken) {
           openid = verifyToken(req.sessionToken, env);

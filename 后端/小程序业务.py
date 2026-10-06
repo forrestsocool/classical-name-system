@@ -1,6 +1,7 @@
 import hashlib
 import json
 import re
+import secrets
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -76,6 +77,10 @@ class 姓名详情参数(名字参数):
     surname: str = Field(default="", max_length=4, pattern=r"^[\u3400-\u9fff]*$")
 
 
+class 分享链接参数(严格参数):
+    token: str = Field(min_length=32, max_length=32, pattern=r"^[A-Za-z0-9_-]+$")
+
+
 def 卡片(row, include_wuxing=False):
     内容 = dict(row["payload"])
     内容.setdefault("男孩适配分", 50)
@@ -135,6 +140,61 @@ def 姓名详情(owner, p):
         name = p.surname + 已投递名字(owner, [p.material_id], c)[p.material_id]
         记录姓氏(owner, p.surname, c)
     return {"wuxing": 分析姓名(name), "elements": 逐字出处(name)}
+
+
+def 可分享物料(c, material_id=None, token=None):
+    # Match the public-feed quality gate; a withdrawn passage cannot keep circulating.
+    where = "m.id=%s" if material_id is not None else "s.token=%s"
+    join = "" if material_id is not None else "JOIN app_share_links s ON s.material_id=m.id"
+    value = material_id if material_id is not None else token
+    return c.execute(f"""SELECT m.id,m.given_name,m.full_name,m.payload FROM app_materials m
+        JOIN app_profiles f ON f.id=m.profile_id
+        JOIN passages p ON p.id=m.passage_id
+        {join} WHERE {where} AND f.surname='' AND p.active_for_recall
+        AND (p.status='待核验' OR (p.status='已核验' AND p.can_generate=1))
+        AND COALESCE((m.payload->>'基础分')::int,0)>=85""", (value,)).fetchone()
+
+
+def 创建分享(owner, p):
+    with 连接数据库() as c:
+        if not c.execute("SELECT 1 FROM app_deliveries WHERE owner=%s AND material_id=%s",
+                         (owner, p.material_id)).fetchone() or not 可分享物料(c, material_id=p.material_id):
+            raise HTTPException(404, "名字暂不可分享")
+        row = c.execute("SELECT token FROM app_share_links WHERE owner=%s AND material_id=%s",
+                        (owner, p.material_id)).fetchone()
+        if not row:
+            row = c.execute("""INSERT INTO app_share_links(token,owner,material_id) VALUES (%s,%s,%s)
+                ON CONFLICT(owner,material_id) DO NOTHING RETURNING token""",
+                (secrets.token_urlsafe(24), owner, p.material_id)).fetchone()
+            if not row:
+                row = c.execute("SELECT token FROM app_share_links WHERE owner=%s AND material_id=%s",
+                                (owner, p.material_id)).fetchone()
+    return {"token": row["token"]}
+
+
+def 打开分享(owner, p):
+    with 连接数据库() as c:
+        row = 可分享物料(c, token=p.token)
+    if not row:
+        raise HTTPException(404, "分享的名字已不可查看")
+    name = row["given_name"]
+    return {"card": 卡片(row, include_wuxing=True), "elements": 逐字出处(name)}
+
+
+def 收藏分享(owner, p):
+    with 连接数据库() as c:
+        # Serialize with feed.pull so a shared name is not delivered again mid-save.
+        c.execute("SELECT id FROM app_users WHERE id=%s FOR UPDATE", (owner,))
+        row = 可分享物料(c, token=p.token)
+        if not row:
+            raise HTTPException(404, "分享的名字已不可收藏")
+        c.execute("INSERT INTO app_seen_names(owner,given_name) VALUES (%s,%s) ON CONFLICT DO NOTHING",
+                  (owner, row["given_name"]))
+        c.execute("""INSERT INTO app_deliveries(owner,full_name,material_id) VALUES (%s,%s,%s)
+            ON CONFLICT(owner,material_id) DO NOTHING""", (owner, row["given_name"], row["id"]))
+        c.execute("""INSERT INTO app_favorites(owner,material_id) VALUES (%s,%s)
+            ON CONFLICT DO NOTHING""", (owner, row["id"]))
+    return {"saved": True, "material_id": row["id"]}
 
 
 def 拉卡(owner, p):
@@ -249,5 +309,7 @@ def 反馈(owner, p):
       "sources.list": (严格参数, 来源列表),
       "feed.pull": (拉卡参数, 拉卡), "favorites.list": (列表参数, 收藏列表),
       "names.analyze": (姓名分析参数, 姓名分析), "names.detail": (姓名详情参数, 姓名详情),
+      "shares.create": (名字参数, 创建分享), "shares.get": (分享链接参数, 打开分享),
+      "shares.save": (分享链接参数, 收藏分享),
       "favorites.add": (名字参数, 收藏), "favorites.remove": (名字参数, 取消收藏),
       "favorites.compare": (比较参数, 比较), "feedback.save": (反馈参数, 反馈)}

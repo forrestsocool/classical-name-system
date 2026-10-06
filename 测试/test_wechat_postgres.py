@@ -305,6 +305,61 @@ class PostgreSQLTests(unittest.TestCase):
         self.assertEqual(len(self.request("favorites.list").json()["cards"]),2)
         self.assertEqual(self.request("feed.pull",self.pull(count=2),user="user-B").json()["cards"],cards)
 
+    def test_share_link_opens_for_another_user_and_can_be_saved_without_leaking_surname(self):
+        card = self.request("feed.pull", self.pull(count=1, surname="李"), user="share-A").json()["cards"][0]
+        material_id = card["id"]
+        self.assertEqual(self.request("shares.create", {"material_id": material_id}, user="share-B").status_code, 404)
+        issued = self.request("shares.create", {"material_id": material_id}, user="share-A")
+        self.assertEqual(issued.status_code, 200, issued.text)
+        token = issued.json()["token"]
+        self.assertEqual(len(token), 32)
+        self.assertEqual(self.request("shares.create", {"material_id": material_id}, user="share-A").json()["token"], token)
+        self.assertEqual(self.request("shares.get", {"token": "z" * 32}, user="share-B").status_code, 404)
+        self.assertEqual(self.request("shares.get", {"token": "short"}, user="share-B").status_code, 422)
+        opened = self.request("shares.get", {"token": token}, user="share-B")
+        self.assertEqual(opened.status_code, 200, opened.text)
+        self.assertEqual(opened.json()["card"]["item"]["姓名"], card["item"]["姓名"])
+        self.assertNotIn("李" + card["item"]["姓名"], opened.text)
+        self.assertEqual(self.request("favorites.add", {"material_id": material_id}, user="share-B").status_code, 404)
+        self.assertEqual(self.request("shares.save", {"token": token}, user="share-B").status_code, 200)
+        self.assertEqual(self.request("shares.save", {"token": token}, user="share-B").status_code, 200)
+        favorite = self.request("favorites.list", user="share-B").json()["cards"]
+        self.assertEqual([item["id"] for item in favorite], [material_id])
+        with self.connect() as c:
+            owner = 用户身份(APPID, "share-B")
+            self.assertEqual(c.execute("SELECT count(*) AS n FROM app_seen_names WHERE owner=%s AND given_name=%s",
+                (owner, card["item"]["姓名"])).fetchone()["n"], 1)
+            c.execute("UPDATE app_materials SET payload=jsonb_set(payload,'{基础分}','80'::jsonb) WHERE id=%s",
+                      (material_id,))
+        self.assertEqual(self.request("shares.get", {"token": token}, user="share-B").status_code, 404)
+
+    def test_share_keeps_the_exact_source_even_if_receiver_saw_the_same_name_elsewhere(self):
+        migration = (ROOT / "后端/迁移/007_名字分享.sql").read_text(encoding="utf-8")
+        with self.connect() as c:
+            c.execute(migration)
+            c.execute(migration)
+        original = self.request("feed.pull", self.pull(count=1), user="source-A").json()["cards"][0]
+        with self.connect() as c:
+            base = c.execute("SELECT profile_id,given_name,book,passage_id,payload FROM app_materials WHERE id=%s",
+                             (original["id"],)).fetchone()
+            second = c.execute("""INSERT INTO app_materials(profile_id,given_name,full_name,book,passage_id,payload)
+                VALUES (%s,%s,%s,%s,%s,%s) RETURNING id""",
+                (base["profile_id"], base["given_name"], base["given_name"], "另一出处",
+                 base["passage_id"], Jsonb(base["payload"]))).fetchone()["id"]
+        self.request("feed.pull", self.pull(count=8), user="source-B")
+        with self.connect() as c:
+            owner = 用户身份(APPID, "source-B")
+            c.execute("INSERT INTO app_deliveries(owner,full_name,material_id) VALUES (%s,%s,%s)",
+                      (owner, base["given_name"], second))
+        token = self.request("shares.create", {"material_id": original["id"]}, user="source-A").json()["token"]
+        saved = self.request("shares.save", {"token": token}, user="source-B")
+        self.assertEqual(saved.status_code, 200, saved.text)
+        with self.connect() as c:
+            owner = 用户身份(APPID, "source-B")
+            ids = {row["material_id"] for row in c.execute("SELECT material_id FROM app_deliveries WHERE owner=%s", (owner,))}
+            self.assertIn(original["id"], ids)
+            self.assertIn(second, ids)
+
     def test_admin_boundary_and_old_web_removed(self):
         for path in ('/api/feed/pull','/api/name-runs','/static/app.js','/docs','/api/model/status'):
             self.assertEqual(self.client.get(path).status_code,404,path)
