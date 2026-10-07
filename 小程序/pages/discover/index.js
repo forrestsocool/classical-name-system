@@ -174,7 +174,14 @@ Page({
       hasFilters: !!(this.filters.required || this.filters.excluded || this.filters.excluded_sources.length),
       cooldown: Math.max(0, Math.ceil((state.retryAt - Date.now()) / 1000))
     });
-    if (prepareShare && visible[0]) prepareShare(visible[0]).catch(() => {});
+    if (prepareShare && visible[0]) {
+      const id = visible[0].id;
+      if (wx.hideShareMenu) wx.hideShareMenu({menus: ['shareAppMessage']});
+      prepareShare(visible[0]).then(() => {
+        if (!this.closed && this.data.current && this.data.current.id === id && wx.showShareMenu)
+          wx.showShareMenu({menus: ['shareAppMessage']});
+      }).catch(() => {});
+    }
     const missing = visible.filter(card => card.item.wuxing.version !== 'server-v1' &&
       !this.analysisRequests.has(`${card.id}|${surname}`));
     if (missing.length && this.user && !this.analysisSuspended) this.refreshAnalysis(missing, surname);

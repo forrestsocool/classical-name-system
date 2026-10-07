@@ -58,7 +58,7 @@
           </view>
         </view>
         <view class="favorite-actions">
-        <button class="favorite-share-button" open-type="share" data-id="{{item.id}}" disabled="{{removingId}}" aria-label="分享{{item.item.name}}"><image src="/assets/icons/share-green.svg" mode="aspectFit" /><text>分享</text></button>
+        <button class="favorite-share-button" open-type="share" data-id="{{item.id}}" disabled="{{removingId || !item.shareReady}}" aria-label="分享{{item.item.name}}"><image src="/assets/icons/share-green.svg" mode="aspectFit" /><text>分享</text></button>
         <button class="source-button" data-id="{{item.id}}" disabled="{{removingId}}" catchtap="detail" aria-label="查看{{item.item.displayName}}的出处与释义">
           <image src="/assets/icons/document-green.svg" mode="aspectFit" /><text>查看出处</text><image class="source-arrow" src="/assets/icons/arrow-right-green.svg" mode="aspectFit" />
         </button>

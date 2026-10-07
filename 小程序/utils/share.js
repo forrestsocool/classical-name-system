@@ -1,5 +1,6 @@
 const {call} = require('./api');
 const prepared = new Map();
+const ready = new Map();
 
 function storeShareImage(result) {
   if (!result.image_base64 || typeof wx === 'undefined' || !wx.getFileSystemManager) return result.image_url || '/assets/share-cover.jpg';
@@ -18,10 +19,16 @@ function prepareShare(card) {
   if (prepared.has(card.id)) return prepared.get(card.id);
   const task = call('shares.create', {material_id: card.id}).then(result => {
     if (!result.token) throw new Error('分享链接未准备好');
-    return {...result, imageUrl: storeShareImage(result)};
+    const share = {...result, imageUrl: storeShareImage(result)};
+    ready.set(card.id, share);
+    return share;
   }).catch(error => { prepared.delete(card.id); throw error; });
   prepared.set(card.id, task);
-  if (prepared.size > 32) prepared.delete(prepared.keys().next().value);
+  if (prepared.size > 64) {
+    const oldest = prepared.keys().next().value;
+    prepared.delete(oldest);
+    ready.delete(oldest);
+  }
   return task;
 }
 
@@ -31,6 +38,9 @@ function shareName(card) {
   if (!card) return fallback;
   const {name, book} = card.item;
   const title = book ? `「${name}」出自《${book}》，你觉得怎么样？` : `「${name}」，你觉得怎么样？`;
+  const cached = ready.get(card.id);
+  if (cached) return {title, path: `/pages/detail/index?share=${encodeURIComponent(cached.token)}`,
+    imageUrl: cached.imageUrl};
   return {...fallback, title, promise: prepareShare(card)
     .then(result => ({title, path: `/pages/detail/index?share=${encodeURIComponent(result.token)}`,
       imageUrl: result.imageUrl || fallback.imageUrl})).catch(() => ({...fallback, title}))};

@@ -36,7 +36,8 @@ test('both entry points share a local JPEG received through the cloud response',
   })});
   const card = {id: 9, item: {name: '以宁', book: '道德经'}};
   const home = await shareName(card).promise;
-  const favorite = await shareName(card).promise;
+  const favorite = shareName(card);
+  assert.equal(favorite.promise, undefined);
   assert.equal(home.imageUrl, `wxfile://usr/share-${'b'.repeat(32)}.jpg`);
   assert.equal(favorite.imageUrl, home.imageUrl);
   assert.equal(calls, 1);

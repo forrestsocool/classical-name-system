@@ -68,7 +68,10 @@ Page({
           if (!ids.has(card.id)) { cards.push(card); ids.add(card.id); }
         }
         this.setData({cards, nextCursor: response.next_cursor || null, initialized: true});
-        if (prepareShare) cards.slice(0, 3).forEach(card => prepareShare(card).catch(() => {}));
+        if (prepareShare) cards.forEach(card => prepareShare(card).then(() => {
+          if (!this.closed) this.setData({cards: this.data.cards.map(current =>
+            current.id === card.id ? {...current, shareReady: true} : current)});
+        }).catch(() => {}));
       } catch (error) {
         if (!this.closed) this.setData({error: error.message || '收藏暂时没有送达，请重试'});
       } finally {
