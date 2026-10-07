@@ -12,13 +12,13 @@
 .favorite-card.is-dragging { transition: none; }
 .card-mountains { position: absolute; left: -15rpx; top: 22rpx; width: 320rpx; height: 190rpx; opacity: .55; pointer-events: none; }
 .favorite-top, .mini-scores, .favorite-meaning, .favorite-tags, .favorite-source { position: relative; z-index: 1; }
-.favorite-top { display: flex; align-items: center; justify-content: space-between; gap: 18rpx; }
-.name-group { flex: 1; min-width: 0; }
-.favorite-actions { flex: none; display: flex; align-items: center; gap: 12rpx; }
+.favorite-top { display: flex; flex-direction: column; align-items: stretch; gap: 18rpx; }
+.name-group { min-width: 0; width: 100%; }
+.favorite-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12rpx; }
 .favorite-share-button { flex: none; width: 76rpx; height: 61rpx; margin: 0; padding: 0; border: 1rpx solid #dce6da; border-radius: 999rpx; color: #0b584b; background: #f0f5ed; font-size: 22rpx; line-height: 59rpx; }
 .favorite-share-button::after { border: 0; }
 .favorite-share-button[disabled] { opacity: .55; }
-.favorite-name { color: #094e43; font-weight: 600; font-size: 55rpx; line-height: 1.2; letter-spacing: 7rpx; overflow-wrap: anywhere; }
+.favorite-name { color: #094e43; font-weight: 600; font-size: 55rpx; line-height: 1.2; letter-spacing: 7rpx; white-space: nowrap; }
 .favorite-pinyin { margin-top: 9rpx; color: #7e8c87; font-size: 20rpx; line-height: 1.5; letter-spacing: 4rpx; word-break: break-word; }
 .source-button { flex: none; display: flex; align-items: center; justify-content: center; gap: 10rpx; width: 188rpx; min-width: 188rpx; max-width: 188rpx; height: 61rpx; margin: 0; padding: 0 17rpx; border: 1rpx solid #dce6da; border-radius: 999rpx; color: #0b584b; background: #f0f5ed; font-size: 22rpx; font-weight: 400; line-height: 1; }
 .source-button image { width: 27rpx; height: 27rpx; }
