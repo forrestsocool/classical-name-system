@@ -7,7 +7,7 @@ Page({
     statusBarHeight: 0, card: null, elements: [], showElements: false,
     popularity: '未命中已收录的历史热门资料，不代表实时重名率。',
     busy: false, error: '', loading: false, loadError: '',
-    isShared: false, shareToken: '', shareReady: false, shareLoading: false,
+    isShared: false, shareToken: '', shareImageUrl: '', shareReady: false, shareLoading: false,
     shareError: '', shareUnavailable: false
   },
   async onLoad(options = {}) {
@@ -19,7 +19,7 @@ Page({
       try {
         const result = await call('shares.get', {token: options.share});
         this.showCard(result.card, result.elements);
-        this.setData({shareToken: options.share, shareReady: true});
+        this.setData({shareToken: options.share, shareImageUrl: result.image_url || '', shareReady: true});
         if (wx.showShareMenu) wx.showShareMenu({menus: ['shareAppMessage']});
       } catch (error) {
         this.setData({loadError: error.message || '分享的名字暂时无法打开'});
@@ -59,7 +59,7 @@ Page({
     this.setData({shareLoading: true, shareError: ''});
     try {
       const result = await call('shares.create', {material_id: materialId});
-      this.setData({shareToken: result.token, shareReady: true, shareUnavailable: false});
+      this.setData({shareToken: result.token, shareImageUrl: result.image_url || '', shareReady: true, shareUnavailable: false});
       if (wx.showShareMenu) wx.showShareMenu({menus: ['shareAppMessage']});
     } catch (error) {
       this.setData({shareUnavailable: error.status === 404,
@@ -80,7 +80,7 @@ Page({
     const name = card.item.name;
     const book = card.item.book;
     return {title: book ? `「${name}」出自《${book}》，你觉得怎么样？` : `「${name}」，你觉得怎么样？`,
-      path: `/pages/detail/index?share=${this.data.shareToken}`, imageUrl: '/assets/share-cover.jpg'};
+      path: `/pages/detail/index?share=${this.data.shareToken}`, imageUrl: this.data.shareImageUrl || '/assets/share-cover.jpg'};
   },
   goBack() {
     if (getCurrentPages().length > 1) wx.navigateBack();

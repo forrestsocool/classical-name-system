@@ -313,6 +313,11 @@ class PostgreSQLTests(unittest.TestCase):
         self.assertEqual(issued.status_code, 200, issued.text)
         token = issued.json()["token"]
         self.assertEqual(len(token), 32)
+        self.assertTrue(issued.json()['image_url'].endswith(f'/share-card/{token}.jpg'))
+        image = self.client.get(f'/share-card/{token}.jpg')
+        self.assertEqual(image.status_code,200)
+        self.assertEqual(image.headers['content-type'],'image/jpeg')
+        self.assertEqual(self.client.get('/share-card/invalid.jpg').status_code,404)
         self.assertEqual(self.request("shares.create", {"material_id": material_id}, user="share-A").json()["token"], token)
         self.assertEqual(self.request("shares.get", {"token": "z" * 32}, user="share-B").status_code, 404)
         self.assertEqual(self.request("shares.get", {"token": "short"}, user="share-B").status_code, 422)
@@ -332,6 +337,7 @@ class PostgreSQLTests(unittest.TestCase):
             c.execute("UPDATE app_materials SET payload=jsonb_set(payload,'{基础分}','80'::jsonb) WHERE id=%s",
                       (material_id,))
         self.assertEqual(self.request("shares.get", {"token": token}, user="share-B").status_code, 404)
+        self.assertEqual(self.client.get(f'/share-card/{token}.jpg').status_code,404)
 
     def test_share_keeps_the_exact_source_even_if_receiver_saw_the_same_name_elsewhere(self):
         migration = (ROOT / "后端/迁移/007_名字分享.sql").read_text(encoding="utf-8")

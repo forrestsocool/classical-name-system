@@ -8,7 +8,7 @@ function shareName(card) {
   const title = book ? `「${name}」出自《${book}》，你觉得怎么样？` : `「${name}」，你觉得怎么样？`;
   return {...fallback, title, promise: call('shares.create', {material_id: card.id})
     .then(result => ({title, path: `/pages/detail/index?share=${encodeURIComponent(result.token)}`,
-      imageUrl: fallback.imageUrl})).catch(() => ({...fallback, title}))};
+      imageUrl: result.image_url || fallback.imageUrl})).catch(() => ({...fallback, title}))};
 }
 
 module.exports = {shareName};

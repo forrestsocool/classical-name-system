@@ -1,12 +1,13 @@
 from pathlib import Path
 import logging
 import time
+import re
 
 import psycopg
 from psycopg_pool import PoolTimeout
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import Field, ValidationError
 from starlette.concurrency import run_in_threadpool
@@ -14,6 +15,8 @@ from starlette.concurrency import run_in_threadpool
 from .数据库 import 连接数据库, 使用请求连接池
 from .网关鉴权 import 校验签名, 用户身份, 登记与限流
 from .小程序业务 import 严格参数, 动作
+from .小程序业务 import 可分享物料
+from .分享图片 import 渲染分享图片
 from .测试直连 import 已启用, 测试分发, 测试分发请求, 测试登录请求, 换取开放身份, 签发令牌
 from .管理接口 import 路由 as 管理路由, 管理权限
 
@@ -65,6 +68,17 @@ def 管理首页():
 @应用.get("/api/health")
 def 健康检查():
     return {"status": "ok"}
+
+
+@应用.get('/share-card/{token}.jpg', include_in_schema=False)
+def 分享卡片图片(token: str):
+    if not re.fullmatch(r'[A-Za-z0-9_-]{32}',token):
+        raise HTTPException(404,'分享图片不可查看')
+    with 使用请求连接池(), 连接数据库() as connection:
+        row=可分享物料(connection,token=token)
+    if not row:
+        raise HTTPException(404,'分享图片不可查看')
+    return Response(渲染分享图片(row),media_type='image/jpeg')
 
 
 @应用.get("/api/ready")

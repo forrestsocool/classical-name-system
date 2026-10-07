@@ -169,7 +169,8 @@ def 创建分享(owner, p):
             if not row:
                 row = c.execute("SELECT token FROM app_share_links WHERE owner=%s AND material_id=%s",
                                 (owner, p.material_id)).fetchone()
-    return {"token": row["token"]}
+    from .分享图片 import 图片地址
+    return {"token": row["token"], "image_url": 图片地址(row["token"])}
 
 
 def 打开分享(owner, p):
@@ -178,7 +179,8 @@ def 打开分享(owner, p):
     if not row:
         raise HTTPException(404, "分享的名字已不可查看")
     name = row["given_name"]
-    return {"card": 卡片(row, include_wuxing=True), "elements": 逐字出处(name)}
+    from .分享图片 import 图片地址
+    return {"card": 卡片(row, include_wuxing=True), "elements": 逐字出处(name), "image_url": 图片地址(p.token)}
 
 
 def 收藏分享(owner, p):
