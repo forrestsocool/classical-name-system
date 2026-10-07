@@ -317,6 +317,8 @@ class PostgreSQLTests(unittest.TestCase):
         image = self.client.get(f'/share-card/{token}.jpg')
         self.assertEqual(image.status_code,200)
         self.assertEqual(image.headers['content-type'],'image/jpeg')
+        import base64
+        self.assertEqual(base64.b64decode(issued.json()['image_base64']), image.content)
         self.assertEqual(self.client.get('/share-card/invalid.jpg').status_code,404)
         self.assertEqual(self.request("shares.create", {"material_id": material_id}, user="share-A").json()["token"], token)
         self.assertEqual(self.request("shares.get", {"token": "z" * 32}, user="share-B").status_code, 404)

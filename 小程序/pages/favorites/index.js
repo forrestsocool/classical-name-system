@@ -1,6 +1,6 @@
 const {call, preferenceKey} = require('../../utils/api');
 const {normalizeCards} = require('../../utils/view');
-const {shareName} = require('../../utils/share');
+const {shareName, prepareShare} = require('../../utils/share');
 
 Page({
   data: {
@@ -68,6 +68,7 @@ Page({
           if (!ids.has(card.id)) { cards.push(card); ids.add(card.id); }
         }
         this.setData({cards, nextCursor: response.next_cursor || null, initialized: true});
+        if (prepareShare) cards.slice(0, 3).forEach(card => prepareShare(card).catch(() => {}));
       } catch (error) {
         if (!this.closed) this.setData({error: error.message || '收藏暂时没有送达，请重试'});
       } finally {

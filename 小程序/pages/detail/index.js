@@ -1,6 +1,7 @@
 const {call} = require('../../utils/api');
 const {normalizeCard} = require('../../utils/view');
 const {highlightText} = require('../../utils/richText');
+const {storeShareImage} = require('../../utils/share');
 
 Page({
   data: {
@@ -19,7 +20,7 @@ Page({
       try {
         const result = await call('shares.get', {token: options.share});
         this.showCard(result.card, result.elements);
-        this.setData({shareToken: options.share, shareImageUrl: result.image_url || '', shareReady: true});
+        this.setData({shareToken: options.share, shareImageUrl: storeShareImage({...result, token: options.share}), shareReady: true});
         if (wx.showShareMenu) wx.showShareMenu({menus: ['shareAppMessage']});
       } catch (error) {
         this.setData({loadError: error.message || '分享的名字暂时无法打开'});
@@ -59,7 +60,7 @@ Page({
     this.setData({shareLoading: true, shareError: ''});
     try {
       const result = await call('shares.create', {material_id: materialId});
-      this.setData({shareToken: result.token, shareImageUrl: result.image_url || '', shareReady: true, shareUnavailable: false});
+      this.setData({shareToken: result.token, shareImageUrl: storeShareImage(result), shareReady: true, shareUnavailable: false});
       if (wx.showShareMenu) wx.showShareMenu({menus: ['shareAppMessage']});
     } catch (error) {
       this.setData({shareUnavailable: error.status === 404,

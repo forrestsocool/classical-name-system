@@ -1,6 +1,6 @@
 const {call, requestId, storageKey, preferenceKey} = require('../../utils/api');
 const {normalizeCard, normalizeCards} = require('../../utils/view');
-const {shareName} = require('../../utils/share');
+const {shareName, prepareShare} = require('../../utils/share');
 const {dragState, releaseDirection} = require('../../utils/swipe');
 const {normalizeFilters, filterKey, filterError, matchesCard} = require('../../utils/filters');
 
@@ -174,6 +174,7 @@ Page({
       hasFilters: !!(this.filters.required || this.filters.excluded || this.filters.excluded_sources.length),
       cooldown: Math.max(0, Math.ceil((state.retryAt - Date.now()) / 1000))
     });
+    if (prepareShare && visible[0]) prepareShare(visible[0]).catch(() => {});
     const missing = visible.filter(card => card.item.wuxing.version !== 'server-v1' &&
       !this.analysisRequests.has(`${card.id}|${surname}`));
     if (missing.length && this.user && !this.analysisSuspended) this.refreshAnalysis(missing, surname);
