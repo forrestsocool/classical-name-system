@@ -1,5 +1,6 @@
 const {call, preferenceKey} = require('../../utils/api');
 const {normalizeCards} = require('../../utils/view');
+const {shareName} = require('../../utils/share');
 
 Page({
   data: {
@@ -16,6 +17,12 @@ Page({
     return this.reload();
   },
   onHide() { this.closeRow(); },
+  onShareAppMessage(event = {}) {
+    const id = event.target && event.target.dataset.id;
+    const card = event.from === 'button'
+      ? this.data.cards.find(item => String(item.id) === String(id)) : null;
+    return shareName(card);
+  },
   onUnload() { this.closed = true; this.touch = null; },
   async onPullDownRefresh() {
     try { await this.reload(); }

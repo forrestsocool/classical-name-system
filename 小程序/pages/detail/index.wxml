@@ -21,10 +21,6 @@
       <view class="detail-tags" wx:if="{{card.item.tags.length}}">
         <text wx:for="{{card.item.tags}}" wx:key="*this">{{item}}</text>
       </view>
-      <button class="share-name-button" wx:if="{{shareReady}}" open-type="share" aria-label="把{{card.item.name}}发给家人看看"><image src="/assets/icons/book-open.svg" mode="aspectFit" />发给家人看看</button>
-      <button class="share-name-button share-pending" wx:elif="{{shareLoading}}" disabled>正在准备分享…</button>
-      <button class="share-name-button share-pending" wx:elif="{{shareError}}" bindtap="retryShare">{{shareError}}</button>
-      <view class="share-unavailable" wx:elif="{{shareUnavailable}}">此名暂不可分享</view>
     </view>
 
     <view class="detail-section source-section">

@@ -1,5 +1,6 @@
 const {call, requestId, storageKey, preferenceKey} = require('../../utils/api');
 const {normalizeCard, normalizeCards} = require('../../utils/view');
+const {shareName} = require('../../utils/share');
 const {dragState, releaseDirection} = require('../../utils/swipe');
 const {normalizeFilters, filterKey, filterError, matchesCard} = require('../../utils/filters');
 
@@ -390,7 +391,6 @@ Page({
     wx.navigateTo({url: '/pages/detail/index'});
   },
   onShareAppMessage() {
-    return {title: '从典籍里挑一个好名字｜好名书中来', path: '/pages/discover/index',
-      imageUrl: '/assets/share-cover.jpg'};
+    return shareName(this.data.current);
   }
 });

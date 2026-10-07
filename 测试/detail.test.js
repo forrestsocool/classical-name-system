@@ -44,7 +44,7 @@ test('detail loads only delivered name sources from server and keeps meaning sep
   assert.match(markup, /elements-section/);
   assert.doesNotMatch(markup, /字源未定|字源 ·/);
   assert.match(markup, /assets\/elements\/\{\{entry\.tone\}\}\.svg/);
-  assert.match(markup, /open-type="share"/);
+  assert.doesNotMatch(markup, /open-type="share"/);
   const elements = [{id:0, char:'李', element:'木', citations:[{book:'说文解字',quote:'李，果也。'}]}];
   const {data, requests} = await openDetail({elements, wuxing: {version:'server-v1', analyzed_name:'李清熙'}}, '李');
   assert.deepEqual(JSON.parse(JSON.stringify(requests.find(x => x.action === 'names.detail'))),

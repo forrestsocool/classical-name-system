@@ -51,9 +51,12 @@
           <view class="favorite-name">{{item.item.displayName}}</view>
           <view class="favorite-pinyin">{{item.item.pinyin}}</view>
         </view>
+        <view class="favorite-actions">
+        <button class="favorite-share-button" open-type="share" data-id="{{item.id}}" disabled="{{removingId}}" aria-label="分享{{item.item.name}}">分享</button>
         <button class="source-button" data-id="{{item.id}}" disabled="{{removingId}}" catchtap="detail" aria-label="查看{{item.item.displayName}}的出处与释义">
           <text>查看出处</text><image src="/assets/icons/arrow-right-green.svg" mode="aspectFit" />
         </button>
+        </view>
       </view>
       <view class="mini-scores">
         <view class="mini-score mini-male"><image src="/assets/icons/male.svg" mode="aspectFit" /><text>{{item.item.maleScore}}%</text></view>
