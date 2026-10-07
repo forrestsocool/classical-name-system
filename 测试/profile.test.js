@@ -23,6 +23,15 @@ function harness(saved = {}, catalog = [{name: '诗经', kind: '古籍'}, {name:
   page.setData = data => Object.assign(page.data, data);
   return {page, storage, app, toasts, navigations, setOffline: value => { offline = value; }};
 }
+
+test('new poetry sources appear enabled and can be excluded independently', async () => {
+  const {page, storage} = harness({}, [{name:'唐诗',kind:'古籍'},{name:'宋词',kind:'古籍'}]);
+  await page.onShow();
+  assert.equal(page.data.enabledCount, 2);
+  page.sourceChange({currentTarget:{dataset:{name:'唐诗'}},detail:{value:false}});
+  assert.deepEqual(storage.get('prefs:user').excluded_sources, ['唐诗']);
+  assert.equal(page.data.sources.find(x => x.name === '宋词').enabled, true);
+});
 const input = (page, field, value) => page.characterInput({currentTarget: {dataset: {field}}, detail: {value}});
 
 test('source switches default on, persist independently and preserve homepage preferences', async () => {
