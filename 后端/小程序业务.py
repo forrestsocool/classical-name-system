@@ -278,7 +278,8 @@ def 来源列表(owner, p):
     with 连接数据库() as c:
         # Include sources without inventory, so switches remain stable as production runs.
         行 = c.execute("SELECT DISTINCT name FROM books ORDER BY name").fetchall()
-        return {"sources": [{"name": x["name"], "kind": "年号" if x["name"] == "东亚年号" else "古籍"} for x in 行]}
+        return {"sources": [{"name": x["name"], "kind": "年号" if x["name"] == "东亚年号"
+                              else "榜单" if x["name"] == "历年高考状元" else "古籍"} for x in 行]}
 
 
 def 收藏列表(owner, p):

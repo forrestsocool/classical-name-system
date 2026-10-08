@@ -83,8 +83,10 @@ def 生产一次():
             心跳(状态)
             return False
         档案 = c.execute("""SELECT f.id,f.surname,f.name_length,b.name AS book FROM app_profiles f
-            CROSS JOIN (SELECT DISTINCT b.name FROM books b JOIN passages p ON p.book_id=b.id
-                WHERE p.active_for_recall AND (p.status='待核验' OR (p.status='已核验' AND p.can_generate=1))) b
+            CROSS JOIN (SELECT DISTINCT b.name FROM books b JOIN sources src ON src.id=b.source_id
+                JOIN passages p ON p.book_id=b.id
+                WHERE src.source_type <> '高考状元'
+                  AND p.active_for_recall AND (p.status='待核验' OR (p.status='已核验' AND p.can_generate=1))) b
             LEFT JOIN app_source_progress s ON s.profile_id=f.id AND s.book=b.name
             WHERE f.enabled AND f.surname='' AND (s.retry_at IS NULL OR s.retry_at<=now())
             ORDER BY f.last_scheduled,COALESCE(s.last_started,'epoch'::timestamptz),f.id,b.name LIMIT 1""").fetchone()

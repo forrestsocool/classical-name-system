@@ -19,6 +19,7 @@ function normalizeItem(item = {}, surname = '') {
   const rawFemaleScore = item.femaleScore != null ? item.femaleScore : item['女孩适配分'];
   const maleScore = Number(rawMaleScore);
   const femaleScore = Number(rawFemaleScore);
+  const book = item.book || item['书名'] || '';
   return {
     name,
     displayName,
@@ -29,8 +30,10 @@ function normalizeItem(item = {}, surname = '') {
     pinyin: [surnamePinyin(selectedSurname), givenPinyin].filter(Boolean).join(' '),
     meaning: item.meaning || item['现代释义'] || '',
     tags: item.tags || item['文化标签'] || [],
-    book: item.book || item['书名'] || '',
+    book,
+    isGaokao: book === '历年高考状元',
     chapter: item.chapter || item['篇章'] || '',
+    examSources: item.examSources || item['高考来源'] || [],
     original,
     excerpt: original.length > 46 ? `${original.slice(0, 46)}…` : original,
     extraction: item.extraction || item['取字方式'] || '',

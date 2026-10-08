@@ -25,12 +25,20 @@
 
     <view class="detail-section source-section">
       <view class="section-head">
-        <view class="section-title"><image src="/assets/icons/book-open.svg" mode="aspectFit" />典籍出处</view>
+        <view class="section-title"><image src="/assets/icons/book-open.svg" mode="aspectFit" />{{card.item.isGaokao ? '高考榜单来源' : '典籍出处'}}</view>
         <view class="source-book">《{{card.item.book}}》</view>
       </view>
       <view class="source-box">
         <view class="source-chapter">《{{card.item.book}} · {{card.item.chapter}}》</view>
         <rich-text class="source-quote" nodes="{{card.item.originalNodes}}"></rich-text>
+      </view>
+      <view class="gaokao-source-list" wx:if="{{card.item.examSources.length}}">
+        <view class="gaokao-source-title">同名记录</view>
+        <view class="gaokao-source-row" wx:for="{{card.item.examSources}}" wx:key="index" wx:for-item="entry">
+          <text>{{entry.year}} · {{entry.province}} · {{entry.subject}}</text>
+          <text class="gaokao-source-name">{{entry.full_name}}</text>
+          <text class="gaokao-source-school" wx:if="{{entry.school}}">{{entry.school}}</text>
+        </view>
       </view>
       <view class="section-note">取字方式：{{card.item.extraction}}。释义包含现代寄意，不能替代古文原意。</view>
     </view>

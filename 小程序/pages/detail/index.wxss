@@ -27,6 +27,11 @@
 .source-box { margin-top: 24rpx; padding: 19rpx 20rpx 20rpx; border: 1rpx solid #e5e9e1; border-left: 4rpx solid #1b806a; border-radius: 2rpx 14rpx 14rpx 2rpx; background: #f7f8f4; }
 .source-chapter { color: #2b3f3b; font-size: 24rpx; }
 .source-quote { margin-top: 8rpx; color: #53615e; font-size: 23rpx; line-height: 1.72; white-space: pre-wrap; }
+.gaokao-source-list { margin-top: 18rpx; padding: 16rpx 18rpx; border-radius: 12rpx; background: #f2f6f0; }
+.gaokao-source-title { margin-bottom: 8rpx; color: #527167; font-size: 21rpx; }
+.gaokao-source-row { display: flex; align-items: baseline; gap: 12rpx; padding-top: 7rpx; color: #496259; font-size: 21rpx; line-height: 1.55; }
+.gaokao-source-name { color: #1e5547; font-weight: 600; }
+.gaokao-source-school { flex: 1; color: #7a8982; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .section-note { margin-top: 16rpx; color: #89938f; font-size: 20rpx; line-height: 1.7; }
 .section-copy { margin-top: 19rpx; color: #465954; font-size: 25rpx; line-height: 1.82; }
 .muted-copy { color: #7f8985; }
