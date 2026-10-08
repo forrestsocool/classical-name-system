@@ -176,9 +176,11 @@ Page({
     });
     if (prepareShare && visible[0]) {
       const id = visible[0].id;
+      const displayName = visible[0].item.displayName;
       if (wx.hideShareMenu) wx.hideShareMenu({menus: ['shareAppMessage']});
       prepareShare(visible[0], this).then(() => {
-        if (!this.closed && this.data.current && this.data.current.id === id && wx.showShareMenu)
+        if (!this.closed && this.data.current && this.data.current.id === id &&
+            this.data.current.item.displayName === displayName && wx.showShareMenu)
           wx.showShareMenu({menus: ['shareAppMessage']});
       }).catch(() => {});
     }

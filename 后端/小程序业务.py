@@ -81,6 +81,7 @@ class 姓名详情参数(名字参数):
 class 分享链接参数(严格参数):
     token: str = Field(min_length=32, max_length=32, pattern=r"^[A-Za-z0-9_-]+$")
     include_image: bool = True
+    surname: str = Field(default="", max_length=4, pattern=r"^[\u3400-\u9fff]*$")
 
 
 class 创建分享参数(名字参数):
@@ -189,11 +190,15 @@ def 创建分享(owner, p):
 def 打开分享(owner, p):
     with 连接数据库() as c:
         row = 可分享物料(c, token=p.token)
+        if row and p.surname:
+            记录姓氏(owner, p.surname, c)
     if not row:
         raise HTTPException(404, "分享的名字已不可查看")
-    name = row["given_name"]
+    name = p.surname + row["given_name"]
     from .分享图片 import 图片地址, 渲染分享图片
     result = {"card": 卡片(row, include_wuxing=True), "elements": 逐字出处(name), "image_url": 图片地址(p.token)}
+    if p.surname:
+        result['card']['item'].update({'surname': p.surname, 'displayName': name, 'wuxing': 分析姓名(name)})
     if p.include_image:
         result["image_base64"] = base64.b64encode(渲染分享图片(row)).decode("ascii")
     return result

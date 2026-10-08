@@ -2,6 +2,7 @@
 // source fields in Chinese and the WeChat compiler only accepts ASCII names.
 const LABELS = ['金', '木', '水', '火', '土'];
 const KEYS = ['jin', 'mu', 'shui', 'huo', 'tu'];
+const {surnamePinyin, markedPinyin} = require('./surnamePinyin');
 function pendingWuxing(name) {
   return {version: 'pending', analyzed_name: name, available: false, status: '正在读取五行资料',
     explanation: '正在读取五行资料，请稍后再试。',
@@ -11,7 +12,9 @@ function pendingWuxing(name) {
 function normalizeItem(item = {}, surname = '') {
   const original = item.original || item['原文'] || '';
   const name = item.name || item['姓名'] || '';
-  const displayName = surname ? surname + name : (item.displayName || name);
+  const selectedSurname = surname || item.surname || '';
+  const displayName = selectedSurname ? selectedSurname + name : (item.displayName || name);
+  const givenPinyin = markedPinyin(item.givenPinyin || item['拼音带调'] || item.pinyin || '');
   const rawMaleScore = item.maleScore != null ? item.maleScore : item['男孩适配分'];
   const rawFemaleScore = item.femaleScore != null ? item.femaleScore : item['女孩适配分'];
   const maleScore = Number(rawMaleScore);
@@ -19,9 +22,11 @@ function normalizeItem(item = {}, surname = '') {
   return {
     name,
     displayName,
+    surname: selectedSurname,
+    givenPinyin,
     wuxing: item.wuxing && item.wuxing.version === 'server-v1' && item.wuxing.analyzed_name === displayName
       ? item.wuxing : pendingWuxing(displayName),
-    pinyin: item.pinyin || item['拼音带调'] || '',
+    pinyin: [surnamePinyin(selectedSurname), givenPinyin].filter(Boolean).join(' '),
     meaning: item.meaning || item['现代释义'] || '',
     tags: item.tags || item['文化标签'] || [],
     book: item.book || item['书名'] || '',

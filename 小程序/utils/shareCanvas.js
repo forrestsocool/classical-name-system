@@ -38,7 +38,7 @@ function pill(ctx, x, y, width, height) {
 }
 async function draw(card, page) {
   const item = card.item;
-  const name = Array.from(String(item.name || item['姓名'] || '')).slice(0, 4).join('');
+  const name = Array.from(String(item.displayName || item.name || item['姓名'] || '')).slice(0, 6).join('');
   const [canvas, glyphs] = await Promise.all([canvasNode(page), nameGlyphs(name)]);
   page.shareFontLoaded = glyphs.every(glyph => !!glyph.units);
   canvas.width = 750; canvas.height = 600;
@@ -53,19 +53,19 @@ async function draw(card, page) {
   ctx.beginPath(); ctx.moveTo(384, 289); ctx.lineTo(416, 289); ctx.stroke();
   const small = '"PingFang SC", "Microsoft YaHei", sans-serif';
   const source = book ? `《${book}》${chapter ? ' · ' + chapter : ''}` : '';
-  fit(ctx, source, 22, 480, small); ctx.fillStyle = '#52685b';
-  ctx.fillText(ellipse(ctx, source, 480), 400, 327);
-  let size = 20, widths;
+  fit(ctx, source, 28, 520, small); ctx.fillStyle = '#52685b';
+  ctx.fillText(ellipse(ctx, source, 520), 400, 327);
+  let size = 25, widths;
   do {
     ctx.font = `${size}px ${small}`;
-    widths = tags.map(tag => ctx.measureText(tag).width + 30);
-    if (widths.reduce((a, b) => a + b, 0) + Math.max(0, tags.length - 1) * 12 <= 480) break;
+    widths = tags.map(tag => ctx.measureText(tag).width + 36);
+    if (widths.reduce((a, b) => a + b, 0) + Math.max(0, tags.length - 1) * 16 <= 520) break;
   } while (--size > 10);
-  let x = 400 - (widths.reduce((a, b) => a + b, 0) + Math.max(0, tags.length - 1) * 12) / 2;
+  let x = 400 - (widths.reduce((a, b) => a + b, 0) + Math.max(0, tags.length - 1) * 16) / 2;
   tags.forEach((tag, i) => {
     ctx.fillStyle = '#ebf0e0'; ctx.strokeStyle = '#c4d1bc'; ctx.lineWidth = 1;
-    pill(ctx, x, 364, widths[i], 40); ctx.fillStyle = '#46624e'; ctx.fillText(tag, x + widths[i] / 2, 384);
-    x += widths[i] + 12;
+    pill(ctx, x, 364, widths[i], 48); ctx.fillStyle = '#46624e'; ctx.fillText(tag, x + widths[i] / 2, 388);
+    x += widths[i] + 16;
   });
   return new Promise((resolve, reject) => wx.canvasToTempFilePath({canvas, x: 0, y: 0,
     width: 750, height: 600, destWidth: 750, destHeight: 600, fileType: 'jpg', quality: .92,

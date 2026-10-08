@@ -67,11 +67,11 @@ async function nameGlyphs(name) {
   }));
 }
 function drawName(ctx, glyphs) {
-  let size = 160, widths;
+  let size = 132, widths;
   do {
     ctx.font = `${size}px serif`;
     widths = glyphs.map(glyph => glyph.units ? glyph.advance * size / glyph.units : ctx.measureText(glyph.char).width);
-    if (widths.reduce((a, b) => a + b, 0) <= 400) break;
+    if (widths.reduce((a, b) => a + b, 0) <= 500) break;
   } while (--size > 24);
   const known = glyphs.filter(glyph => glyph.units);
   const ymin = known.length ? Math.min(...known.map(glyph => glyph.bounds[1] / glyph.units)) : 0;

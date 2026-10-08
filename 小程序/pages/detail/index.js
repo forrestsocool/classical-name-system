@@ -1,7 +1,7 @@
 const {call} = require('../../utils/api');
 const {normalizeCard} = require('../../utils/view');
 const {highlightText} = require('../../utils/richText');
-const {storeShareImage} = require('../../utils/share');
+const {storeShareImage, sharePath} = require('../../utils/share');
 const {renderShareImage} = require('../../utils/shareCanvas');
 
 Page({
@@ -19,7 +19,8 @@ Page({
     if (options.share) {
       this.setData({isShared: true, loading: true});
       try {
-        const result = await call('shares.get', {token: options.share, include_image: false});
+        const surname = decodeURIComponent(options.surname || '');
+        const result = await call('shares.get', {token: options.share, surname, include_image: false});
         this.showCard(result.card, result.elements);
         const imageUrl = wx.createSelectorQuery ? await renderShareImage(this.data.card, this) : storeShareImage({...result, token: options.share});
         this.setData({shareToken: options.share, shareImageUrl: imageUrl, shareReady: true});
@@ -83,10 +84,10 @@ Page({
       title: '从典籍里挑一个好名字｜好名书中来', path: '/pages/discover/index',
       imageUrl: '/assets/share-cover.jpg'
     };
-    const name = card.item.name;
+    const name = card.item.displayName || card.item.name;
     const book = card.item.book;
     return {title: book ? `「${name}」出自《${book}》，你觉得怎么样？` : `「${name}」，你觉得怎么样？`,
-      path: `/pages/detail/index?share=${this.data.shareToken}`, imageUrl: this.data.shareImageUrl || '/assets/share-cover.jpg'};
+      path: sharePath(this.data.shareToken, card), imageUrl: this.data.shareImageUrl || '/assets/share-cover.jpg'};
   },
   goBack() {
     if (getCurrentPages().length > 1) wx.navigateBack();

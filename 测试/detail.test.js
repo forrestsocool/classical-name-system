@@ -63,7 +63,7 @@ test('detail hides missing source section and reports request failure', async ()
   assert.match(failed.data.error, /五行资料暂时无法读取/);
 });
 
-test('owner shares only the given name and a direct recipient can save that exact source', async () => {
+test('legacy shares without surname still open and can save the exact source', async () => {
   const token = 'a'.repeat(32);
   const shared = {id: 1, item: {姓名: '清熙', 书名: '诗经', 原文: '清熙，清熙。', 现代释义: '明净温暖。'}};
   const response = async action => {
@@ -75,7 +75,7 @@ test('owner shares only the given name and a direct recipient can save that exac
   assert.equal(data.card.item.displayName, '清熙');
   assert.equal(data.shareReady, true);
   assert.equal(data.isShared, true);
-  assert.deepEqual(JSON.parse(JSON.stringify(requests)), [{action:'shares.get', data:{token, include_image: false}}]);
+  assert.deepEqual(JSON.parse(JSON.stringify(requests)), [{action:'shares.get', data:{token, surname: '', include_image: false}}]);
   assert.equal(page.onShareAppMessage().path, `/pages/detail/index?share=${token}`);
   assert.equal(page.onShareAppMessage().imageUrl, '/assets/share-cover.jpg');
   assert.match(page.onShareAppMessage().title, /「清熙」出自《诗经》/);
@@ -86,12 +86,24 @@ test('owner shares only the given name and a direct recipient can save that exac
   assert.equal(tabs[0].url, '/pages/discover/index');
 });
 
+test('a shared full name survives recipient preferences and resharing', async () => {
+  const token = 'b'.repeat(32);
+  const {page, data, requests} = await openDetail(async () => ({card: {id: 1, item: {
+    姓名: '以宁', 拼音带调: 'yǐ níng', surname: '欧阳', displayName: '欧阳以宁', 书名: '道德经'
+  }}, elements: []}), '王', {share: token, surname: encodeURIComponent('欧阳')});
+  assert.equal(requests[0].data.surname, '欧阳');
+  assert.equal(data.card.item.displayName, '欧阳以宁');
+  assert.equal(data.card.item.pinyin, 'ōu yáng yǐ níng');
+  assert.match(page.onShareAppMessage().title, /欧阳以宁/);
+  assert.ok(page.onShareAppMessage().path.endsWith('&surname=' + encodeURIComponent('欧阳')));
+});
+
 test('owner prepares a durable detail link and an invalid share shows recovery UI', async () => {
   const owned = await openDetail({elements: [], wuxing: {version:'server-v1', analyzed_name:'李清熙'}}, '李');
   assert.ok(owned.requests.some(x => x.action === 'shares.create' && x.data.material_id === 1));
-  assert.equal(owned.page.onShareAppMessage().path, `/pages/detail/index?share=${'x'.repeat(32)}`);
+  assert.equal(owned.page.onShareAppMessage().path, `/pages/detail/index?share=${'x'.repeat(32)}&surname=${encodeURIComponent('李')}`);
   assert.ok(fs.existsSync(path.join(__dirname, '../小程序/assets/share-cover.jpg')));
-  assert.doesNotMatch(owned.page.onShareAppMessage().title, /李/);
+  assert.match(owned.page.onShareAppMessage().title, /李清熙/);
   const missing = await openDetail(async () => { throw new Error('分享已失效'); }, '', {share:'z'.repeat(32)});
   assert.equal(missing.data.card, null);
   assert.equal(missing.data.loading, false);

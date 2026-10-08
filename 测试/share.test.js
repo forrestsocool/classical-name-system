@@ -61,3 +61,17 @@ test('share failure retains the name and yields a usable home link', async () =>
   assert.match(result.title, /清和/);
   assert.equal(result.path, '/pages/discover/index');
 });
+
+test('sharing preserves the full surname and changing surname cannot reuse an old cache', async () => {
+  let requests = 0;
+  const share = loadShare(async () => {requests++; return {token: 'd'.repeat(32)};});
+  const li = {id: 42, item: {name: '以宁', surname: '李', displayName: '李以宁'}};
+  const wang = {id: 42, item: {name: '以宁', surname: '王', displayName: '王以宁'}};
+  const first = await share(li).promise;
+  const second = await share(wang).promise;
+  assert.match(first.title, /李以宁/);
+  assert.ok(first.path.endsWith('&surname=' + encodeURIComponent('李')));
+  assert.ok(second.path.endsWith('&surname=' + encodeURIComponent('王')));
+  assert.equal(requests, 2);
+  assert.equal(share(li).promise, undefined);
+});
