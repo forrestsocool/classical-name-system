@@ -43,7 +43,11 @@ function forward(url, body, headers = {}, method = 'POST') {
         catch { reject(new Error('invalid upstream response')); }
       });
     });
-    const timer = setTimeout(() => request.destroy(new Error('upstream timeout')), 10000);
+    const timer = setTimeout(() => {
+      const error = new Error('upstream timeout');
+      error.code = 'UPSTREAM_TIMEOUT';
+      request.destroy(error);
+    }, 18000);
     request.on('error', reject);
     request.on('close', () => clearTimeout(timer));
     request.end(isGet ? undefined : body);
@@ -92,6 +96,8 @@ function verifyToken(token, env, now = Date.now()) {
 
 function createHandler({ getContext = () => ({}), transport = forward, env = process.env, codeExchange = exchangeCode } = {}) {
   return async event => {
+    const started = Date.now();
+    let action = 'unknown';
     try {
       let req = event || {};
       if (typeof event?.body === 'string') {
@@ -104,6 +110,7 @@ function createHandler({ getContext = () => ({}), transport = forward, env = pro
       }
 
       if (!req || !ACTIONS.has(req.action)) return { ok: false, status: 404, message: '操作不存在' };
+      action = req.action;
       if (req.data !== undefined && (!req.data || typeof req.data !== 'object' || Array.isArray(req.data))) {
         return { ok: false, status: 422, message: '参数格式不正确' };
       }
@@ -153,7 +160,10 @@ function createHandler({ getContext = () => ({}), transport = forward, env = pro
       }
       const safeStatus = [401, 403, 404, 409, 413, 422, 429].includes(result.status) ? result.status : 503;
       return { ok: false, status: safeStatus, message: safeStatus === 503 ? '服务暂时不可用，请稍后重试' : String(result.data?.detail || '操作未完成').slice(0, 120) };
-    } catch {
+    } catch (error) {
+      const category = ['UPSTREAM_TIMEOUT', 'ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNREFUSED', 'EAI_AGAIN'].includes(error.code)
+        ? error.code : 'UPSTREAM_ERROR';
+      console.warn(JSON.stringify({event: 'gateway_failure', action, category, elapsed_ms: Date.now() - started}));
       return { ok: false, status: 503, message: '服务暂时不可用，请稍后重试' };
     }
   };

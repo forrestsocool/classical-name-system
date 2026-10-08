@@ -5,6 +5,15 @@ const config = require('../config');
 let sessionToken = '';
 let sessionData = null;
 let loginPromise = null;
+const inFlight = new Map();
+const SAFE_ACTIONS = new Set(['session.get', 'sources.list', 'favorites.list',
+  'names.detail', 'names.analyze', 'shares.get', 'shares.create']);
+function retrySafe(action, data) {
+  return SAFE_ACTIONS.has(action) || (action === 'feed.pull' && !!data.request_id);
+}
+function transient(error) {
+  return error.network === true || [502, 503, 504].includes(error.status);
+}
 
 function wxLogin() {
   return new Promise((resolve, reject) => {
@@ -23,7 +32,7 @@ function requestHttp(payload) {
       method: 'POST',
       data: payload,
       header: { 'Content-Type': 'application/json' },
-      timeout: 15000,
+      timeout: 25000,
       success: res => {
         const body = res.data;
         if (res.statusCode < 200 || res.statusCode >= 300 || !body || !body.ok) {
@@ -34,7 +43,11 @@ function requestHttp(payload) {
         }
         resolve(body.data);
       },
-      fail: () => reject(new Error('连接失败，请检查网络后重试'))
+      fail: () => {
+        const error = new Error('连接失败，请检查网络后重试');
+        error.network = true;
+        reject(error);
+      }
     });
   });
 }
@@ -79,8 +92,11 @@ async function callCloud(action, data = {}) {
       data: { action, data },
       config: { env: config.envId }
     });
-  } catch {
-    throw new Error('连接失败，请检查网络后重试');
+  } catch (cause) {
+    const error = new Error('连接失败，请检查网络后重试');
+    // Retry transport failures, not missing permissions or invalid configuration.
+    error.network = !cause.errCode || /timeout|network|connect|socket/i.test(cause.errMsg || '');
+    throw error;
   }
   const result = response.result;
   if (!result || !result.ok) {
@@ -92,7 +108,23 @@ async function callCloud(action, data = {}) {
 }
 
 function call(action, data = {}) {
-  return config.mode === 'http' ? callHttp(action, data) : callCloud(action, data);
+  const safe = retrySafe(action, data);
+  const key = safe ? JSON.stringify([action, data]) : null;
+  if (key && inFlight.has(key)) return inFlight.get(key);
+  // Freeze the payload across retries: a feed receipt must keep its request id.
+  const payload = JSON.parse(JSON.stringify(data));
+  const task = (async () => {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await (config.mode === 'http' ? callHttp(action, payload) : callCloud(action, payload));
+      } catch (error) {
+        if (!safe || attempt >= 1 || !transient(error)) throw error;
+        await new Promise(resolve => setTimeout(resolve, 250 + Math.floor(Math.random() * 250)));
+      }
+    }
+  })().finally(() => { if (key) inFlight.delete(key); });
+  if (key) inFlight.set(key, task);
+  return task;
 }
 
 function requestId() {

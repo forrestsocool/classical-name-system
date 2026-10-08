@@ -84,11 +84,12 @@ Page({
     const cursor = reset ? null : this.data.nextCursor;
     const task = Promise.resolve().then(async () => {
       try {
-        const user = await getApp().session();
-        this.restoreCache(user);
+        const [user, response] = await Promise.all([
+          getApp().session().then(user => { if (!this.closed) this.restoreCache(user); return user; }),
+          call('favorites.list', cursor ? {before_id: cursor} : {})
+        ]);
         const preferences = wx.getStorageSync(preferenceKey(user)) || getApp().namePreferences || {};
         const surname = preferences.surname || '';
-        const response = await call('favorites.list', cursor ? {before_id: cursor} : {});
         if (this.closed) return;
         this.surname = surname;
         const cards = reset ? [] : this.data.cards.slice();

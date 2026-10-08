@@ -11,6 +11,9 @@ Page({
   async onShow() {
     if (this.getTabBar && this.getTabBar()) this.getTabBar().setData({selected: 2});
     this.restoreCache(getApp().userId);
+    const catalogTask = call('sources.list');
+    // Observe rejection immediately while identity/preferences are being loaded.
+    catalogTask.catch(() => {});
     try {
       this.user = await getApp().session();
       const saved = wx.getStorageSync(preferenceKey(this.user)) || {};
@@ -19,7 +22,7 @@ Page({
         ready: true, inputError: '', savedNotice: ''});
       this.renderSources();
       this.restoreCache(this.user);
-      await this.loadSources(true);
+      await this.loadSources(true, catalogTask);
     } catch (error) {
       this.setData({sourceLoading: false, sourceError: this.catalog ? '' : error.message || '暂时没有连接上，请重试'});
     }
@@ -38,12 +41,12 @@ Page({
     this.renderSources();
     this.setData({sourceLoading: false, sourceError: ''});
   },
-  async loadSources(silent = false) {
+  async loadSources(silent = false, catalogTask) {
     if (!this.user) return this.onShow();
     if (this.sourcePending) return this.sourcePending;
     silent = silent === true;
     this.setData({sourceLoading: !this.catalog, sourceError: ''});
-    this.sourcePending = call('sources.list').then(result => {
+    this.sourcePending = (catalogTask || call('sources.list')).then(result => {
       this.catalog = result.sources || [];
       writeCache('sources', this.user, this.catalog);
       this.renderSources();

@@ -17,7 +17,7 @@ function client(responseFor) {
   };
   const module = {exports: {}};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../小程序/utils/api.js'), 'utf8'), {
-    wx, module, Promise, Error, Math, queueMicrotask,
+    wx, module, Promise, Error, Math, queueMicrotask, setTimeout,
     require(file) {
       if (file === '../config') return {mode: 'http', httpUrl: 'https://example.test/v1/functions/nameGateway'};
       throw new Error(`unexpected import: ${file}`);
