@@ -1,37 +1,6 @@
 // All artwork and text are drawn locally. Only the durable share link needs the API.
 const queues = new WeakMap();
-const fontGroups = require('../assets/share/font-map');
-const fontTasks = new Map();
-function bankFor(char) { return fontGroups.findIndex(group => group.includes(char)); }
-function fontModule(bank) {
-  switch (bank) {
-    case 0: return require.async('../share-font-a/font.js');
-    case 1: return require.async('../share-font-b/font.js');
-    default: return Promise.reject(new Error('字形不在本地字表中'));
-  }
-}
-function loadBank(bank) {
-  if (!fontTasks.has(bank)) fontTasks.set(bank, new Promise(resolve => {
-    let finished = false;
-    const done = value => { if (!finished) { finished = true; resolve(value); } };
-    const timer = setTimeout(() => done(false), 12000);
-    const loading = fontModule(bank);
-    loading.then(({base64}) => {
-      try {
-        wx.loadFontFace({family: `ShareZhenKai${bank}`, global: true, scopes: ['native'],
-          source: `url("data:font/woff2;base64,${base64}")`,
-          success: () => { clearTimeout(timer); done(true); },
-          fail: () => { clearTimeout(timer); done(false); }});
-      } catch { clearTimeout(timer); done(false); }
-    }).catch(() => { clearTimeout(timer); done(false); });
-  }));
-  return fontTasks.get(bank);
-}
-async function loadFonts(name) {
-  const banks = [...new Set(Array.from(name).map(bankFor).filter(bank => bank >= 0))];
-  const loaded = await Promise.all(banks.map(loadBank));
-  return bank => banks.includes(bank) && loaded[banks.indexOf(bank)];
-}
+const {nameGlyphs, drawName} = require('./shareGlyphs');
 function canvasNode(page) {
   return new Promise((resolve, reject) => {
     let attempts = 0;
@@ -70,8 +39,8 @@ function pill(ctx, x, y, width, height) {
 async function draw(card, page) {
   const item = card.item;
   const name = Array.from(String(item.name || item['姓名'] || '')).slice(0, 4).join('');
-  const [canvas, hasFont] = await Promise.all([canvasNode(page), loadFonts(name)]);
-  page.shareFontLoaded = Array.from(name).every(char => hasFont(bankFor(char)));
+  const [canvas, glyphs] = await Promise.all([canvasNode(page), nameGlyphs(name)]);
+  page.shareFontLoaded = glyphs.every(glyph => !!glyph.units);
   canvas.width = 750; canvas.height = 600;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(await image(canvas, '/assets/share/background.jpg'), 0, 0, 750, 600);
@@ -79,17 +48,7 @@ async function draw(card, page) {
   const chapter = String(item.chapter || item['篇章'] || '');
   const tags = (item.tags || item['文化标签'] || []).slice(0, 3).map(tag => String(tag).slice(0, 12));
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  const chars = Array.from(name);
-  const family = char => hasFont(bankFor(char)) ? `ShareZhenKai${bankFor(char)}` : 'serif';
-  let nameSize = 160, nameWidths;
-  do {
-    nameWidths = chars.map(char => { ctx.font = `${nameSize}px ${family(char)}`; return ctx.measureText(char).width; });
-    if (nameWidths.reduce((a, b) => a + b, 0) <= 400) break;
-  } while (--nameSize > 24);
-  let nameX = 400 - nameWidths.reduce((a, b) => a + b, 0) / 2;
-  ctx.textAlign = 'left'; ctx.fillStyle = '#30493f';
-  chars.forEach((char, i) => { ctx.font = `${nameSize}px ${family(char)}`; ctx.fillText(char, nameX, 175); nameX += nameWidths[i]; });
-  ctx.textAlign = 'center';
+  drawName(ctx, glyphs);
   ctx.strokeStyle = '#a83d32'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(384, 289); ctx.lineTo(416, 289); ctx.stroke();
   const small = '"PingFang SC", "Microsoft YaHei", sans-serif';
