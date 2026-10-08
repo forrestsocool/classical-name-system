@@ -80,6 +80,11 @@ class 姓名详情参数(名字参数):
 
 class 分享链接参数(严格参数):
     token: str = Field(min_length=32, max_length=32, pattern=r"^[A-Za-z0-9_-]+$")
+    include_image: bool = True
+
+
+class 创建分享参数(名字参数):
+    include_image: bool = True
 
 
 def 卡片(row, include_wuxing=False):
@@ -171,12 +176,14 @@ def 创建分享(owner, p):
                 row = c.execute("SELECT token FROM app_share_links WHERE owner=%s AND material_id=%s",
                                 (owner, p.material_id)).fetchone()
     from .分享图片 import 图片地址, 渲染分享图片
+    result = {"token": row["token"], "image_url": 图片地址(row["token"])}
+    if not p.include_image:
+        return result
     with 连接数据库() as c:
         material = 可分享物料(c, token=row["token"])
     if not material:
         raise HTTPException(404, "名字暂不可分享")
-    return {"token": row["token"], "image_url": 图片地址(row["token"]),
-            "image_base64": base64.b64encode(渲染分享图片(material)).decode("ascii")}
+    return {**result, "image_base64": base64.b64encode(渲染分享图片(material)).decode("ascii")}
 
 
 def 打开分享(owner, p):
@@ -186,8 +193,10 @@ def 打开分享(owner, p):
         raise HTTPException(404, "分享的名字已不可查看")
     name = row["given_name"]
     from .分享图片 import 图片地址, 渲染分享图片
-    return {"card": 卡片(row, include_wuxing=True), "elements": 逐字出处(name), "image_url": 图片地址(p.token),
-            "image_base64": base64.b64encode(渲染分享图片(row)).decode("ascii")}
+    result = {"card": 卡片(row, include_wuxing=True), "elements": 逐字出处(name), "image_url": 图片地址(p.token)}
+    if p.include_image:
+        result["image_base64"] = base64.b64encode(渲染分享图片(row)).decode("ascii")
+    return result
 
 
 def 收藏分享(owner, p):
@@ -318,7 +327,7 @@ def 反馈(owner, p):
       "sources.list": (严格参数, 来源列表),
       "feed.pull": (拉卡参数, 拉卡), "favorites.list": (列表参数, 收藏列表),
       "names.analyze": (姓名分析参数, 姓名分析), "names.detail": (姓名详情参数, 姓名详情),
-      "shares.create": (名字参数, 创建分享), "shares.get": (分享链接参数, 打开分享),
+      "shares.create": (创建分享参数, 创建分享), "shares.get": (分享链接参数, 打开分享),
       "shares.save": (分享链接参数, 收藏分享),
       "favorites.add": (名字参数, 收藏), "favorites.remove": (名字参数, 取消收藏),
       "favorites.compare": (比较参数, 比较), "feedback.save": (反馈参数, 反馈)}

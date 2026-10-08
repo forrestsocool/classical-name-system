@@ -78,3 +78,5 @@
     {{loading ? '正在翻阅收藏…' : (nextCursor ? '上拉查看更多' : '喜欢的名字，都在这里')}}
   </view>
 </view>
+
+<canvas type="2d" id="shareCanvas" style="position:fixed;left:-2000px;top:0;width:750px;height:600px;pointer-events:none;" aria-hidden="true"></canvas>

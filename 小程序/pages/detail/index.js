@@ -2,6 +2,7 @@ const {call} = require('../../utils/api');
 const {normalizeCard} = require('../../utils/view');
 const {highlightText} = require('../../utils/richText');
 const {storeShareImage} = require('../../utils/share');
+const {renderShareImage} = require('../../utils/shareCanvas');
 
 Page({
   data: {
@@ -18,9 +19,10 @@ Page({
     if (options.share) {
       this.setData({isShared: true, loading: true});
       try {
-        const result = await call('shares.get', {token: options.share});
+        const result = await call('shares.get', {token: options.share, include_image: false});
         this.showCard(result.card, result.elements);
-        this.setData({shareToken: options.share, shareImageUrl: storeShareImage({...result, token: options.share}), shareReady: true});
+        const imageUrl = wx.createSelectorQuery ? await renderShareImage(this.data.card, this) : storeShareImage({...result, token: options.share});
+        this.setData({shareToken: options.share, shareImageUrl: imageUrl, shareReady: true});
         if (wx.showShareMenu) wx.showShareMenu({menus: ['shareAppMessage']});
       } catch (error) {
         this.setData({loadError: error.message || '分享的名字暂时无法打开'});
@@ -59,8 +61,11 @@ Page({
     if (this.data.shareLoading) return;
     this.setData({shareLoading: true, shareError: ''});
     try {
-      const result = await call('shares.create', {material_id: materialId});
-      this.setData({shareToken: result.token, shareImageUrl: storeShareImage(result), shareReady: true, shareUnavailable: false});
+      const [result, imageUrl] = await Promise.all([
+        call('shares.create', {material_id: materialId, include_image: false}),
+        wx.createSelectorQuery ? renderShareImage(this.data.card, this) : Promise.resolve('')
+      ]);
+      this.setData({shareToken: result.token, shareImageUrl: imageUrl || storeShareImage(result), shareReady: true, shareUnavailable: false});
       if (wx.showShareMenu) wx.showShareMenu({menus: ['shareAppMessage']});
     } catch (error) {
       this.setData({shareUnavailable: error.status === 404,

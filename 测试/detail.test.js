@@ -75,7 +75,7 @@ test('owner shares only the given name and a direct recipient can save that exac
   assert.equal(data.card.item.displayName, '清熙');
   assert.equal(data.shareReady, true);
   assert.equal(data.isShared, true);
-  assert.deepEqual(JSON.parse(JSON.stringify(requests)), [{action:'shares.get', data:{token}}]);
+  assert.deepEqual(JSON.parse(JSON.stringify(requests)), [{action:'shares.get', data:{token, include_image: false}}]);
   assert.equal(page.onShareAppMessage().path, `/pages/detail/index?share=${token}`);
   assert.equal(page.onShareAppMessage().imageUrl, '/assets/share-cover.jpg');
   assert.match(page.onShareAppMessage().title, /「清熙」出自《诗经》/);

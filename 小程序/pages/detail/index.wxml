@@ -84,3 +84,5 @@
   <view>{{loading ? '正在打开分享的名字…' : (loadError || '请从好名书中来或收藏页打开一个名字。')}}</view>
   <button wx:if="{{!loading}}" bindtap="continueChoosing">去挑名字</button>
 </view>
+
+<canvas type="2d" id="shareCanvas" style="position:fixed;left:-2000px;top:0;width:750px;height:600px;pointer-events:none;" aria-hidden="true"></canvas>

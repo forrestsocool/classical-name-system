@@ -319,6 +319,10 @@ class PostgreSQLTests(unittest.TestCase):
         self.assertEqual(image.headers['content-type'],'image/jpeg')
         import base64
         self.assertEqual(base64.b64decode(issued.json()['image_base64']), image.content)
+        lightweight = self.request('shares.create', {'material_id': material_id, 'include_image': False}, user='share-A')
+        self.assertEqual(lightweight.status_code, 200)
+        self.assertEqual(lightweight.json()['token'], token)
+        self.assertNotIn('image_base64', lightweight.json())
         self.assertEqual(self.client.get('/share-card/invalid.jpg').status_code,404)
         self.assertEqual(self.request("shares.create", {"material_id": material_id}, user="share-A").json()["token"], token)
         self.assertEqual(self.request("shares.get", {"token": "z" * 32}, user="share-B").status_code, 404)

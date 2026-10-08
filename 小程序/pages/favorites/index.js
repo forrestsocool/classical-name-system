@@ -21,7 +21,7 @@ Page({
     const id = event.target && event.target.dataset.id;
     const card = event.from === 'button'
       ? this.data.cards.find(item => String(item.id) === String(id)) : null;
-    return shareName(card);
+    return shareName(card, this);
   },
   onUnload() { this.closed = true; this.touch = null; },
   async onPullDownRefresh() {
@@ -96,7 +96,7 @@ Page({
     };
     update({sharePreparing: true});
     try {
-      await prepareShare(card);
+      await prepareShare(card, this);
       update({shareReady: true});
       if (!silent) wx.showToast({title: '已准备好，请再点分享', icon: 'none'});
     } catch (error) {

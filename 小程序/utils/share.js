@@ -1,4 +1,5 @@
 const {call} = require('./api');
+const {renderShareImage} = require('./shareCanvas');
 const prepared = new Map();
 const ready = new Map();
 
@@ -14,15 +15,23 @@ function storeShareImage(result) {
   }
 }
 
-function prepareShare(card) {
+function prepareShare(card, page) {
   if (!card) return Promise.resolve(null);
   if (prepared.has(card.id)) return prepared.get(card.id);
-  const task = call('shares.create', {material_id: card.id}).then(result => {
+  const local = page && typeof wx !== 'undefined';
+  const task = Promise.all([
+    call('shares.create', {material_id: card.id, ...(local ? {include_image: false} : {})}),
+    local ? renderShareImage(card, page) : Promise.resolve(null)
+  ]).then(([result, localImage]) => {
     if (!result.token) throw new Error('分享链接未准备好');
-    const share = {...result, imageUrl: storeShareImage(result)};
+    const share = {token: result.token, imageUrl: localImage || storeShareImage(result)};
     ready.set(card.id, share);
     return share;
-  }).catch(error => { prepared.delete(card.id); throw error; });
+  }).catch(error => {
+    prepared.delete(card.id);
+    if (page) page.sharePrepareError = error.message || String(error);
+    throw error;
+  });
   prepared.set(card.id, task);
   if (prepared.size > 64) {
     const oldest = prepared.keys().next().value;
@@ -32,7 +41,7 @@ function prepareShare(card) {
   return task;
 }
 
-function shareName(card) {
+function shareName(card, page) {
   const fallback = {title: '从典籍里挑一个好名字｜好名书中来',
     path: '/pages/discover/index', imageUrl: '/assets/share-cover.jpg'};
   if (!card) return fallback;
@@ -41,7 +50,7 @@ function shareName(card) {
   const cached = ready.get(card.id);
   if (cached) return {title, path: `/pages/detail/index?share=${encodeURIComponent(cached.token)}`,
     imageUrl: cached.imageUrl};
-  return {...fallback, title, promise: prepareShare(card)
+  return {...fallback, title, promise: prepareShare(card, page)
     .then(result => ({title, path: `/pages/detail/index?share=${encodeURIComponent(result.token)}`,
       imageUrl: result.imageUrl || fallback.imageUrl})).catch(() => ({...fallback, title}))};
 }
