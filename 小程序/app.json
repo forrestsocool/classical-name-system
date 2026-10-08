@@ -48,6 +48,27 @@
       "pages": [
         "index"
       ]
+    },
+    {
+      "name": "pageFontA",
+      "root": "page-font-a",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "name": "pageFontB",
+      "root": "page-font-b",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "name": "pageFontC",
+      "root": "page-font-c",
+      "pages": [
+        "index"
+      ]
     }
   ]
 }

@@ -32,7 +32,7 @@
   <view class="deck" wx:if="{{ready}}">
     <view class="name-card card-shadow card-third" wx:if="{{current}}"></view>
     <view class="name-card card-shadow card-next" style="{{stackStyle}}" wx:if="{{next && !saving}}">
-      <view class="next-name">{{next.item.displayName}}</view>
+      <view class="next-name {{nameFontReady ? 'wenkai-name' : ''}}">{{next.item.displayName}}</view>
     </view>
     <view
       class="name-card card-current {{current.item.wuxing.status ? 'card-has-wuxing-note' : ''}}"
@@ -55,7 +55,7 @@
         <view class="decision decision-like" style="opacity:{{likeOpacity}}">收藏</view>
         <view class="card-heading">
           <view class="name-block">
-            <view class="candidate-name {{current.item.displayName.length > 3 ? 'candidate-name-long' : ''}}">{{current.item.displayName}}</view>
+            <view class="candidate-name {{nameFontReady ? 'wenkai-name' : ''}} {{current.item.displayName.length > 3 ? 'candidate-name-long' : ''}}">{{current.item.displayName}}</view>
             <view class="candidate-pinyin">{{current.item.pinyin}}</view>
           </view>
           <view class="gender-scores">
