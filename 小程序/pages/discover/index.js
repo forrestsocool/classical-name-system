@@ -177,14 +177,8 @@ Page({
     });
     if (visible[0] && warmNameFont) warmNameFont(this);
     if (prepareShare && visible[0]) {
-      const id = visible[0].id;
-      const displayName = visible[0].item.displayName;
-      if (wx.hideShareMenu) wx.hideShareMenu({menus: ['shareAppMessage']});
-      prepareShare(visible[0], this).then(() => {
-        if (!this.closed && this.data.current && this.data.current.id === id &&
-            this.data.current.item.displayName === displayName && wx.showShareMenu)
-          wx.showShareMenu({menus: ['shareAppMessage']});
-      }).catch(() => {});
+      if (wx.showShareMenu) wx.showShareMenu({menus: ['shareAppMessage']});
+      visible.forEach(card => prepareShare(card, this).catch(() => {}));
     }
     const missing = visible.filter(card => card.item.wuxing.version !== 'server-v1' &&
       !this.analysisRequests.has(`${card.id}|${surname}`));

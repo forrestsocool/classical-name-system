@@ -34,7 +34,10 @@ function prepareShare(card, page) {
   const local = page && typeof wx !== 'undefined';
   const task = Promise.all([
     call('shares.create', {material_id: card.id, ...(local ? {include_image: false} : {})}),
-    local ? renderShareImage(card, page) : Promise.resolve(null)
+    local ? renderShareImage(card, page).catch(error => {
+      page.sharePrepareError = error.message || String(error);
+      return null;
+    }) : Promise.resolve(null)
   ]).then(([result, localImage]) => {
     if (!result.token) throw new Error('分享链接未准备好');
     const share = {token: result.token, imageUrl: localImage || storeShareImage(result)};

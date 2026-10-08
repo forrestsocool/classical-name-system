@@ -1,5 +1,6 @@
 // All artwork and text are drawn locally. Only the durable share link needs the API.
 const queues = new WeakMap();
+const surfaces = new WeakMap();
 const {nameGlyphs, drawName} = require('./shareGlyphs');
 function canvasNode(page) {
   return new Promise((resolve, reject) => {
@@ -39,11 +40,17 @@ function pill(ctx, x, y, width, height) {
 async function draw(card, page) {
   const item = card.item;
   const name = Array.from(String(item.displayName || item.name || item['姓名'] || '')).slice(0, 6).join('');
-  const [canvas, glyphs] = await Promise.all([canvasNode(page), nameGlyphs(name)]);
+  if (!surfaces.has(page)) {
+    const surface = canvasNode(page).then(async canvas => ({canvas,
+      background: await image(canvas, '/assets/share/background.jpg')}));
+    surfaces.set(page, surface);
+    surface.catch(() => surfaces.delete(page));
+  }
+  const [{canvas, background}, glyphs] = await Promise.all([surfaces.get(page), nameGlyphs(name)]);
   page.shareFontLoaded = glyphs.every(glyph => !!glyph.units);
   canvas.width = 750; canvas.height = 600;
   const ctx = canvas.getContext('2d');
-  ctx.drawImage(await image(canvas, '/assets/share/background.jpg'), 0, 0, 750, 600);
+  ctx.drawImage(background, 0, 0, 750, 600);
   const book = String(item.book || item['书名'] || '');
   const chapter = String(item.chapter || item['篇章'] || '');
   const tags = (item.tags || item['文化标签'] || []).slice(0, 3).map(tag => String(tag).slice(0, 12));

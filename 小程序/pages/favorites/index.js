@@ -83,15 +83,15 @@ Page({
   },
   retry() { return this.reload(); },
   async warmShares(cards) {
-    for (let offset = 0; offset < cards.length && !this.closed; offset += 2) {
+    for (let offset = 0; offset < Math.min(cards.length, 2) && !this.closed; offset += 2) {
       await Promise.all(cards.slice(offset, offset + 2).map(card =>
         this.prepareFavoriteShare({currentTarget: {dataset: {id: card.id}}}, true)));
     }
   },
-  async prepareFavoriteShare(event, silent = false) {
+  async prepareFavoriteShare(event, silent = true) {
     const id = String(event.currentTarget.dataset.id);
     const card = this.data.cards.find(item => String(item.id) === id);
-    if (!card || card.shareReady || card.sharePreparing || this.data.removingId) return;
+    if (!card || card.shareReady || card.sharePreparing) return;
     const update = patch => {
       if (!this.closed) this.setData({cards: this.data.cards.map(item =>
         String(item.id) === id ? {...item, ...patch} : item)});

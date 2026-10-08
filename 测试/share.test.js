@@ -4,8 +4,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-function loadShare(call, wx) {
-  const sandbox = {module: {exports: {}}, require: () => ({call}), wx};
+function loadShare(call, wx, renderShareImage) {
+  const sandbox = {module: {exports: {}}, require: name => name === './shareCanvas' ? {renderShareImage} : {call}, wx};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../小程序/utils/share.js'), 'utf8'), sandbox);
   return sandbox.module.exports.shareName;
 }
@@ -23,6 +23,34 @@ test('sharing the visible name resolves to its exact source link', async () => {
   assert.equal(requests[0].action, 'shares.create');
   assert.equal(requests[0].data.material_id, 42);
   assert.equal(shareName(null).path, '/pages/discover/index');
+});
+
+test('a tap during preparation reuses the in-flight work, then cached shares return immediately', async () => {
+  let finishImage;
+  let imageCalls = 0, linkCalls = 0;
+  const image = new Promise(resolve => {finishImage = resolve;});
+  const share = loadShare(async () => {
+    linkCalls++;
+    return {token: 'e'.repeat(32)};
+  }, {}, () => {imageCalls++; return image;});
+  const card = {id: 42, item: {name: '清和', displayName: '李清和', surname: '李'}};
+  const page = {};
+  const first = share(card, page);
+  const repeated = share(card, page);
+  assert.equal(linkCalls, 1);
+  assert.equal(imageCalls, 1);
+  finishImage('wxfile://share.jpg');
+  assert.equal((await repeated.promise).imageUrl, 'wxfile://share.jpg');
+  await first.promise;
+  assert.equal(share(card, page).promise, undefined);
+});
+
+test('image failure keeps the exact full-name link shareable', async () => {
+  const share = loadShare(async () => ({token: 'f'.repeat(32)}), {},
+    async () => {throw new Error('canvas unavailable');});
+  const result = await share({id: 42, item: {name: '清和', surname: '李', displayName: '李清和'}}, {}).promise;
+  assert.match(result.path, /detail\/index\?share=f{32}&surname=/);
+  assert.equal(result.imageUrl, '/assets/share-cover.jpg');
 });
 
 test('both entry points share a local JPEG received through the cloud response', async () => {

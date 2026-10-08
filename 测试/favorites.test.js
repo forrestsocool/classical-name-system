@@ -89,12 +89,28 @@ test('failed share preparation can be tapped again and enables sharing after suc
   await page.prepareFavoriteShare(event);
   assert.equal(page.data.cards[0].sharePreparing, false);
   assert.equal(page.data.cards[0].shareReady, undefined);
-  assert.equal(events.toasts[0].title, '连接失败');
+  assert.equal(events.toasts.length, 0);
   await page.prepareFavoriteShare(event);
   assert.equal(page.data.cards[0].shareReady, true);
   assert.equal(attempts, 2);
   const markup = fs.readFileSync(path.join(__dirname, '../小程序/pages/favorites/index.wxml'), 'utf8');
-  assert.doesNotMatch(markup, /disabled="[^"\n]*!item.shareReady/);
+  const button = markup.match(/<button class="favorite-share-button"[^>]*>/)[0];
+  assert.match(button, /open-type="share"/);
+  assert.doesNotMatch(button, /disabled=|shareReady/);
+});
+
+test('warming a large favorites list prepares only the first two and removal never blocks sharing', async () => {
+  const requested = [];
+  const {page} = harness(async () => ({}), '赵', async card => {
+    requested.push(card.id);
+    return {token: 'a'.repeat(32)};
+  });
+  page.data.cards = Array.from({length: 30}, (_, index) => card(index + 1));
+  await page.warmShares(page.data.cards);
+  assert.deepEqual(requested, [1, 2]);
+  page.data.removingId = 1;
+  await page.prepareFavoriteShare({currentTarget: {dataset: {id: '30'}}});
+  assert.deepEqual(requested, [1, 2, 30]);
 });
 
 test('short swipe rebounds; a fast left flick reveals the button and leaving the tab closes it', async () => {
