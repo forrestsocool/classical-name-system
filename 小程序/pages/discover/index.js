@@ -3,7 +3,6 @@ const {normalizeCard, normalizeCards} = require('../../utils/view');
 const {shareName, prepareShare} = require('../../utils/share');
 const {dragState, releaseDirection} = require('../../utils/swipe');
 const {normalizeFilters, filterKey, filterError, matchesCard} = require('../../utils/filters');
-const {warmNameFont} = require('../../utils/nameFont');
 
 const GENDERS = ['any', 'male', 'female'];
 const GENDER_LABELS = ['不限', '男孩', '女孩'];
@@ -175,7 +174,6 @@ Page({
       hasFilters: !!(this.filters.required || this.filters.excluded || this.filters.excluded_sources.length),
       cooldown: Math.max(0, Math.ceil((state.retryAt - Date.now()) / 1000))
     });
-    if (visible[0] && warmNameFont) warmNameFont(this);
     if (prepareShare && visible[0]) {
       const id = visible[0].id;
       const displayName = visible[0].item.displayName;

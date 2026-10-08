@@ -48,7 +48,7 @@
       <image class="card-mountains" src="/assets/favorite-landscape.svg" mode="aspectFit" />
       <view class="favorite-top">
         <view class="name-group">
-          <view class="favorite-name {{nameFontReady ? 'wenkai-name' : ''}}">{{item.item.displayName}}</view>
+          <view class="favorite-name">{{item.item.displayName}}</view>
           <view class="favorite-meta">
             <view class="favorite-pinyin">{{item.item.pinyin}}</view>
             <view class="mini-scores">

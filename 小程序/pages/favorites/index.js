@@ -1,7 +1,6 @@
 const {call, preferenceKey} = require('../../utils/api');
 const {normalizeCards} = require('../../utils/view');
 const {shareName, prepareShare} = require('../../utils/share');
-const {warmNameFont} = require('../../utils/nameFont');
 
 Page({
   data: {
@@ -69,7 +68,6 @@ Page({
           if (!ids.has(card.id)) { cards.push(card); ids.add(card.id); }
         }
         this.setData({cards, nextCursor: response.next_cursor || null, initialized: true});
-        if (cards.length && warmNameFont) warmNameFont(this);
         if (prepareShare) this.warmShares(cards);
       } catch (error) {
         if (!this.closed) this.setData({error: error.message || '收藏暂时没有送达，请重试'});

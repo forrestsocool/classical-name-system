@@ -15,7 +15,6 @@
 .favorite-top { display: flex; flex-direction: column; align-items: stretch; gap: 28rpx; }
 .name-group { min-width: 0; width: 100%; }
 .favorite-name { color: #07594f; font-weight: 600; font-size: 68rpx; line-height: 1.2; letter-spacing: 5rpx; white-space: nowrap; }
-.favorite-name.wenkai-name { font-family: 'PageWenKai0', 'PageWenKai1', 'PageWenKai2', 'PingFang SC', 'Microsoft YaHei', sans-serif; font-weight: 500; }
 .favorite-meta { display: flex; flex-wrap: wrap; align-items: center; column-gap: 24rpx; row-gap: 12rpx; margin-top: 10rpx; }
 .favorite-pinyin { min-width: 242rpx; max-width: 100%; color: #7e8d90; font-size: 22rpx; line-height: 1.5; letter-spacing: 5rpx; overflow-wrap: break-word; }
 .mini-scores { flex: none; display: flex; gap: 14rpx; }
