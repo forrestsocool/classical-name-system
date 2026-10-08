@@ -48,14 +48,14 @@
       <image class="card-mountains" src="/assets/favorite-landscape.svg" mode="aspectFit" />
       <view class="favorite-top">
         <view class="name-group">
-          <view class="favorite-name {{nameFontReady ? 'wenkai-name' : ''}}">{{item.item.displayName}}</view>
-          <view class="favorite-meta">
-            <view class="favorite-pinyin">{{item.item.pinyin}}</view>
+          <view class="favorite-heading {{item.item.displayName.length > 4 ? 'long-name-heading' : ''}}">
+            <view class="favorite-name {{nameFontReady ? 'wenkai-name' : ''}}">{{item.item.displayName}}</view>
             <view class="mini-scores">
-              <view class="mini-score mini-male"><image src="/assets/icons/male.svg" mode="aspectFit" /><text>{{item.item.maleScore}}%</text></view>
-              <view class="mini-score mini-female"><image src="/assets/icons/female.svg" mode="aspectFit" /><text>{{item.item.femaleScore}}%</text></view>
+              <view class="mini-score mini-male"><image src="/assets/icons/male-muted.svg" mode="aspectFit" /><text>{{item.item.maleScore}}%</text></view>
+              <view class="mini-score mini-female"><image src="/assets/icons/female-muted.svg" mode="aspectFit" /><text>{{item.item.femaleScore}}%</text></view>
             </view>
           </view>
+          <view class="favorite-pinyin">{{item.item.pinyin}}</view>
         </view>
         <view class="favorite-actions">
         <button class="favorite-share-button" open-type="{{item.shareReady ? 'share' : ''}}" catchtap="prepareFavoriteShare" data-id="{{item.id}}" disabled="{{removingId}}" aria-label="分享{{item.item.name}}"><image src="/assets/icons/share-green.svg" mode="aspectFit" /><text>{{item.sharePreparing ? '准备中' : '分享'}}</text></button>

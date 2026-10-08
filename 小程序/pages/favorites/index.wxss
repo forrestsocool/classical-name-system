@@ -14,15 +14,19 @@
 .favorite-top, .favorite-meaning, .favorite-tags, .favorite-source { position: relative; z-index: 1; }
 .favorite-top { display: flex; flex-direction: column; align-items: stretch; gap: 28rpx; }
 .name-group { min-width: 0; width: 100%; }
-.favorite-name { color: #07594f; font-weight: 600; font-size: 68rpx; line-height: 1.2; letter-spacing: 5rpx; white-space: nowrap; }
+.favorite-heading { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; min-height: 82rpx; }
+.favorite-name { flex: 1; min-width: 0; color: #07594f; font-weight: 600; font-size: 68rpx; line-height: 1.2; letter-spacing: 5rpx; white-space: nowrap; }
 .favorite-name.wenkai-name { font-family: 'PageWenKai0', 'PageWenKai1', 'PageWenKai2', 'PingFang SC', 'Microsoft YaHei', sans-serif; font-weight: 500; }
-.favorite-meta { display: flex; flex-wrap: wrap; align-items: center; column-gap: 24rpx; row-gap: 12rpx; margin-top: 10rpx; }
-.favorite-pinyin { min-width: 242rpx; max-width: 100%; color: #7e8d90; font-size: 22rpx; line-height: 1.5; letter-spacing: 5rpx; overflow-wrap: break-word; }
-.mini-scores { flex: none; display: flex; gap: 14rpx; }
-.mini-score { display: flex; align-items: center; gap: 7rpx; height: 46rpx; padding: 0 17rpx; border-radius: 999rpx; font-size: 22rpx; white-space: nowrap; }
-.mini-score image { width: 23rpx; height: 23rpx; }
-.mini-male { color: #2178e7; background: #edf7ff; }
-.mini-female { color: #f24c74; background: #fff0f3; }
+.favorite-pinyin { margin-top: 10rpx; max-width: 100%; color: #7e8d90; font-size: 22rpx; line-height: 1.5; letter-spacing: 5rpx; overflow-wrap: break-word; }
+.mini-scores { flex: none; display: flex; flex-direction: column; gap: 6rpx; }
+.mini-score { display: flex; align-items: center; justify-content: center; gap: 6rpx; height: 36rpx; min-width: 96rpx; padding: 0 12rpx; border-radius: 999rpx; font-size: 20rpx; line-height: 1; white-space: nowrap; }
+.mini-score image { width: 21rpx; height: 21rpx; }
+.mini-male { color: #52728d; background: #edf1f5; }
+.mini-female { color: #b06c72; background: #f8eeee; }
+.long-name-heading .favorite-name { font-size: 52rpx; letter-spacing: 2rpx; }
+.long-name-heading .mini-scores { gap: 4rpx; }
+.long-name-heading .mini-score { height: 26rpx; font-size: 18rpx; }
+.long-name-heading .mini-score image { width: 18rpx; height: 18rpx; }
 .favorite-actions { display: flex; align-items: center; gap: 18rpx; }
 .favorite-share-button, .source-button { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 18rpx; height: 68rpx; margin: 0; padding: 0 12rpx; border: 1rpx solid #dfe8e2; border-radius: 22rpx; color: #07594f; background: #f2f7f2; font-size: 25rpx; font-weight: 600; line-height: 1; white-space: nowrap; }
 .favorite-share-button image, .source-button image { flex: none; width: 29rpx; height: 29rpx; }
