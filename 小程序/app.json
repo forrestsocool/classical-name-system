@@ -48,41 +48,6 @@
       "pages": [
         "index"
       ]
-    },
-    {
-      "name": "shareFontC",
-      "root": "share-font-c",
-      "pages": [
-        "index"
-      ]
-    },
-    {
-      "name": "shareFontD",
-      "root": "share-font-d",
-      "pages": [
-        "index"
-      ]
-    },
-    {
-      "name": "shareFontE",
-      "root": "share-font-e",
-      "pages": [
-        "index"
-      ]
-    },
-    {
-      "name": "shareFontF",
-      "root": "share-font-f",
-      "pages": [
-        "index"
-      ]
-    },
-    {
-      "name": "shareFontG",
-      "root": "share-font-g",
-      "pages": [
-        "index"
-      ]
     }
   ]
 }

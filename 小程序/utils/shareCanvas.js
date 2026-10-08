@@ -7,11 +7,6 @@ function fontModule(bank) {
   switch (bank) {
     case 0: return require.async('../share-font-a/font.js');
     case 1: return require.async('../share-font-b/font.js');
-    case 2: return require.async('../share-font-c/font.js');
-    case 3: return require.async('../share-font-d/font.js');
-    case 4: return require.async('../share-font-e/font.js');
-    case 5: return require.async('../share-font-f/font.js');
-    case 6: return require.async('../share-font-g/font.js');
     default: return Promise.reject(new Error('字形不在本地字表中'));
   }
 }

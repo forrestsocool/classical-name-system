@@ -4,15 +4,17 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 
-test('bundled name fonts map only Han, including rare standard characters', () => {
+test('bundled name fonts contain the selected GB2312 Han subset only', () => {
   const groups = require('../小程序/assets/share/font-map');
   const characters = Array.from(groups.join(''));
   const kept = new Set(characters);
-  assert.equal(kept.size, 16538);
+  assert.equal(kept.size, 6760);
+  assert.equal(groups.length, 2);
   assert.equal(characters.length, kept.size);
   assert.ok(characters.every(char => /^\p{Unified_Ideograph}$/u.test(char)));
-  for (const char of Array.from('书龙台后宁𬭶')) assert.ok(kept.has(char));
-  for (const char of Array.from('書龍臺後寧ABCabc123，。！？')) assert.equal(kept.has(char), false);
+  for (const char of Array.from('书龙台后宁')) assert.ok(kept.has(char));
+  for (const char of Array.from('軎麴齄𬭶')) assert.equal(kept.has(char), false);
+  for (const char of Array.from('書龍臺寧ABCabc123，。！？')) assert.equal(kept.has(char), false);
 });
 
 test('local canvas draws existing name, source and tags then exports a JPEG without an API', async () => {
