@@ -59,9 +59,9 @@
             <view class="candidate-pinyin">{{current.item.pinyin}}</view>
           </view>
           <view class="gender-scores">
-            <view class="score-pill score-male"><image src="/assets/icons/male.svg" mode="aspectFit" /><text>{{current.item.maleScore}}%</text></view>
+            <view class="score-pill score-male"><image src="/assets/icons/male-muted.svg" mode="aspectFit" /><text>{{current.item.maleScore}}%</text></view>
             <view class="score-divider"></view>
-            <view class="score-pill score-female"><image src="/assets/icons/female.svg" mode="aspectFit" /><text>{{current.item.femaleScore}}%</text></view>
+            <view class="score-pill score-female"><image src="/assets/icons/female-muted.svg" mode="aspectFit" /><text>{{current.item.femaleScore}}%</text></view>
           </view>
           <view class="wuxing-panel" aria-label="姓名五行取象强度">
             <view class="wuxing-grid {{current.item.wuxing.available ? '' : 'wuxing-unavailable'}}">

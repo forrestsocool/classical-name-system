@@ -59,8 +59,8 @@
 .gender-scores { height: 44rpx; margin-top: 20rpx; display: flex; align-items: center; justify-content: center; gap: 16rpx; }
 .score-pill { height: 44rpx; padding: 0 17rpx; display: flex; align-items: center; justify-content: center; gap: 8rpx; border-radius: 999rpx; font-size: 22rpx; }
 .score-pill image { width: 25rpx; height: 25rpx; }
-.score-male { color: #3673b4; background: #f0f7fc; }
-.score-female { color: #ac6270; background: #fcf1f2; }
+.score-male { color: #52728d; background: #edf1f5; }
+.score-female { color: #b06c72; background: #f8eeee; }
 .score-divider { width: 1rpx; height: 23rpx; background: #e0e4dc; }
 
 /* Five soft ink palettes and fractional cells mirror the approved reference. */
