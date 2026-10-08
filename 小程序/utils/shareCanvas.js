@@ -3,12 +3,24 @@ const queues = new WeakMap();
 const fontGroups = require('../assets/share/font-map');
 const fontTasks = new Map();
 function bankFor(char) { return fontGroups.findIndex(group => group.includes(char)); }
+function fontModule(bank) {
+  switch (bank) {
+    case 0: return require.async('../share-font-a/font.js');
+    case 1: return require.async('../share-font-b/font.js');
+    case 2: return require.async('../share-font-c/font.js');
+    case 3: return require.async('../share-font-d/font.js');
+    case 4: return require.async('../share-font-e/font.js');
+    case 5: return require.async('../share-font-f/font.js');
+    case 6: return require.async('../share-font-g/font.js');
+    default: return Promise.reject(new Error('字形不在本地字表中'));
+  }
+}
 function loadBank(bank) {
   if (!fontTasks.has(bank)) fontTasks.set(bank, new Promise(resolve => {
     let finished = false;
     const done = value => { if (!finished) { finished = true; resolve(value); } };
     const timer = setTimeout(() => done(false), 12000);
-    const loading = bank === 0 ? require.async('../share-font-a/font.js') : require.async('../share-font-b/font.js');
+    const loading = fontModule(bank);
     loading.then(({base64}) => {
       try {
         wx.loadFontFace({family: `ShareZhenKai${bank}`, global: true, scopes: ['native'],
@@ -62,7 +74,7 @@ function pill(ctx, x, y, width, height) {
 }
 async function draw(card, page) {
   const item = card.item;
-  const name = String(item.name || item['姓名'] || '').slice(0, 4);
+  const name = Array.from(String(item.name || item['姓名'] || '')).slice(0, 4).join('');
   const [canvas, hasFont] = await Promise.all([canvasNode(page), loadFonts(name)]);
   page.shareFontLoaded = Array.from(name).every(char => hasFont(bankFor(char)));
   canvas.width = 750; canvas.height = 600;
