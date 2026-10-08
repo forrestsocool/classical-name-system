@@ -6,14 +6,18 @@ const path = require('node:path');
 
 test('bundled name fonts contain the selected GB2312 Han subset only', () => {
   const groups = require('../小程序/assets/share/font-map');
+  const info = require('../小程序/assets/share/font-info');
+  assert.match(info.family, /WenKai/);
+  assert.match(info.id, /^[a-f0-9]{16}$/);
   const characters = Array.from(groups.join(''));
   const kept = new Set(characters);
-  assert.equal(kept.size, 6760);
+  assert.equal(kept.size, 6763);
   assert.equal(groups.length, 2);
   assert.equal(characters.length, kept.size);
   assert.ok(characters.every(char => /^\p{Unified_Ideograph}$/u.test(char)));
   for (const char of Array.from('书龙台后宁')) assert.ok(kept.has(char));
-  for (const char of Array.from('軎麴齄𬭶')) assert.equal(kept.has(char), false);
+  for (const char of Array.from('軎麴齄')) assert.ok(kept.has(char));
+  assert.equal(kept.has('𬭶'), false);
   for (const char of Array.from('書龍臺寧ABCabc123，。！？')) assert.equal(kept.has(char), false);
 });
 
@@ -46,7 +50,7 @@ test('local canvas draws existing name, source and tags then exports a JPEG with
     loadFontFace: () => {fontRegistrations++; throw new Error('iOS native font unsupported');},
     canvasToTempFilePath: args => {exports.push(args); args.success({tempFilePath: 'wxfile://temp/local.jpg'});}
   };
-  const fontRequire = () => ['以宁', ''];
+  const fontRequire = name => name.endsWith('font-info') ? {id: 'wenkai-test'} : ['以宁', ''];
   fontRequire.async = async () => ({zip_base64: 'emlw'});
   const glyphSandbox = {module: {exports: {}}, require: fontRequire, wx};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../小程序/utils/shareGlyphs.js'), 'utf8'), glyphSandbox);

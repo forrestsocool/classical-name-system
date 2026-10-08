@@ -2,6 +2,7 @@
 import argparse
 import base64
 import io
+import hashlib
 import json
 from pathlib import Path
 import zipfile
@@ -36,8 +37,12 @@ def main():
             except UnicodeDecodeError:
                 pass
     characters = sorted(characters)
-    assert len(characters) == 6760
-    groups = [characters[:3380], characters[3380:]]
+    assert len(characters) >= 6760
+    midpoint = (len(characters) + 1) // 2
+    groups = [characters[:midpoint], characters[midpoint:]]
+    copyright = font['name'].getDebugName(0)
+    family = font['name'].getDebugName(1)
+    font_id = hashlib.sha256(Path(args.font).read_bytes()).hexdigest()[:16]
     for index, group in enumerate(groups):
         data = {'units': font['head'].unitsPerEm, 'glyphs': {}}
         for char in group:
@@ -65,13 +70,15 @@ def main():
             entry.compress_type = zipfile.ZIP_DEFLATED
             archive.writestr(entry, json.dumps(data, ensure_ascii=False, separators=(',', ':')).encode('utf8'), compresslevel=9)
         content = 'module.exports = ' + json.dumps({'zip_base64': base64.b64encode(output.getvalue()).decode('ascii'),
-            'copyright': 'Copyright 2022 LXGW; Copyright 2020 The Klee Project Authors',
+            'copyright': copyright,
             'license': 'SIL Open Font License 1.1'}) + ';\n'
         assert len(content.encode()) + 1024 < 2 * 1024 * 1024
         Path(f'小程序/share-font-{chr(97+index)}/font.js').write_text(content, encoding='utf8')
         print(chr(97+index), len(output.getvalue()), len(content.encode()))
     Path('小程序/assets/share/font-map.js').write_text('module.exports = ' +
         json.dumps([''.join(group) for group in groups], ensure_ascii=False) + ';\n', encoding='utf8')
+    Path('小程序/assets/share/font-info.js').write_text('module.exports = ' +
+        json.dumps({'id': font_id, 'family': family, 'characters': len(characters)}, ensure_ascii=False) + ';\n', encoding='utf8')
 
 
 if __name__ == '__main__':

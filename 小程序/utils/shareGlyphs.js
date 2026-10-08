@@ -1,10 +1,11 @@
 // Draw the selected font's original TrueType outlines instead of registering a font.
 const groups = require('../assets/share/font-map');
+const fontInfo = require('../assets/share/font-info');
 const banks = new Map();
 function loadBank(bank) {
   if (!banks.has(bank)) banks.set(bank, (async () => {
     const fs = wx.getFileSystemManager();
-    const directory = `${wx.env.USER_DATA_PATH}/share-zhenkai-outlines-046-${bank}`;
+    const directory = `${wx.env.USER_DATA_PATH}/share-outlines-v1-${fontInfo.id}-${bank}`;
     try { return JSON.parse(fs.readFileSync(`${directory}/glyphs.json`, 'utf8')); } catch {}
     const data = bank === 0 ? await require.async('../share-font-a/font.js') : await require.async('../share-font-b/font.js');
     try { fs.accessSync(directory); } catch { fs.mkdirSync(directory, true); }
