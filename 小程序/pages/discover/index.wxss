@@ -54,6 +54,7 @@
 .name-block { text-align: center; }
 .candidate-name { overflow: hidden; color: #064a40; font-weight: 700; font-size: 100rpx; line-height: 1.18; letter-spacing: 10rpx; text-indent: 10rpx; white-space: nowrap; }
 .candidate-name-long { font-size: 86rpx; letter-spacing: 6rpx; text-indent: 6rpx; }
+.candidate-name.wenkai-name, .next-name.wenkai-name { font-family: 'PageWenKai0', 'PageWenKai1', 'PageWenKai2', 'PingFang SC', 'Microsoft YaHei', sans-serif; font-weight: 500; }
 .candidate-pinyin { margin-top: 8rpx; color: #78867d; font-size: 23rpx; line-height: 1.4; letter-spacing: 6rpx; text-transform: lowercase; }
 .gender-scores { height: 44rpx; margin-top: 20rpx; display: flex; align-items: center; justify-content: center; gap: 16rpx; }
 .score-pill { height: 44rpx; padding: 0 17rpx; display: flex; align-items: center; justify-content: center; gap: 8rpx; border-radius: 999rpx; font-size: 22rpx; }
