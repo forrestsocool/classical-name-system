@@ -68,10 +68,7 @@ Page({
           if (!ids.has(card.id)) { cards.push(card); ids.add(card.id); }
         }
         this.setData({cards, nextCursor: response.next_cursor || null, initialized: true});
-        if (prepareShare) cards.forEach(card => prepareShare(card).then(() => {
-          if (!this.closed) this.setData({cards: this.data.cards.map(current =>
-            current.id === card.id ? {...current, shareReady: true} : current)});
-        }).catch(() => {}));
+        if (prepareShare) this.warmShares(cards);
       } catch (error) {
         if (!this.closed) this.setData({error: error.message || '收藏暂时没有送达，请重试'});
       } finally {
@@ -83,6 +80,31 @@ Page({
     return task;
   },
   retry() { return this.reload(); },
+  async warmShares(cards) {
+    for (let offset = 0; offset < cards.length && !this.closed; offset += 2) {
+      await Promise.all(cards.slice(offset, offset + 2).map(card =>
+        this.prepareFavoriteShare({currentTarget: {dataset: {id: card.id}}}, true)));
+    }
+  },
+  async prepareFavoriteShare(event, silent = false) {
+    const id = String(event.currentTarget.dataset.id);
+    const card = this.data.cards.find(item => String(item.id) === id);
+    if (!card || card.shareReady || card.sharePreparing || this.data.removingId) return;
+    const update = patch => {
+      if (!this.closed) this.setData({cards: this.data.cards.map(item =>
+        String(item.id) === id ? {...item, ...patch} : item)});
+    };
+    update({sharePreparing: true});
+    try {
+      await prepareShare(card);
+      update({shareReady: true});
+      if (!silent) wx.showToast({title: '已准备好，请再点分享', icon: 'none'});
+    } catch (error) {
+      if (!silent) wx.showToast({title: error.message || '分享准备失败，请重试', icon: 'none'});
+    } finally {
+      update({sharePreparing: false});
+    }
+  },
   goDiscover() { wx.switchTab({url: '/pages/discover/index'}); },
   detail(event) {
     if (this.data.removingId || Date.now() < (this.ignoreTapUntil || 0)) return;

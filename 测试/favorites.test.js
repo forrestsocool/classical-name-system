@@ -16,7 +16,7 @@ function deferred() {
   const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
   return {promise, resolve, reject};
 }
-function harness(call, surname = '赵') {
+function harness(call, surname = '赵', prepareShare) {
   let page;
   const app = {session: async () => 'user-A', namePreferences: {surname}};
   const events = {refreshStopped: 0, navigations: [], toasts: [], tabs: []};
@@ -31,7 +31,7 @@ function harness(call, surname = '赵') {
       switchTab: data => events.tabs.push(data),
       showToast: data => events.toasts.push(data)
     },
-    require: name => name.includes('/view') ? view : {call, preferenceKey: value => value},
+    require: name => name.includes('/view') ? view : name.includes('/share') ? {prepareShare} : {call, preferenceKey: value => value},
     Promise, Date, Set, console
   });
   page.data = JSON.parse(JSON.stringify(page.data));
@@ -76,6 +76,25 @@ test('favorites left swipe reveals removal without removing; right swipe, vertic
   assert.equal(page.data.openId, 1);
   page.touchCancel();
   assert.equal(page.data.openId, null);
+});
+
+test('failed share preparation can be tapped again and enables sharing after success', async () => {
+  let attempts = 0;
+  const {page, events} = harness(async () => ({}), '赵', async () => {
+    if (++attempts === 1) throw new Error('连接失败');
+    return {token: 'a'.repeat(32)};
+  });
+  page.data.cards = [card(9)];
+  const event = {currentTarget: {dataset: {id: '9'}}};
+  await page.prepareFavoriteShare(event);
+  assert.equal(page.data.cards[0].sharePreparing, false);
+  assert.equal(page.data.cards[0].shareReady, undefined);
+  assert.equal(events.toasts[0].title, '连接失败');
+  await page.prepareFavoriteShare(event);
+  assert.equal(page.data.cards[0].shareReady, true);
+  assert.equal(attempts, 2);
+  const markup = fs.readFileSync(path.join(__dirname, '../小程序/pages/favorites/index.wxml'), 'utf8');
+  assert.doesNotMatch(markup, /disabled="[^"\n]*!item.shareReady/);
 });
 
 test('short swipe rebounds; a fast left flick reveals the button and leaving the tab closes it', async () => {
