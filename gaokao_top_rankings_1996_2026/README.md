@@ -9,12 +9,14 @@
 - 原始文件：`raw_data/pastebin-z3XiLUfa.txt`
 - 原始文件哈希：`0de07e0163fe6612a5a2dca005700f06bc759b6e200f7e63ecdc440ddcfa33cd`
 - 清洗结果：`data/gaokao_champions_1996_2026.json`
+- 审阅报告：`data/review_report.md`（覆盖统计、类别归类、2026 明确姓名记录、拒绝项和复核建议）
 
 执行以下命令可重新下载和清洗。清洗不会覆盖规则外的记录到候选池：
 
 ```powershell
 python scripts/crawler.py --download
 python scripts/crawler.py --normalize
+python scripts/build_review_report.py
 ```
 
 清洗结果当前为 1947 条记录、1560 个一字或两字名，覆盖 31 个省级地区。当前公开快照没有 2024、2025 的可复用结构化行，`manifest.missing_years` 会明确列出年份空档；后续补充来源后可直接重新清洗。空姓名、脱敏姓名、无法拆成一字或两字名的记录只计入 `manifest.rejected`，不会进入小程序；各条记录的 `subject` 保留原始类别，方便区分年份、文科/理科与新高考类别。
