@@ -1,6 +1,7 @@
 const {call, preferenceKey} = require('../../utils/api');
 const {cleanCharacters, normalizeFilters, filterError} = require('../../utils/filters');
 const build = require('../../utils/build');
+const {readCache, writeCache} = require('../../utils/pageCache');
 
 Page({
   data: {
@@ -9,6 +10,7 @@ Page({
   },
   async onShow() {
     if (this.getTabBar && this.getTabBar()) this.getTabBar().setData({selected: 2});
+    this.restoreCache(getApp().userId);
     try {
       this.user = await getApp().session();
       const saved = wx.getStorageSync(preferenceKey(this.user)) || {};
@@ -16,20 +18,37 @@ Page({
       this.setData({required: this.filters.required, excluded: this.filters.excluded,
         ready: true, inputError: '', savedNotice: ''});
       this.renderSources();
-      await this.loadSources();
+      this.restoreCache(this.user);
+      await this.loadSources(true);
     } catch (error) {
-      this.setData({sourceLoading: false, sourceError: error.message || '暂时没有连接上，请重试'});
+      this.setData({sourceLoading: false, sourceError: this.catalog ? '' : error.message || '暂时没有连接上，请重试'});
     }
   },
-  async loadSources() {
+  restoreCache(user) {
+    if (!user) return;
+    if (this.catalogUser && this.catalogUser !== user) {
+      this.catalog = null;
+      this.renderSources();
+    }
+    this.catalogUser = user;
+    const cached = readCache('sources', user);
+    if (!Array.isArray(cached)) return;
+    this.filters = normalizeFilters(wx.getStorageSync(preferenceKey(user)) || {});
+    this.catalog = cached;
+    this.renderSources();
+    this.setData({sourceLoading: false, sourceError: ''});
+  },
+  async loadSources(silent = false) {
     if (!this.user) return this.onShow();
     if (this.sourcePending) return this.sourcePending;
-    this.setData({sourceLoading: true, sourceError: ''});
+    silent = silent === true;
+    this.setData({sourceLoading: !this.catalog, sourceError: ''});
     this.sourcePending = call('sources.list').then(result => {
       this.catalog = result.sources || [];
+      writeCache('sources', this.user, this.catalog);
       this.renderSources();
     }).catch(error => {
-      this.setData({sourceError: error.message || '来源暂时没加载成功，请重试'});
+      if (!(silent && this.catalog)) this.setData({sourceError: error.message || '来源暂时没加载成功，请重试'});
     }).finally(() => {
       this.sourcePending = null;
       this.setData({sourceLoading: false});

@@ -14,7 +14,10 @@ function harness(saved = {}, catalog = [{name: '诗经', kind: '古籍'}, {name:
     Page: value => { page = value; }, getApp: () => app,
     wx: {getStorageSync: key => storage.get(key), setStorageSync: (key, value) => storage.set(key, JSON.parse(JSON.stringify(value))),
       showToast: value => toasts.push(value), switchTab: value => navigations.push(value)},
-    require: name => name.endsWith('/filters') ? filters : name.endsWith('/build') ? {version: 'test'} : {
+    require: name => name.endsWith('/pageCache') ? {
+      readCache: (kind, user) => storage.get(kind + ':' + user),
+      writeCache: (kind, user, data) => storage.set(kind + ':' + user, JSON.parse(JSON.stringify(data)))
+    } : name.endsWith('/filters') ? filters : name.endsWith('/build') ? {version: 'test'} : {
       preferenceKey: user => 'prefs:' + user,
       call: async action => { assert.equal(action, 'sources.list'); if (offline) throw new Error('offline'); return {sources: catalog}; }
     }
@@ -33,6 +36,24 @@ test('new poetry sources appear enabled and can be excluded independently', asyn
   assert.equal(page.data.sources.find(x => x.name === '宋词').enabled, true);
 });
 const input = (page, field, value) => page.characterInput({currentTarget: {dataset: {field}}, detail: {value}});
+
+test('cached source catalog appears immediately, keeps current switches and refreshes silently offline', async () => {
+  const {page, storage, app, setOffline} = harness({excluded_sources: ['诗经']});
+  app.userId = 'user';
+  storage.set('sources:user', [{name: '诗经', kind: '古籍'}]);
+  setOffline(true);
+  const refresh = page.onShow();
+  assert.equal(page.data.sourceCount, 1);
+  assert.equal(page.data.sourceLoading, false);
+  assert.equal(page.data.sources[0].enabled, false);
+  await refresh;
+  assert.equal(page.data.sourceError, '');
+  setOffline(false);
+  await page.onShow();
+  assert.equal(page.data.sourceCount, 2);
+  assert.equal(storage.get('sources:user').length, 2);
+  assert.equal(page.data.sources[0].enabled, false);
+});
 
 test('source switches default on, persist independently and preserve homepage preferences', async () => {
   const {page, storage} = harness({surname: '李', gender: 'female'});

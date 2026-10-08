@@ -2,6 +2,7 @@ const {call, preferenceKey} = require('../../utils/api');
 const {normalizeCards} = require('../../utils/view');
 const {shareName, prepareShare} = require('../../utils/share');
 const {warmNameFont} = require('../../utils/nameFont');
+const {readCache, writeCache} = require('../../utils/pageCache');
 
 Page({
   data: {
@@ -15,7 +16,8 @@ Page({
   },
   onShow() {
     if (this.getTabBar && this.getTabBar()) this.getTabBar().setData({selected: 1});
-    return this.reload();
+    this.restoreCache(getApp().userId);
+    return this.reload(true);
   },
   onHide() { this.closeRow(); },
   onShareAppMessage(event = {}) {
@@ -33,16 +35,41 @@ Page({
     if (this.data.nextCursor && !this.refreshTask && !this.data.error) return this.fetchPage();
   },
 
-  reload() {
+  restoreCache(user) {
+    if (!user) return;
+    if (this.cacheUser === user) {
+      const preferences = wx.getStorageSync(preferenceKey(user)) || getApp().namePreferences || {};
+      const cards = normalizeCards(this.data.cards, preferences.surname || '');
+      this.setData({cards: cards.map((card, index) => card.item.displayName === this.data.cards[index].item.displayName
+        ? card : {...card, shareReady: false, sharePreparing: false})});
+      return;
+    }
+    if (this.cacheUser) this.setData({cards: [], nextCursor: null, initialized: false});
+    this.cacheUser = user;
+    const cached = readCache('favorites', user);
+    if (!cached || !Array.isArray(cached.cards)) return;
+    try {
+      const preferences = wx.getStorageSync(preferenceKey(user)) || getApp().namePreferences || {};
+      const cards = normalizeCards(cached.cards, preferences.surname || '');
+      this.setData({cards, nextCursor: cached.nextCursor || null, initialized: true, error: ''});
+      if (cards.length && warmNameFont) warmNameFont(this);
+    } catch {}
+  },
+  saveCache() {
+    const cards = this.data.cards.slice(0, 100).map(({shareReady, sharePreparing, ...card}) => card);
+    writeCache('favorites', this.cacheUser, {cards,
+      nextCursor: this.data.cards.length > 100 ? cards[99].id : this.data.nextCursor});
+  },
+  reload(silent = false) {
     if (this.closed) return Promise.resolve();
     if (this.refreshTask) return this.refreshTask;
     this.closeRow();
-    this.setData({refreshing: true, error: ''});
+    this.setData({refreshing: !silent, error: ''});
     // Finish in-flight work before replacing the list, so a deleted card cannot reappear.
     const task = Promise.resolve().then(async () => {
       if (this.listTask) await this.listTask;
       if (this.removeTask) await this.removeTask;
-      if (!this.closed) await this.fetchPage(true);
+      if (!this.closed) await this.fetchPage(true, silent);
     }).finally(() => {
       this.refreshTask = null;
       if (!this.closed) this.setData({refreshing: false});
@@ -50,14 +77,15 @@ Page({
     this.refreshTask = task;
     return task;
   },
-  fetchPage(reset = false) {
+  fetchPage(reset = false, silent = false) {
     if (this.closed || this.removeTask || (!reset && this.refreshTask)) return Promise.resolve();
     if (this.listTask) return this.listTask;
-    this.setData({loading: true, error: ''});
+    this.setData({loading: !silent || !this.data.initialized, error: ''});
     const cursor = reset ? null : this.data.nextCursor;
     const task = Promise.resolve().then(async () => {
       try {
         const user = await getApp().session();
+        this.restoreCache(user);
         const preferences = wx.getStorageSync(preferenceKey(user)) || getApp().namePreferences || {};
         const surname = preferences.surname || '';
         const response = await call('favorites.list', cursor ? {before_id: cursor} : {});
@@ -69,10 +97,11 @@ Page({
           if (!ids.has(card.id)) { cards.push(card); ids.add(card.id); }
         }
         this.setData({cards, nextCursor: response.next_cursor || null, initialized: true});
+        this.saveCache();
         if (cards.length && warmNameFont) warmNameFont(this);
         if (prepareShare) this.warmShares(cards);
       } catch (error) {
-        if (!this.closed) this.setData({error: error.message || '收藏暂时没有送达，请重试'});
+        if (!this.closed && !(silent && this.data.initialized)) this.setData({error: error.message || '收藏暂时没有送达，请重试'});
       } finally {
         this.listTask = null;
         if (!this.closed) this.setData({loading: false});
@@ -177,6 +206,7 @@ Page({
         await call('favorites.remove', {material_id: id});
         if (this.closed) return;
         this.setData({cards: this.data.cards.filter(card => card.id !== id)});
+        this.saveCache();
         this.closeRow();
         wx.showToast({title: '已取消收藏', icon: 'none'});
       } catch (error) {

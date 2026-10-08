@@ -20,6 +20,7 @@ function harness(call, surname = '赵', prepareShare) {
   let page;
   const app = {session: async () => 'user-A', namePreferences: {surname}};
   const events = {refreshStopped: 0, navigations: [], toasts: [], tabs: []};
+  const storage = new Map();
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../小程序/pages/favorites/index.js'), 'utf8'), {
     Page: definition => { page = definition; },
     getApp: () => app,
@@ -31,14 +32,43 @@ function harness(call, surname = '赵', prepareShare) {
       switchTab: data => events.tabs.push(data),
       showToast: data => events.toasts.push(data)
     },
-    require: name => name.includes('/view') ? view : name.includes('/share') ? {prepareShare} : {call, preferenceKey: value => value},
+    require: name => name.includes('/pageCache') ? {
+      readCache: (kind, user) => storage.get(kind + ':' + user),
+      writeCache: (kind, user, data) => storage.set(kind + ':' + user, JSON.parse(JSON.stringify(data)))
+    } : name.includes('/view') ? view : name.includes('/share') ? {prepareShare} : {call, preferenceKey: value => value},
     Promise, Date, Set, console
   });
   page.data = JSON.parse(JSON.stringify(page.data));
   page.setData = patch => Object.assign(page.data, patch);
   page.onLoad();
-  return {page, app, events};
+  return {page, app, events, storage};
 }
+test('cached favorites appear before refresh finishes and refresh failure stays silent', async () => {
+  const pending = deferred();
+  const {page, app, storage} = harness(() => pending.promise);
+  app.userId = 'user-A';
+  storage.set('favorites:user-A', {cards: [card(7)], nextCursor: 7});
+  const refresh = page.onShow();
+  assert.equal(page.data.cards[0].id, 7);
+  assert.equal(page.data.refreshing, false);
+  await Promise.resolve();
+  pending.reject(new Error('offline'));
+  await refresh;
+  assert.equal(page.data.error, '');
+  assert.equal(page.data.cards[0].id, 7);
+  assert.equal(page.data.nextCursor, 7);
+});
+
+test('successful silent refresh replaces cached favorites and persists the new result', async () => {
+  const {page, app, storage} = harness(async () => ({cards: [card(9)], next_cursor: null}));
+  app.userId = 'user-A';
+  storage.set('favorites:user-A', {cards: [card(7)], nextCursor: 7});
+  await page.onShow();
+  assert.deepEqual(Array.from(page.data.cards, card => card.id), [9]);
+  assert.equal(storage.get('favorites:user-A').cards[0].id, 9);
+  assert.equal(storage.get('favorites:user-A').nextCursor, null);
+});
+
 function touch(id, x, y, timeStamp) {
   return {currentTarget: {dataset: {id}}, touches: [{clientX: x, clientY: y}],
     changedTouches: [{clientX: x, clientY: y}], timeStamp};
