@@ -85,7 +85,7 @@
     </view>
     <view class="custom-form" wx:if="{{customOpen}}">
       <text class="custom-copy">输入不含姓氏的名字，自动补全五行、释义和男女适配标记。</text>
-      <input value="{{customName}}" bindinput="inputCustom" maxlength="2" disabled="{{customSaving}}" placeholder="如：清和（不含姓氏）" aria-label="自定义名字" />
+      <input value="{{customName}}" bindinput="inputCustom" maxlength="-1" disabled="{{customSaving}}" placeholder="如：清和（不含姓氏）" aria-label="自定义名字" />
       <view class="custom-error" wx:if="{{customError}}">{{customError}}</view>
       <button class="custom-submit" catchtap="saveCustom" loading="{{customSaving}}" disabled="{{customSaving}}">{{customSaving ? '正在补全名字信息…' : '补全并加入收藏'}}</button>
     </view>
