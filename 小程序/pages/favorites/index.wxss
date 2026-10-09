@@ -5,8 +5,13 @@
   background: #f8f7f2;
   overflow-x: hidden;
 }
-.custom-entry { margin: 18rpx 0 28rpx; }
-.custom-toggle { margin: 0 0 0 auto; width: auto; padding: 0 24rpx; color: #07594f; background: #f2f7f2; border: 1rpx solid #dfe8e2; border-radius: 18rpx; font-size: 25rpx; line-height: 70rpx; }
+.custom-entry { margin: 24rpx 0 12rpx; }
+.custom-add-ornament { padding: 10rpx 0; }
+.custom-toggle { display: flex; align-items: center; justify-content: center; width: 100%; min-width: 0; height: 104rpx; margin: 0; padding: 0; background: #f2f7f2; border: 1rpx solid #d2e0d7; border-radius: 20rpx; }
+.custom-toggle:active { background: #edf4ee; }
+.custom-toggle[disabled] { opacity: .5; }
+.custom-plus { display: block; width: 42rpx; height: 42rpx; transition: transform 180ms ease; }
+.custom-toggle-open .custom-plus { transform: rotate(45deg); }
 .custom-form { padding: 26rpx; margin-top: 18rpx; background: #fffefa; border: 1rpx solid #e8ebe5; border-radius: 24rpx; }
 .custom-copy { color: #7e8d90; font-size: 24rpx; line-height: 1.7; }
 .custom-form input { margin: 24rpx 0; height: 84rpx; padding: 0 20rpx; border: 1rpx solid #dfe8e2; border-radius: 12rpx; font-size: 30rpx; }

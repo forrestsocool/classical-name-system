@@ -1,13 +1,4 @@
 <view class="favorites-page" bindtap="closeOnTap">
-  <view class="custom-entry">
-    <button class="custom-toggle" catchtap="toggleCustom" disabled="{{customSaving}}">{{customOpen ? '收起' : '新增自定义名字'}}</button>
-    <view class="custom-form" wx:if="{{customOpen}}">
-      <text class="custom-copy">输入不含姓氏的名字，自动补全五行、释义和男女适配标记。</text>
-      <input value="{{customName}}" bindinput="inputCustom" maxlength="2" disabled="{{customSaving}}" placeholder="如：清和（不含姓氏）" aria-label="自定义名字" />
-      <view class="custom-error" wx:if="{{customError}}">{{customError}}</view>
-      <button class="custom-submit" catchtap="saveCustom" loading="{{customSaving}}" disabled="{{customSaving}}">{{customSaving ? '正在补全名字信息…' : '补全并加入收藏'}}</button>
-    </view>
-  </view>
   <view class="collection-hint" wx:if="{{cards.length}}">
     <view class="hint-line"></view>
     <text>左滑卡片可取消收藏</text>
@@ -85,6 +76,19 @@
   </view>
   <view class="list-foot" wx:if="{{cards.length && !error}}">
     {{loading ? '正在翻阅收藏…' : (nextCursor ? '上拉查看更多' : '喜欢的名字，都在这里')}}
+  </view>
+  <view class="custom-entry">
+    <view class="custom-add-ornament">
+      <button class="custom-toggle {{customOpen ? 'custom-toggle-open' : ''}}" catchtap="toggleCustom" disabled="{{customSaving}}" aria-label="{{customOpen ? '收起自定义名字' : '新增自定义名字'}}">
+        <image class="custom-plus" src="/assets/icons/collection-plus.svg" mode="aspectFit" />
+      </button>
+    </view>
+    <view class="custom-form" wx:if="{{customOpen}}">
+      <text class="custom-copy">输入不含姓氏的名字，自动补全五行、释义和男女适配标记。</text>
+      <input value="{{customName}}" bindinput="inputCustom" maxlength="2" disabled="{{customSaving}}" placeholder="如：清和（不含姓氏）" aria-label="自定义名字" />
+      <view class="custom-error" wx:if="{{customError}}">{{customError}}</view>
+      <button class="custom-submit" catchtap="saveCustom" loading="{{customSaving}}" disabled="{{customSaving}}">{{customSaving ? '正在补全名字信息…' : '补全并加入收藏'}}</button>
+    </view>
   </view>
 </view>
 
