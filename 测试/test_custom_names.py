@@ -33,6 +33,8 @@ class CustomNameTests(unittest.TestCase):
         self.assertEqual(result['男孩适配分'] + result['女孩适配分'], 100)
         self.assertEqual(result['wuxing']['analyzed_name'], '清和')
         self.assertEqual(opener.open.call_args.kwargs['timeout'], 12)
+        request_body = json.loads(opener.open.call_args.args[0].data)
+        self.assertEqual(request_body['max_tokens'], 4000)
 
     def test_model_failure_hides_internal_error(self):
         config = 模型配置(地址='https://example.com/api', 密钥='secret', 模型='test')
