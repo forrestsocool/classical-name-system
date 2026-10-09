@@ -154,16 +154,20 @@ def 姓名详情(owner, p):
 
 
 def 可分享物料(c, material_id=None, token=None):
-    # Match the public-feed quality gate; a withdrawn passage cannot keep circulating.
+    # Custom names become accessible only through a deliberately created share link.
+    # Literary names retain the public-feed gate and source-withdrawal checks.
     where = "m.id=%s" if material_id is not None else "s.token=%s"
     join = "" if material_id is not None else "JOIN app_share_links s ON s.material_id=m.id"
     value = material_id if material_id is not None else token
     return c.execute(f"""SELECT m.id,m.given_name,m.full_name,m.payload FROM app_materials m
-        JOIN app_profiles f ON f.id=m.profile_id
-        JOIN passages p ON p.id=m.passage_id
-        {join} WHERE {where} AND f.surname='' AND p.active_for_recall
+        LEFT JOIN app_profiles f ON f.id=m.profile_id
+        LEFT JOIN passages p ON p.id=m.passage_id
+        {join} WHERE {where} AND (
+        (m.custom_owner IS NOT NULL AND m.book='用户自定义'
+         AND length(trim(COALESCE(m.payload->>'现代释义','')))>0)
+        OR (m.custom_owner IS NULL AND f.surname='' AND p.active_for_recall
         AND (p.status='待核验' OR (p.status='已核验' AND p.can_generate=1))
-        AND COALESCE((m.payload->>'基础分')::int,0)>=85""", (value,)).fetchone()
+        AND COALESCE((m.payload->>'基础分')::int,0)>=85))""", (value,)).fetchone()
 
 
 def 创建分享(owner, p):

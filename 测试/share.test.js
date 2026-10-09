@@ -10,6 +10,15 @@ function loadShare(call, wx, renderShareImage) {
   return sandbox.module.exports.shareName;
 }
 
+test('custom names share their exact link with an honest user-defined source title', async () => {
+  const share = loadShare(async () => ({token: 'c'.repeat(32)}));
+  const result = share({id: 91, item: {name: '清和', displayName: '李清和', surname: '李', book: '用户自定义'}});
+  assert.match(result.title, /用户自定义/);
+  assert.doesNotMatch(result.title, /出自|《/);
+  const resolved = await result.promise;
+  assert.match(resolved.path, /share=c{32}&surname=/);
+});
+
 test('sharing the visible name resolves to its exact source link', async () => {
   const requests = [];
   const shareName = loadShare(async (action, data) => {

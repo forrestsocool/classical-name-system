@@ -60,7 +60,7 @@ def _渲染(name,book,chapter,tags_json):
     box=draw.textbbox((0,0),name,font=font)
     centered(name,350-(box[3]-box[1])/2,font,'#30493f')
     draw.line((768,578,832,578),fill='#a83d32',width=3)
-    source=f'《{book}》' + (f' · {chapter}' if chapter else '') if book else ''
+    source=book if book == '用户自定义' else f'《{book}》' + (f' · {chapter}' if chapter else '') if book else ''
     source_font=合适字体(source,44,960,True)
     if source_font.getlength(source)>960:
         while source and source_font.getlength(source+'…')>960: source=source[:-1]

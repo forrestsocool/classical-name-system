@@ -148,7 +148,7 @@ Page({
   async prepareFavoriteShare(event, silent = true) {
     const id = String(event.currentTarget.dataset.id);
     const card = this.data.cards.find(item => String(item.id) === id);
-    if (!card || card.item.isCustom || card.shareReady || card.sharePreparing) return;
+    if (!card || card.shareReady || card.sharePreparing) return;
     const update = patch => {
       if (!this.closed) this.setData({cards: this.data.cards.map(item =>
         String(item.id) === id ? {...item, ...patch} : item)});

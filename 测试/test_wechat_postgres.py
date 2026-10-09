@@ -121,7 +121,14 @@ class PostgreSQLTests(unittest.TestCase):
             self.assertNotEqual(other.json()['card']['id'], id)
             self.assertEqual(self.request('names.detail', {'material_id': id}, user='custom-B').status_code, 404)
             self.assertEqual(self.request('names.detail', {'material_id': id}, user='custom-A').status_code, 200)
-            self.assertEqual(self.request('shares.create', {'material_id': id, 'include_image': False}, user='custom-A').status_code, 404)
+            shared = self.request('shares.create', {'material_id': id, 'include_image': False}, user='custom-A')
+            self.assertEqual(shared.status_code, 200, shared.text)
+            token = shared.json()['token']
+            opened = self.request('shares.get', {'token': token, 'include_image': False}, user='custom-B')
+            self.assertEqual(opened.status_code, 200, opened.text)
+            self.assertEqual(opened.json()['card']['item']['书名'], '用户自定义')
+            self.assertEqual(self.request('shares.save', {'token': token}, user='custom-B').status_code, 200)
+            self.assertEqual(self.request('names.detail', {'material_id': id}, user='custom-B').status_code, 200)
             favorites = self.request('favorites.list', user='custom-A').json()['cards']
             self.assertEqual([card['id'] for card in favorites], [id])
             self.assertEqual(favorites[0]['item']['书名'], '用户自定义')

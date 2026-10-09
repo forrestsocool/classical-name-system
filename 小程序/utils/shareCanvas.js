@@ -59,7 +59,7 @@ async function draw(card, page) {
   ctx.strokeStyle = '#a83d32'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(384, 289); ctx.lineTo(416, 289); ctx.stroke();
   const small = '"PingFang SC", "Microsoft YaHei", sans-serif';
-  const source = book ? `《${book}》${chapter ? ' · ' + chapter : ''}` : '';
+  const source = book === '用户自定义' ? book : book ? `《${book}》${chapter ? ' · ' + chapter : ''}` : '';
   fit(ctx, source, 28, 520, small); ctx.fillStyle = '#52685b';
   ctx.fillText(ellipse(ctx, source, 520), 400, 327);
   let size = 25, widths;

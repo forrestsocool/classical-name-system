@@ -59,10 +59,6 @@ Page({
     }
   },
   async prepareShare(materialId) {
-    if (this.data.card && this.data.card.item.isCustom) {
-      this.setData({shareUnavailable: true});
-      return;
-    }
     if (this.data.shareLoading) return;
     this.setData({shareLoading: true, shareError: ''});
     try {
@@ -90,7 +86,7 @@ Page({
     };
     const name = card.item.displayName || card.item.name;
     const book = card.item.book;
-    return {title: book ? `「${name}」出自《${book}》，你觉得怎么样？` : `「${name}」，你觉得怎么样？`,
+    return {title: book === '用户自定义' ? `「${name}」｜用户自定义，你觉得怎么样？` : book ? `「${name}」出自《${book}》，你觉得怎么样？` : `「${name}」，你觉得怎么样？`,
       path: sharePath(this.data.shareToken, card), imageUrl: this.data.shareImageUrl || '/assets/share-cover.jpg'};
   },
   goBack() {

@@ -63,7 +63,7 @@ function shareName(card, page) {
   if (!card) return fallback;
   const name = card.item.displayName || card.item.name;
   const {book} = card.item;
-  const title = book ? `「${name}」出自《${book}》，你觉得怎么样？` : `「${name}」，你觉得怎么样？`;
+  const title = book === '用户自定义' ? `「${name}」｜用户自定义，你觉得怎么样？` : book ? `「${name}」出自《${book}》，你觉得怎么样？` : `「${name}」，你觉得怎么样？`;
   const cached = ready.get(shareKey(card));
   if (cached) return {title, path: sharePath(cached.token, card),
     imageUrl: cached.imageUrl};
