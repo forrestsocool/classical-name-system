@@ -5,7 +5,7 @@ const upstreamAgent = new https.Agent({ keepAlive: true, maxSockets: 8, maxFreeS
 const ACTIONS = new Set([
   'session.get', 'sources.list', 'feed.pull', 'names.analyze', 'names.detail',
   'shares.create', 'shares.get', 'shares.save',
-  'favorites.list', 'favorites.add', 'favorites.remove', 'feedback.save'
+  'favorites.list', 'favorites.add', 'favorites.custom', 'favorites.remove', 'feedback.save'
 ]);
 const SESSION_SECONDS = 12 * 60 * 60;
 

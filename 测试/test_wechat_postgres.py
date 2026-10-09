@@ -107,6 +107,29 @@ class PostgreSQLTests(unittest.TestCase):
     def pull(self, **kw):
         return {"request_id": str(uuid.uuid4()),"name_length":2,**kw}
 
+    def test_custom_favorites_are_private_idempotent_and_have_details(self):
+        payload = {'姓名': '清和', '书名': '用户自定义', '现代释义': '清润平和',
+                   '拼音带调': 'qīng hé', '男孩适配分': 60, '女孩适配分': 40}
+        with patch('后端.自定义名字.补全自定义名字', return_value=payload), \
+             patch('后端.小程序业务.分析姓名', return_value={'version': 'server-v1', 'analyzed_name': '清和'}), \
+             patch('后端.小程序业务.逐字出处', return_value=[]):
+            first = self.request('favorites.custom', {'name': '清和'}, user='custom-A')
+            self.assertEqual(first.status_code, 200, first.text)
+            id = first.json()['card']['id']
+            self.assertEqual(self.request('favorites.custom', {'name': '清和'}, user='custom-A').json()['card']['id'], id)
+            other = self.request('favorites.custom', {'name': '清和'}, user='custom-B')
+            self.assertNotEqual(other.json()['card']['id'], id)
+            self.assertEqual(self.request('names.detail', {'material_id': id}, user='custom-B').status_code, 404)
+            self.assertEqual(self.request('names.detail', {'material_id': id}, user='custom-A').status_code, 200)
+            self.assertEqual(self.request('shares.create', {'material_id': id, 'include_image': False}, user='custom-A').status_code, 404)
+            favorites = self.request('favorites.list', user='custom-A').json()['cards']
+            self.assertEqual([card['id'] for card in favorites], [id])
+            self.assertEqual(favorites[0]['item']['书名'], '用户自定义')
+            self.assertEqual(self.request('favorites.remove', {'material_id': id}, user='custom-A').status_code, 200)
+            self.assertEqual(self.request('favorites.custom', {'name': '清和'}, user='custom-A').json()['card']['id'], id)
+        with self.connect() as c:
+            self.assertEqual(c.execute('SELECT count(*) AS n FROM app_materials WHERE custom_owner IS NOT NULL').fetchone()['n'], 2)
+
     def test_migration_preserves_counts_and_sequences_and_rejects_repeat(self):
         self.assertGreater(self.counts["passages"], 9000)
         with self.connect() as c:

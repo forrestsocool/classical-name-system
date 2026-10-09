@@ -1,4 +1,13 @@
 <view class="favorites-page" bindtap="closeOnTap">
+  <view class="custom-entry">
+    <button class="custom-toggle" catchtap="toggleCustom" disabled="{{customSaving}}">{{customOpen ? '收起' : '新增自定义名字'}}</button>
+    <view class="custom-form" wx:if="{{customOpen}}">
+      <text class="custom-copy">输入不含姓氏的名字，自动补全五行、释义和男女适配标记。</text>
+      <input value="{{customName}}" bindinput="inputCustom" maxlength="2" disabled="{{customSaving}}" placeholder="如：清和（不含姓氏）" aria-label="自定义名字" />
+      <view class="custom-error" wx:if="{{customError}}">{{customError}}</view>
+      <button class="custom-submit" catchtap="saveCustom" loading="{{customSaving}}" disabled="{{customSaving}}">{{customSaving ? '正在补全名字信息…' : '补全并加入收藏'}}</button>
+    </view>
+  </view>
   <view class="collection-hint" wx:if="{{cards.length}}">
     <view class="hint-line"></view>
     <text>左滑卡片可取消收藏</text>
@@ -58,9 +67,9 @@
           <view class="favorite-pinyin">{{item.item.pinyin}}</view>
         </view>
         <view class="favorite-actions">
-        <button class="favorite-share-button" open-type="share" catchtap="prepareFavoriteShare" data-id="{{item.id}}" aria-label="分享{{item.item.displayName}}"><image src="/assets/icons/share-green.svg" mode="aspectFit" /><text>分享</text></button>
+        <button class="favorite-share-button" wx:if="{{!item.item.isCustom}}" open-type="share" catchtap="prepareFavoriteShare" data-id="{{item.id}}" aria-label="分享{{item.item.displayName}}"><image src="/assets/icons/share-green.svg" mode="aspectFit" /><text>分享</text></button>
         <button class="source-button" data-id="{{item.id}}" disabled="{{removingId}}" catchtap="detail" aria-label="查看{{item.item.displayName}}的出处与释义">
-          <image src="/assets/icons/document-green.svg" mode="aspectFit" /><text>查看出处</text><image class="source-arrow" src="/assets/icons/arrow-right-green.svg" mode="aspectFit" />
+          <image src="/assets/icons/document-green.svg" mode="aspectFit" /><text>{{item.item.isCustom ? '查看释义与五行' : '查看出处'}}</text><image class="source-arrow" src="/assets/icons/arrow-right-green.svg" mode="aspectFit" />
         </button>
         </view>
       </view>
@@ -70,7 +79,7 @@
       </view>
       <view class="favorite-source">
         <image src="/assets/icons/book-open.svg" mode="aspectFit" />
-        <text>《{{item.item.book}}》<text wx:if="{{item.item.chapter}}"> · {{item.item.chapter}}</text></text>
+        <text>{{item.item.isCustom ? '用户自定义' : '《' + item.item.book + '》'}}<text wx:if="{{item.item.chapter}}"> · {{item.item.chapter}}</text></text>
       </view>
     </view>
   </view>

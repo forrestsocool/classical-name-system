@@ -56,6 +56,10 @@ class 名字参数(严格参数):
     material_id: 名字编号
 
 
+class 自定义名字参数(严格参数):
+    name: str = Field(min_length=1, max_length=2, pattern=r"^[\u3400-\u9fff]{1,2}$")
+
+
 class 反馈参数(名字参数):
     kind: Literal["不喜欢", "出处问题", "释义问题"]
     comment: str = Field(default="", max_length=500)
@@ -302,6 +306,36 @@ def 收藏(owner, p):
     return {"saved": True}
 
 
+def 自定义收藏(owner, p):
+    from .自定义名字 import 补全自定义名字
+    from .持续生产 import 预留模型调用, 额度上限
+    with 连接数据库() as c:
+        row = c.execute("SELECT id,payload FROM app_materials WHERE custom_owner=%s AND given_name=%s",
+                        (owner, p.name)).fetchone()
+    if not row:
+        with 连接数据库() as c:
+            if 预留模型调用(c, 额度上限()):
+                raise HTTPException(429, '名字补全服务繁忙，请稍后重试')
+        try:
+            payload = 补全自定义名字(p.name)
+        except (RuntimeError, ValueError):
+            raise HTTPException(503, '名字信息补全失败，请稍后重试') from None
+    with 连接数据库() as c:
+        # Serialize favorite creation with this user's feed and retry requests.
+        c.execute("SELECT id FROM app_users WHERE id=%s FOR UPDATE", (owner,))
+        if not row:
+            row = c.execute("""INSERT INTO app_materials(given_name,full_name,book,payload,custom_owner)
+                VALUES (%s,%s,'用户自定义',%s,%s)
+                ON CONFLICT(custom_owner,given_name) WHERE custom_owner IS NOT NULL
+                DO UPDATE SET given_name=excluded.given_name RETURNING id,payload""",
+                (p.name, p.name, Jsonb(payload), owner)).fetchone()
+        c.execute("INSERT INTO app_seen_names(owner,given_name) VALUES (%s,%s) ON CONFLICT DO NOTHING", (owner, p.name))
+        c.execute("""INSERT INTO app_deliveries(owner,full_name,material_id) VALUES (%s,%s,%s)
+            ON CONFLICT(owner,material_id) DO NOTHING""", (owner, p.name, row['id']))
+        c.execute("INSERT INTO app_favorites(owner,material_id) VALUES (%s,%s) ON CONFLICT DO NOTHING", (owner, row['id']))
+    return {'saved': True, 'card': 卡片(row, include_wuxing=True)}
+
+
 def 取消收藏(owner, p):
     with 连接数据库() as c:
         c.execute("DELETE FROM app_favorites WHERE owner=%s AND material_id=%s", (owner, p.material_id))
@@ -336,4 +370,5 @@ def 反馈(owner, p):
       "shares.create": (创建分享参数, 创建分享), "shares.get": (分享链接参数, 打开分享),
       "shares.save": (分享链接参数, 收藏分享),
       "favorites.add": (名字参数, 收藏), "favorites.remove": (名字参数, 取消收藏),
+      "favorites.custom": (自定义名字参数, 自定义收藏),
       "favorites.compare": (比较参数, 比较), "feedback.save": (反馈参数, 反馈)}

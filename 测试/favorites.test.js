@@ -16,6 +16,43 @@ function deferred() {
   const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
   return {promise, resolve, reject};
 }
+
+test('custom favorite validates given names, prevents duplicates and refreshes after success', async () => {
+  const pending = deferred();
+  const actions = [];
+  const {page, events} = harness((action, data) => {
+    actions.push({action, data});
+    if (action === 'favorites.custom') return pending.promise;
+    return Promise.resolve({cards: [{...card(90), item: {...card(90).item, 书名: '用户自定义'}}]});
+  });
+  page.toggleCustom();
+  page.inputCustom({detail: {value: 'abc'}});
+  await page.saveCustom();
+  assert.equal(actions.length, 0);
+  assert.ok(page.data.customError);
+  page.inputCustom({detail: {value: '清和'}});
+  const save = page.saveCustom();
+  await page.saveCustom();
+  assert.equal(actions.length, 1);
+  assert.equal(actions[0].data.name, '清和');
+  pending.resolve({saved: true});
+  await save;
+  assert.equal(page.data.customSaving, false);
+  assert.equal(page.data.customOpen, false);
+  assert.equal(page.data.cards[0].item.isCustom, true);
+  assert.equal(events.toasts[0].title, '已加入收藏');
+});
+
+test('failed custom enrichment retains input and allows retry', async () => {
+  const {page} = harness(async () => {throw new Error('补全失败');});
+  page.toggleCustom();
+  page.inputCustom({detail: {value: '清和'}});
+  await page.saveCustom();
+  assert.equal(page.data.customName, '清和');
+  assert.equal(page.data.customOpen, true);
+  assert.equal(page.data.customSaving, false);
+  assert.equal(page.data.customError, '补全失败');
+});
 function harness(call, surname = '赵', prepareShare) {
   let page;
   const app = {session: async () => 'user-A', namePreferences: {surname}};

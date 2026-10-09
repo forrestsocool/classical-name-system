@@ -8,7 +8,8 @@ Page({
   data: {
     cards: [], nextCursor: null, loading: false, refreshing: false,
     removingId: null, error: '', initialized: false,
-    openId: null, slideX: 0, dragging: false
+    openId: null, slideX: 0, dragging: false,
+    customOpen: false, customName: '', customSaving: false, customError: ''
   },
   onLoad() {
     const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
@@ -112,6 +113,32 @@ Page({
     return task;
   },
   retry() { return this.reload(); },
+  toggleCustom() {
+    if (this.data.customSaving) return;
+    this.closeRow();
+    this.setData({customOpen: !this.data.customOpen, customError: ''});
+  },
+  inputCustom(event) { this.setData({customName: event.detail.value, customError: ''}); },
+  async saveCustom() {
+    if (this.closed || this.data.customSaving) return;
+    const name = this.data.customName.trim();
+    if (!/^[\u3400-\u9fff]{1,2}$/.test(name)) {
+      this.setData({customError: '请输入不含姓氏的 1～2 个汉字'});
+      return;
+    }
+    this.setData({customSaving: true, customError: ''});
+    try {
+      await call('favorites.custom', {name});
+      if (this.closed) return;
+      this.setData({customOpen: false, customName: ''});
+      wx.showToast({title: '已加入收藏', icon: 'none'});
+      await this.reload();
+    } catch (error) {
+      if (!this.closed) this.setData({customError: error.message || '新增失败，请稍后重试'});
+    } finally {
+      if (!this.closed) this.setData({customSaving: false});
+    }
+  },
   async warmShares(cards) {
     for (let offset = 0; offset < Math.min(cards.length, 2) && !this.closed; offset += 2) {
       await Promise.all(cards.slice(offset, offset + 2).map(card =>
@@ -121,7 +148,7 @@ Page({
   async prepareFavoriteShare(event, silent = true) {
     const id = String(event.currentTarget.dataset.id);
     const card = this.data.cards.find(item => String(item.id) === id);
-    if (!card || card.shareReady || card.sharePreparing) return;
+    if (!card || card.item.isCustom || card.shareReady || card.sharePreparing) return;
     const update = patch => {
       if (!this.closed) this.setData({cards: this.data.cards.map(item =>
         String(item.id) === id ? {...item, ...patch} : item)});

@@ -59,6 +59,10 @@ Page({
     }
   },
   async prepareShare(materialId) {
+    if (this.data.card && this.data.card.item.isCustom) {
+      this.setData({shareUnavailable: true});
+      return;
+    }
     if (this.data.shareLoading) return;
     this.setData({shareLoading: true, shareError: ''});
     try {

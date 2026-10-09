@@ -1,2 +1,2 @@
 // The source build marker also identifies preview builds, where version is empty.
-module.exports = {version: '0.4.54', revision: 'haoming-shuzhonglai'};
+module.exports = {version: '0.4.55', revision: 'custom-favorites'};

@@ -31,6 +31,7 @@ function normalizeItem(item = {}, surname = '') {
     meaning: item.meaning || item['现代释义'] || '',
     tags: item.tags || item['文化标签'] || [],
     book,
+    isCustom: book === '用户自定义',
     isGaokao: book === '历年高考状元',
     chapter: item.chapter || item['篇章'] || '',
     examSources: item.examSources || item['高考来源'] || [],

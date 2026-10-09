@@ -5,6 +5,14 @@
   background: #f8f7f2;
   overflow-x: hidden;
 }
+.custom-entry { margin: 18rpx 0 28rpx; }
+.custom-toggle { margin: 0 0 0 auto; width: auto; padding: 0 24rpx; color: #07594f; background: #f2f7f2; border: 1rpx solid #dfe8e2; border-radius: 18rpx; font-size: 25rpx; line-height: 70rpx; }
+.custom-form { padding: 26rpx; margin-top: 18rpx; background: #fffefa; border: 1rpx solid #e8ebe5; border-radius: 24rpx; }
+.custom-copy { color: #7e8d90; font-size: 24rpx; line-height: 1.7; }
+.custom-form input { margin: 24rpx 0; height: 84rpx; padding: 0 20rpx; border: 1rpx solid #dfe8e2; border-radius: 12rpx; font-size: 30rpx; }
+.custom-submit { color: #fffefa; background: #07594f; border-radius: 18rpx; font-size: 26rpx; }
+.custom-toggle::after, .custom-submit::after { border: 0; }
+.custom-error { color: #a0634c; font-size: 24rpx; margin-bottom: 20rpx; }
 .collection-hint { height: 70rpx; margin: 0 28rpx 18rpx; display: flex; align-items: center; justify-content: center; gap: 22rpx; color: #7e8d90; font-size: 22rpx; letter-spacing: 2rpx; }
 .hint-line { width: 54rpx; height: 1rpx; background: #d7dfd6; }
 .favorite-row { position: relative; margin-bottom: 30rpx; border-radius: 24rpx; overflow: hidden; background: #f2e6df; box-shadow: 0 8rpx 24rpx rgba(45, 63, 54, .045); }
