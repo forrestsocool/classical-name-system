@@ -1,2 +1,2 @@
 // The source build marker also identifies preview builds, where version is empty.
-module.exports = {version: '0.4.59', revision: 'custom-name-sharing'};
+module.exports = {version: '0.4.60', revision: 'https-edgeone-gateway'};

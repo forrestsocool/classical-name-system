@@ -1,6 +1,6 @@
 # 好名书中来 · 微信小程序版
 
-本分支将选名入口迁移到微信小程序。CloudBase 云函数负责微信身份与签名接入；古籍召回、模型审稿、持续入库和 PostgreSQL 全部运行在自有服务器。服务器网页只提供管理后台。
+本分支将选名入口迁移到微信小程序。小程序通过 HTTPS 访问 `name.wxapp.655567.xyz`，经已有 EdgeOne CDN 回源到 `name.sensen.li`；服务器用微信登录码换取可信身份并签发会话。古籍召回、模型审稿、持续入库和 PostgreSQL 均运行在自有服务器。服务器网页提供管理后台。
 
 - [划卡改造方案](千千嘉名划卡改造方案.md)：打开即划卡、共享队列和曝光迁移。
 - [生产部署说明](部署/生产部署说明.md)：数据库迁移、云函数、小程序、管理与备份。
@@ -13,7 +13,8 @@
 | 目录 / 入口 | 职责 |
 | --- | --- |
 | `小程序/` | 单双字切换、滑卡、出处、收藏、比较、反馈 |
-| `云函数/nameGateway/` | 微信可信身份、动作白名单、HMAC 签名、HTTPS 转发 |
+| `后端/HTTPS接入.py` | 正式 HTTPS 入口、微信可信身份、短期会话和动作鉴权 |
+| `云函数/nameGateway/` | 保留旧版客户端的兼容入口；新版不调用 |
 | `后端/小程序服务.py` | 新版 FastAPI；内部业务接入与独立管理 API |
 | `后端/持续生产.py` | 常驻生产进程；单双字队列轮换、可选预算、失败退避 |
 | `后端/迁移/` | PostgreSQL 资料、历史记录和新业务表 |
@@ -36,7 +37,7 @@ docker compose run --rm migrate
 docker compose up -d api producer
 ```
 
-管理后台：`http://127.0.0.1:8000/admin`。小程序使用正式 AppID `wx3d9171fa1ecde642` 和已关联的云环境 `cloud1-d4g0by2075923531d`，只通过 `wx.cloud.callFunction` 调用 `nameGateway`；云函数再签名访问自有服务器。客户端已移除测试 HTTP 直连，开发者工具启用域名校验。AppSecret 不参与这条原生云开发身份链路，也不需要写入小程序或服务器配置。实际部署与体验版状态见上方体验文档。
+管理后台：`http://127.0.0.1:8000/admin`。小程序使用正式 AppID `wx3d9171fa1ecde642`，通过 `wx.login` 获取登录码，再使用 `wx.request` 调用 `https://name.wxapp.655567.xyz/api/v1/dispatch`。服务器必须配置 `WECHAT_APP_SECRET` 和会话签名密钥 `GATEWAY_SECRET`；两者均不进入小程序包。公众平台 request 合法域名须包含该 HTTPS 域名，开发者工具保持域名校验。原 AppID + OpenID 派生用户编号不变，已有收藏与偏好继续使用。实际部署与体验版状态见体验文档。
 
 `https://<envId>.api.tcloudbasegateway.com/v1/ai/cloudbase` 是 CloudBase AI 模型的 Base URL，不是业务云函数入口；环境 API Key 只允许放在服务器或云函数环境变量中。
 

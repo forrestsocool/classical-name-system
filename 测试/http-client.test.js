@@ -42,6 +42,14 @@ test('HTTP client shares one WeChat login over the configured gateway', async ()
   assert.equal(c.requests[1].data.sessionToken, 'signed-session');
 });
 
+test('production config routes through the HTTPS CDN instead of a cloud function', () => {
+  const config = require('../小程序/config');
+  assert.equal(config.mode, 'http');
+  assert.equal(config.httpUrl, 'https://name.wxapp.655567.xyz/api/v1/dispatch');
+  assert.equal(config.envId, undefined);
+  assert.equal(config.gateway, undefined);
+});
+
 test('HTTP client renews an expired session once before retrying', async () => {
   let firstFeed = true;
   const c = client(payload => {

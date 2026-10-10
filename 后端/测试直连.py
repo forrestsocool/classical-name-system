@@ -75,7 +75,7 @@ def 换取开放身份(code):
     appid = os.getenv("WECHAT_APP_ID", "")
     secret = os.getenv("WECHAT_APP_SECRET", "")
     if not appid or not secret:
-        raise HTTPException(503, "测试号登录尚未配置")
+        raise HTTPException(503, "微信登录尚未配置")
     query = urllib.parse.urlencode({"appid": appid, "secret": secret,
                                     "js_code": code, "grant_type": "authorization_code"})
     request = urllib.request.Request("https://api.weixin.qq.com/sns/jscode2session?" + query,

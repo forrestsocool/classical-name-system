@@ -1,7 +1,7 @@
 const config = require('../config');
 
 // Share one WeChat login between simultaneous page requests. Keep the session
-// in memory so that changing CloudBase environments cannot reuse an old token.
+// in memory; never persist login codes or session tokens to local storage.
 let sessionToken = '';
 let sessionData = null;
 let loginPromise = null;

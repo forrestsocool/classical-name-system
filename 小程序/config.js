@@ -1,5 +1,4 @@
 module.exports = {
-  envId: 'cloud1-d4g0by2075923531d',
-  gateway: 'nameGateway',
-  mode: 'cloud'
+  httpUrl: 'https://name.wxapp.655567.xyz/api/v1/dispatch',
+  mode: 'http'
 };

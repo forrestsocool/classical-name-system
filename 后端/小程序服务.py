@@ -18,6 +18,7 @@ from .小程序业务 import 严格参数, 动作
 from .小程序业务 import 可分享物料
 from .分享图片 import 渲染分享图片
 from .测试直连 import 已启用, 测试分发, 测试分发请求, 测试登录请求, 换取开放身份, 签发令牌
+from .HTTPS接入 import HTTPS请求, HTTPS分发
 from .管理接口 import 路由 as 管理路由, 管理权限
 
 应用 = FastAPI(title="古籍起名管理与小程序内部服务", version="1.0.0", docs_url=None, redoc_url=None, openapi_url=None)
@@ -151,6 +152,22 @@ async def 测试号登录(body: 测试登录请求):
         raise HTTPException(404, "测试接入未启用")
     appid, openid = await run_in_threadpool(换取开放身份, body.code)
     return {"token": 签发令牌(appid, openid), "user_id": 用户身份(appid, openid)}
+
+
+@应用.post('/api/v1/dispatch', include_in_schema=False)
+async def HTTPS业务接入(request: Request):
+    try:
+        body = bytearray()
+        async for chunk in request.stream():
+            body.extend(chunk)
+            if len(body)>16384:
+                raise HTTPException(413, '请求过大')
+        参数 = HTTPS请求.model_validate_json(bytes(body))
+        return {'ok':True, 'data':await run_in_threadpool(HTTPS分发, 参数)}
+    except ValidationError:
+        return JSONResponse({'ok':False, 'status':422, 'message':'请求参数格式不正确'}, status_code=422)
+    except HTTPException as error:
+        return JSONResponse({'ok':False, 'status':error.status_code, 'message':error.detail}, status_code=error.status_code, headers=error.headers)
 
 
 @应用.post("/api/test/dispatch", include_in_schema=False)
