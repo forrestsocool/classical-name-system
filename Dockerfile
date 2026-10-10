@@ -16,6 +16,9 @@ COPY 脚本/ /app/脚本/
 COPY 资料配置/ /app/资料配置/
 COPY 古籍与东亚年号参考资料/ /app/古籍与东亚年号参考资料/
 COPY 公安部姓名报告参考资料/ /app/公安部姓名报告参考资料/
+COPY 汉字五行知识库/model_overlay.py /app/汉字五行知识库/model_overlay.py
+COPY 汉字五行知识库/data/wuxing_knowledge_base.json /app/汉字五行知识库/data/wuxing_knowledge_base.json
+COPY 汉字五行知识库/data/wuxing_model_profiles.json /app/汉字五行知识库/data/wuxing_model_profiles.json
 
 EXPOSE 8000
 

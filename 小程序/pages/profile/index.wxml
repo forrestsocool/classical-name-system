@@ -1,0 +1,31 @@
+<view class="profile-page">
+  <view class="profile-panel source-panel">
+    <view class="section-head"><image class="section-icon" src="/assets/icons/book-open.svg" mode="aspectFit" /><text class="section-title">名字来源</text></view>
+    <view class="source-status" wx:if="{{sourceLoading && sourceCount === 0}}">正在翻阅来源目录…</view>
+    <view class="source-error" wx:if="{{sourceError}}"><text>{{sourceError}}</text><button bindtap="loadSources">重新加载</button></view>
+    <view class="source-row" wx:for="{{sources}}" wx:key="name">
+      <view class="source-info"><text class="source-name">{{item.name}}</text><text class="source-kind">{{item.kind}}</text></view>
+      <switch class="source-switch" color="#216255" checked="{{item.enabled}}" data-name="{{item.name}}" bindchange="sourceChange" aria-label="{{item.name}}，{{item.enabled ? '已开启' : '已关闭'}}" />
+    </view>
+  </view>
+
+  <view class="profile-panel character-panel" wx:if="{{showCharacterFilters}}">
+    <view class="section-head"><image class="section-icon" src="/assets/icons/leaf.svg" mode="aspectFit" /><text class="section-title">名字用字</text><text class="section-caption">选填</text></view>
+    <view class="character-field">
+      <view class="field-heading"><text>必须包含的字</text><text class="field-limit">{{required.length}} / 2</text></view>
+      <input class="character-input" value="{{required}}" data-field="required" bindinput="characterInput" maxlength="64" placeholder="如：清宁" placeholder-class="input-placeholder" disabled="{{!ready}}" />
+      <view class="field-hint">每个字都要出现在名字中，顺序不限</view>
+    </view>
+    <view class="character-field">
+      <view class="field-heading"><text>避开的字</text><text class="field-limit">{{excluded.length}} / 32</text></view>
+      <input class="character-input" value="{{excluded}}" data-field="excluded" bindinput="characterInput" maxlength="128" placeholder="填入不希望出现的字" placeholder-class="input-placeholder" disabled="{{!ready}}" />
+      <view class="field-hint">名字含有其中任一字，就不会推荐</view>
+    </view>
+    <view class="input-error" wx:if="{{inputError}}">{{inputError}}，本次用字修改未保存</view>
+    <view class="section-note" wx:else>留空即不限 · 只筛选名字，不包含姓氏</view>
+  </view>
+
+  <view class="save-notice" aria-live="polite">{{inputError ? '请先调整有冲突的用字' : (savedNotice || '设置自动保存，返回首页即可继续挑选')}}</view>
+  <button class="profile-button" bindtap="chooseNames" disabled="{{!ready || !!inputError}}">继续寻名<image src="/assets/icons/arrow-right.svg" mode="aspectFit" /></button>
+  <view class="profile-version">好名书中来 {{buildVersion}}</view>
+</view>

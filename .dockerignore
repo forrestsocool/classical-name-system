@@ -14,3 +14,9 @@ node_modules
 构建产物/*.sqlite3-wal
 构建产物/*.sqlite3-shm
 构建产物/起名系统-校勘完成.sqlite3
+汉字五行知识库/*
+!汉字五行知识库/model_overlay.py
+!汉字五行知识库/data/
+汉字五行知识库/data/*
+!汉字五行知识库/data/wuxing_knowledge_base.json
+!汉字五行知识库/data/wuxing_model_profiles.json

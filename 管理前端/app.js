@@ -16,9 +16,9 @@ function table(target,rows,fields,action){
 async function refresh(){
   const [m,p,c,f]=await Promise.all([api('metrics'),api('profiles'),api('model-config'),api('feedback')]);
   $('#metrics').replaceChildren(...Object.entries(m.totals).map(([name,value])=>{const n=el('div');n.className='stat';n.append(el('span',name),el('strong',value));return n;}));
-  $('#worker').textContent=`生产进程：${m.worker?(m.worker.alive?m.worker.status:'心跳中断'):'尚未启动'} · 今日批次 ${m.today_batches} / ${m.daily_limit}${m.worker?.last_error?' · '+m.worker.last_error:''}`;
-  table($('#sources'),m.sources,[['姓氏','surname'],['字数','name_length'],['来源','book'],['批次','batches'],['入库','accepted'],['连续失败','failures'],['异常','last_error']]);
-  table($('#profiles'),p,[['姓氏','surname'],['字数','name_length'],['库存','stock'],['启用','enabled']],row=>{const b=el('button',row.enabled?'暂停':'启用');b.onclick=()=>work(b,async()=>{await api('profiles','PUT',{surname:row.surname,name_length:row.name_length,enabled:!row.enabled});await refresh();});return b;});
+  $('#worker').textContent=`生产进程：${m.worker?(m.worker.alive?m.worker.status:'心跳中断'):'尚未启动'} · 今日批次 ${m.today_batches} · ${m.daily_limit>0?'每日上限 '+m.daily_limit:'持续生产，无每日批次上限'}${m.worker?.last_error?' · '+m.worker.last_error:''}`;
+  table($('#sources'),m.sources,[['字数','name_length'],['来源','book'],['批次','batches'],['入库','accepted'],['连续失败','failures'],['异常','last_error']]);
+  table($('#profiles'),p,[['字数','name_length'],['库存','stock'],['启用','enabled']],row=>{const b=el('button',row.enabled?'暂停':'启用');b.onclick=()=>work(b,async()=>{await api('profiles','PUT',{name_length:row.name_length,enabled:!row.enabled});await refresh();});return b;});
   for(const name of ['地址','模型','超时秒数'])$('#model').elements[name].value=c[name];$('#modelStatus').textContent=c.已配置?'模型已配置':'尚未配置模型';
   table($('#feedback'),f,[['姓名','full_name'],['来源','book'],['类型','kind'],['内容','comment'],['时间','created_at']]);
 }
@@ -26,7 +26,6 @@ async function work(button,fn){if(button.disabled)return;button.disabled=true;tr
 $('#login').onsubmit=e=>{e.preventDefault();key=$('#adminKey').value;$('#adminKey').value='';work(e.submitter,async()=>{await refresh();$('#console').hidden=false;});};
 $('#logout').onclick=()=>{key='';$('#console').hidden=true;$('#model').reset();$('#reviews').replaceChildren();message('已退出');};
 $('#refresh').onclick=e=>work(e.target,refresh);
-$('#profile').onsubmit=e=>{e.preventDefault();const f=e.target.elements;work(e.submitter,async()=>{await api('profiles','PUT',{surname:f.surname.value.trim(),name_length:Number(f.name_length.value),enabled:true});await refresh();});};
 $('#model').onsubmit=e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target));data.超时秒数=Number(data.超时秒数);work(e.submitter,async()=>{await api('model-config','PUT',data);e.target.elements['密钥'].value='';await refresh();});};
 function updateStatuses(){const select=$('#reviewStatus');select.replaceChildren(...statuses[$('#reviewKind').value].map(s=>{const n=el('option',s);n.value=s;return n;}));}
 $('#reviewKind').onchange=updateStatuses;updateStatuses();

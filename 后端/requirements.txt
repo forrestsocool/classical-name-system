@@ -5,3 +5,5 @@ tzdata==2025.2
 lunar-python==1.4.8
 pypinyin==0.55.0
 psycopg[binary]==3.2.13
+psycopg-pool==3.2.7
+Pillow==11.1.0

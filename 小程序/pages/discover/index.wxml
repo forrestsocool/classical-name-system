@@ -1,21 +1,133 @@
-<view class="page">
-  <view class="eyebrow">一 字 一 意 · 一 名 一 生</view><view class="title">在古籍里，遇见好名字</view><view class="muted">循着文字的来处，寻找心中的名字。</view>
-  <view class="panel" wx:if="{{editing}}">
-    <view class="row"><view><view class="label">宝宝姓氏</view><input class="input" value="{{surname}}" maxlength="2" placeholder="如：李、欧阳" data-field="surname" bindinput="input" /></view><view><view class="label">名字字数</view><picker range="{{lengthLabels}}" value="{{lengthIndex}}" bindchange="lengthChange"><view class="input">{{lengthLabels[lengthIndex]}} ▾</view></picker></view></view>
-    <view class="row"><view><view class="label">固定字 · 选填</view><input class="input" value="{{required}}" maxlength="2" placeholder="希望包含的字" data-field="required" bindinput="input" /></view><view><view class="label">避用字 · 选填</view><input class="input" value="{{excluded}}" maxlength="32" placeholder="不想使用的字" data-field="excluded" bindinput="input" /></view></view>
-    <button class="button" loading="{{busy}}" disabled="{{busy}}" bindtap="start">开始寻名</button>
-  </view>
-  <view wx:else>
-    <view class="link" bindtap="edit">{{surname}}姓 · {{nameLength}}字名{{required ? ' · 含' + required : ''}}　修改条件</view>
-    <view class="panel" wx:if="{{current}}" bindtouchstart="touchStart" bindtouchend="touchEnd" bindtouchcancel="touchCancel">
-      <view class="card-top"><text class="label">来自《{{current.item.书名}}》</text><text class="label">{{remaining}} 个待看</text></view>
-      <view class="name">{{current.item.姓名}}</view><view class="pinyin">{{current.item.拼音带调}}</view>
-      <view class="meaning">{{current.item.现代释义}}</view><view><text class="tag" wx:for="{{current.item.文化标签}}" wx:key="*this">{{item}}</text></view>
-      <view class="source">《{{current.item.书名}}》 · {{current.item.篇章}}</view><view class="link" catchtap="detail">读原文，了解名字的来处 →</view>
+<view class="discover-page" style="padding-top:{{statusBarHeight}}px">
+  <image class="hero-landscape" style="top:{{statusBarHeight - 12}}px" src="/assets/landscape.svg" mode="aspectFill" aria-hidden="true" />
+  <image class="footer-landscape" src="/assets/footer-mountains.svg" mode="scaleToFill" aria-hidden="true" />
+  <view class="hero" style="height:{{navHeight}}px">
+    <view class="brand-row">
+      <view class="brand-name">好名书中来</view>
     </view>
-    <view class="empty" wx:else><view>{{busy ? '正在翻阅名字…' : '好名字，值得慢慢遇见'}}</view><view class="muted">{{hint}}</view><button class="button secondary" disabled="{{busy || cooldown > 0}}" bindtap="load">{{cooldown > 0 ? cooldown + '秒后再看' : '再看一看'}}</button></view>
-    <view class="row" wx:if="{{current}}"><button class="button secondary" disabled="{{busy}}" bindtap="skip">再看一个</button><button class="button" disabled="{{busy}}" loading="{{saving}}" bindtap="favorite">♡ 收藏这个</button></view>
-    <view class="note" wx:if="{{current}}">左滑换一个 · 右滑收藏。名字释义由模型辅助整理，出处可自行核对。</view>
   </view>
-  <view class="muted error" wx:if="{{error}}">{{error}}</view>
+  <view class="brand-copy">
+    <view class="brand-subtitle">从典籍深处，寻一个好名字</view>
+    <view class="brand-motto"><view></view><text>好名伴一生</text><view></view></view>
+  </view>
+
+  <view class="filters">
+    <view class="filter-control surname-control">
+      <text class="filter-label">姓氏</text>
+      <input class="surname-input" value="{{surname}}" maxlength="32" placeholder="选填" placeholder-class="input-placeholder" bindinput="onSurnameInput" />
+    </view>
+    <picker class="gender-picker" mode="selector" range="{{genderLabels}}" value="{{genderIndex}}" bindchange="genderChange">
+      <view class="filter-control gender-control">
+        <image src="/assets/icons/{{genderIcon}}.svg" mode="aspectFit" />
+        <text>{{genderLabel}}</text>
+        <view class="chevron"></view>
+      </view>
+    </picker>
+    <view class="length-switch" aria-label="名字字数">
+      <view class="length-option {{nameLength === 1 ? 'is-active' : ''}}" data-length="1" bindtap="lengthChange">单字</view>
+      <view class="length-option {{nameLength === 2 ? 'is-active' : ''}}" data-length="2" bindtap="lengthChange">双字</view>
+    </view>
+  </view>
+
+  <view class="deck" wx:if="{{ready}}">
+    <view class="name-card card-shadow card-third" wx:if="{{current}}"></view>
+    <view class="name-card card-shadow card-next" style="{{stackStyle}}" wx:if="{{next && !saving}}">
+      <view class="next-name {{nameFontReady ? 'wenkai-name' : ''}}">{{next.item.displayName}}</view>
+    </view>
+    <view
+      class="name-card card-current {{current.item.wuxing.status ? 'card-has-wuxing-note' : ''}}"
+      style="{{cardStyle}}"
+      wx:if="{{current}}"
+      bindtouchstart="touchStart"
+      catchtouchmove="touchMove"
+      bindtouchend="touchEnd"
+      bindtouchcancel="touchCancel"
+      catchtap="detail"
+    >
+      <image class="card-landscape" src="/assets/card-landscape.svg" mode="aspectFit" />
+      <image class="bamboo" src="/assets/bamboo.svg" mode="aspectFit" />
+      <view class="save-state" wx:if="{{saving}}" aria-live="polite">
+        <view class="save-state-mark"><view></view><view></view><view></view></view>
+        <text>正在收藏</text>
+      </view>
+      <block wx:else>
+        <view class="decision decision-skip" style="opacity:{{skipOpacity}}">不喜欢</view>
+        <view class="decision decision-like" style="opacity:{{likeOpacity}}">收藏</view>
+        <view class="card-heading">
+          <view class="name-block">
+            <view class="candidate-name {{nameFontReady ? 'wenkai-name' : ''}} {{current.item.displayName.length > 3 ? 'candidate-name-long' : ''}}">{{current.item.displayName}}</view>
+            <view class="candidate-pinyin">{{current.item.pinyin}}</view>
+          </view>
+          <view class="gender-scores">
+            <view class="score-pill score-male"><image src="/assets/icons/male-muted.svg" mode="aspectFit" /><text>{{current.item.maleScore}}%</text></view>
+            <view class="score-divider"></view>
+            <view class="score-pill score-female"><image src="/assets/icons/female-muted.svg" mode="aspectFit" /><text>{{current.item.femaleScore}}%</text></view>
+          </view>
+          <view class="wuxing-panel" aria-label="姓名五行取象强度">
+            <view class="wuxing-grid {{current.item.wuxing.available ? '' : 'wuxing-unavailable'}}">
+              <view class="wuxing-tile wuxing-{{element.key}}" wx:for="{{current.item.wuxing.items}}" wx:for-item="element" wx:key="key" aria-label="{{element.description}}">
+                <text class="wuxing-label">{{element.label}}</text>
+                <view class="wuxing-meter" aria-hidden="true">
+                  <view class="wuxing-cell" wx:for="{{element.cells}}" wx:for-item="cell" wx:key="id"><view class="wuxing-fill" style="width:{{cell.fill}}%"></view></view>
+                </view>
+              </view>
+            </view>
+            <view class="wuxing-status" wx:if="{{current.item.wuxing.status}}">{{current.item.wuxing.status}}</view>
+          </view>
+        </view>
+        <view class="card-story">
+          <view class="candidate-meaning">{{current.item.meaning}}</view>
+          <view class="tags" wx:if="{{current.item.tags.length}}">
+            <text class="tag" wx:for="{{current.item.tags}}" wx:key="*this" wx:if="{{index < 3}}">{{item}}</text>
+          </view>
+        </view>
+        <view class="card-footer">
+          <view class="card-source" wx:if="{{current.item.book}}">
+            <image src="/assets/icons/book-open.svg" mode="aspectFit" />
+            <text>《{{current.item.book}}》<text wx:if="{{current.item.chapter}}"> · {{current.item.chapter}}</text></text>
+          </view>
+          <view class="card-detail" catchtap="detail" role="button" aria-label="查看名字的出处与释义">
+            <text>查看出处</text><image src="/assets/icons/arrow-right-green.svg" mode="aspectFit" />
+          </view>
+        </view>
+      </block>
+    </view>
+
+    <view class="deck-empty" wx:else>
+      <view class="loading-mark" wx:if="{{loading}}"><view></view><view></view><view></view></view>
+      <view class="empty-title">{{loading ? '正在翻阅典籍' : (hasFilters ? '暂无符合条件的新名字' : '这一叠已经看完')}}</view>
+      <view class="empty-copy" wx:if="{{!loading}}">{{filterMessage || (hasFilters ? '可调整个人中心的来源或用字条件' : (cooldown > 0 ? cooldown + ' 秒后继续送来新名字' : '可换一种筛选，或稍后再来'))}}</view>
+      <button class="retry-button" wx:if="{{!loading && hasFilters}}" bindtap="editFilters">调整筛选</button>
+      <button class="retry-button" wx:elif="{{!loading}}" disabled="{{cooldown > 0}}" bindtap="retry">{{cooldown > 0 ? '稍候片刻' : '再寻一叠'}}</button>
+    </view>
+  </view>
+
+  <view class="deck deck-loading" wx:else>
+    <view class="deck-empty"><view class="loading-mark"><view></view><view></view><view></view></view><view class="empty-title">正在进入好名书中来</view></view>
+  </view>
+
+  <view class="action-bar" wx:if="{{current}}">
+    <view class="action-wrap">
+      <button class="action-button action-skip" disabled="{{animating}}" bindtap="skip" aria-label="不喜欢这个名字">
+        <image src="/assets/icons/x.svg" mode="aspectFit" />
+      </button>
+      <text>不喜欢</text>
+    </view>
+    <view class="action-wrap">
+      <button class="action-button action-favorite" loading="{{saving}}" disabled="{{animating}}" bindtap="favorite" aria-label="收藏这个名字">
+        <image wx:if="{{!saving}}" src="/assets/icons/star.svg" mode="aspectFit" />
+      </button>
+      <text>收藏</text>
+    </view>
+    <view class="action-wrap">
+      <button class="action-button action-next" disabled="{{animating}}" bindtap="next" aria-label="查看下一个名字">
+        <image src="/assets/icons/arrow-right.svg" mode="aspectFit" />
+      </button>
+      <text>下一个</text>
+    </view>
+  </view>
+
+  <view class="error-toast" wx:if="{{error}}" bindtap="retry">{{error}}</view>
 </view>
+
+<canvas type="2d" id="shareCanvas" style="position:fixed;left:-2000px;top:0;width:750px;height:600px;pointer-events:none;" aria-hidden="true"></canvas>

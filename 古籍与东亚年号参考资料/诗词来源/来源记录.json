@@ -1,0 +1,23 @@
+{
+  "repository": "https://github.com/chinese-poetry/chinese-poetry",
+  "revision": "b8594f81a89752241442f2ce267d6f66f96704ee",
+  "conversion": "OpenCC t2s",
+  "collections": [
+    {
+      "name": "唐诗",
+      "path": "全唐诗/唐诗三百首.json",
+      "url": "https://github.com/chinese-poetry/chinese-poetry/blob/b8594f81a89752241442f2ce267d6f66f96704ee/全唐诗/唐诗三百首.json",
+      "poems": 366,
+      "original_sha256": "d77a145f7470da2ed2f79515944563c062ffc43fceda07f195a36ead66b7e5c7",
+      "text_sha256": "7749c3a1740829c7a0a6148b8f745a982291464851cd7a5cf5a6657c31993d1c"
+    },
+    {
+      "name": "宋词",
+      "path": "宋词/宋词三百首.json",
+      "url": "https://github.com/chinese-poetry/chinese-poetry/blob/b8594f81a89752241442f2ce267d6f66f96704ee/宋词/宋词三百首.json",
+      "poems": 280,
+      "original_sha256": "ca5d74f7fdb9d5a6acc22a7c8b4395228cad4bb8be53df44c19ba83ab6983b20",
+      "text_sha256": "346d12ee9e54d9f1c592f3cd6720f92b1258ddf5ee03f04c94637324372df55d"
+    }
+  ]
+}

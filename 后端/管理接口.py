@@ -32,7 +32,6 @@ def 管理权限(x_admin_key: str = Header(default=""), authorization: str = Hea
 
 
 class 档案参数(严格参数):
-    surname: str = Field(pattern=r"^[\u3400-\u9fff]{1,2}$")
     name_length: Literal[1, 2] = 2
     enabled: bool = True
 
@@ -40,8 +39,10 @@ class 档案参数(严格参数):
 @路由.get("/profiles")
 def 档案列表():
     with 连接数据库() as c:
-        return c.execute("""SELECT p.*,count(m.id) AS stock FROM app_profiles p LEFT JOIN app_materials m ON m.profile_id=p.id
-            GROUP BY p.id ORDER BY p.id""").fetchall()
+        return c.execute("""SELECT p.*,count(m.id) FILTER (WHERE
+                COALESCE((m.payload->>'基础分')::int,0)>=85) AS stock
+            FROM app_profiles p LEFT JOIN app_materials m ON m.profile_id=p.id
+            WHERE p.surname='' GROUP BY p.id ORDER BY p.name_length""").fetchall()
 
 
 @路由.put("/profiles")
@@ -49,7 +50,7 @@ def 保存档案(p: 档案参数):
     with 连接数据库() as c:
         return c.execute("""INSERT INTO app_profiles(surname,name_length,enabled) VALUES (%s,%s,%s)
             ON CONFLICT(surname,name_length) DO UPDATE SET enabled=excluded.enabled RETURNING *""",
-            (p.surname, p.name_length, p.enabled)).fetchone()
+            ("", p.name_length, p.enabled)).fetchone()
 
 
 @路由.get("/metrics")
@@ -60,10 +61,10 @@ def 指标():
                             "历史任务": "name_runs", "历史收藏": "favorites"}.items():
             totals[name] = c.execute(sql.SQL("SELECT count(*) AS n FROM {}").format(sql.Identifier(table))).fetchone()["n"]
         return {"totals": totals, "worker": c.execute("SELECT *,heartbeat>now()-interval '5 minutes' AS alive FROM app_worker").fetchone(),
-                "daily_limit": int(os.getenv("PRODUCER_DAILY_BATCHES", "480")),
+                "daily_limit": int(os.getenv("PRODUCER_DAILY_BATCHES", "0")),
                 "today_batches": c.execute("SELECT COALESCE(sum(batches),0) AS n FROM app_budget WHERE day=CURRENT_DATE").fetchone()["n"],
                 "sources": c.execute("""SELECT s.*,p.surname,p.name_length FROM app_source_progress s
-                    JOIN app_profiles p ON p.id=s.profile_id ORDER BY p.id,s.book""").fetchall()}
+                    JOIN app_profiles p ON p.id=s.profile_id WHERE p.surname='' ORDER BY p.name_length,s.book""").fetchall()}
 
 
 @路由.get("/feedback")

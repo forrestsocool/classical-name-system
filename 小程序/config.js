@@ -1,2 +1,4 @@
-// Public deployment identifier only. Credentials belong in cloud/server environment variables.
-module.exports = { envId: 'wxapp-backend-test-d5c9k701c7cf2', gateway: 'nameGateway' };
+module.exports = {
+  httpUrl: 'https://name.wxapp.655567.xyz/api/v1/dispatch',
+  mode: 'http'
+};

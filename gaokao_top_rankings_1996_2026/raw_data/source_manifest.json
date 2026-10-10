@@ -1,0 +1,18 @@
+{
+  "sources": [
+    {
+      "url": "https://pastebin.com/raw/z3XiLUfa",
+      "page": "https://pastebin.com/z3XiLUfa",
+      "file": "pastebin-z3XiLUfa.txt",
+      "sha256": "0de07e0163fe6612a5a2dca005700f06bc759b6e200f7e63ecdc440ddcfa33cd",
+      "bytes": 202483
+    },
+    {
+      "url": "https://www.sohu.com/a/1042818486_100934",
+      "file": "sohu-2026.html",
+      "sha256": "822d20f58eca0e6fcac67582edf7b5e0f93050bb76fcdd7a8c720b85f2a099c0",
+      "bytes": 26630
+    }
+  ],
+  "retrieved_at": "2026-10-08"
+}

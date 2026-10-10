@@ -1,8 +1,95 @@
-<view class="page"><view class="eyebrow">把心动的名字，慢慢留下</view><view class="title">我的收藏</view><view class="muted">选中 2—4 个名字，一起比较。</view>
-<view class="row"><button class="button secondary" loading="{{busy}}" disabled="{{busy}}" bindtap="reload">刷新收藏</button><button class="button" disabled="{{busy || selectedCount < 2}}" bindtap="compare">比较 {{selectedCount || ''}}</button></view>
-<view class="muted error" wx:if="{{error}}">{{error}}</view>
-<view class="empty" wx:if="{{!cards.length && !busy}}">还没有收藏的名字<view class="muted">去发现页，留下你的第一份心动。</view></view>
-<view class="panel" wx:for="{{cards}}" wx:key="id"><view class="card-top"><view class="favorite-name" data-id="{{item.id}}" bindtap="detail">{{item.item.姓名}}</view><view class="check" data-id="{{item.id}}" bindtap="select">{{item.selected ? '☑ 已选择' : '□ 选择'}}</view></view><view class="muted">{{item.item.现代释义}}</view><view class="source">《{{item.item.书名}}》 · {{item.item.篇章}}</view><view class="row"><button class="button secondary" data-id="{{item.id}}" bindtap="detail">查看出处</button><button class="button secondary" data-id="{{item.id}}" disabled="{{busy}}" bindtap="remove">取消收藏</button></view></view>
-<button class="button secondary" wx:if="{{nextCursor}}" disabled="{{busy}}" bindtap="more">更多收藏</button>
-<view class="panel" wx:if="{{comparison.length}}"><view class="section-title">名字比较</view><view class="comparison" wx:for="{{comparison}}" wx:key="id"><view class="favorite-name">{{item.item.姓名}}</view><view class="pinyin">{{item.item.拼音带调}}</view><view class="meaning">{{item.item.现代释义}}</view><view class="source">《{{item.item.书名}}》 · {{item.item.篇章}}</view><text class="tag" wx:for="{{item.item.文化标签}}" wx:for-item="tag" wx:key="*this">{{tag}}</text></view></view>
+<view class="favorites-page" bindtap="closeOnTap">
+  <view class="collection-hint" wx:if="{{cards.length}}">
+    <view class="hint-line"></view>
+    <text>左滑卡片可取消收藏</text>
+    <view class="hint-line"></view>
+  </view>
+
+  <view class="collection-error" wx:if="{{error}}" catchtap="retry" role="button" aria-label="重新加载收藏">
+    {{error}}<text class="retry-label">轻点重试</text>
+  </view>
+
+  <view class="collection-state" wx:if="{{!cards.length && (loading || refreshing)}}">
+    <view class="loading-dots"><view></view><view></view><view></view></view>
+    <view class="state-title">正在翻阅收藏</view>
+  </view>
+  <view class="collection-state empty-state" wx:elif="{{initialized && !cards.length && !error}}">
+    <view class="empty-art">
+      <image class="empty-mountains" src="/assets/card-landscape.svg" mode="aspectFit" />
+      <image class="empty-heart" src="/assets/icons/heart.svg" mode="aspectFit" />
+    </view>
+    <view class="state-title">还没有收藏的名字</view>
+    <view class="state-copy">在首页右滑，留下喜欢的名字。</view>
+    <button class="discover-button" catchtap="goDiscover">去挑名字<image src="/assets/icons/arrow-right.svg" mode="aspectFit" /></button>
+  </view>
+
+  <view class="favorite-row {{openId === item.id ? 'row-open' : ''}}" wx:for="{{cards}}" wx:key="id">
+    <button
+      wx:if="{{openId === item.id}}"
+      class="remove-button"
+      data-id="{{item.id}}"
+      disabled="{{loading || refreshing || removingId}}"
+      loading="{{removingId === item.id}}"
+      catchtap="remove"
+      aria-label="取消收藏{{item.item.displayName}}"
+    >
+      <image wx:if="{{removingId !== item.id}}" src="/assets/icons/heart-minus.svg" mode="aspectFit" />
+      <text>{{removingId === item.id ? '正在取消' : '取消收藏'}}</text>
+    </button>
+    <view
+      class="favorite-card {{openId === item.id && dragging ? 'is-dragging' : ''}}"
+      style="transform:translate3d({{openId === item.id ? slideX : 0}}px,0,0);"
+      data-id="{{item.id}}"
+      bindtouchstart="touchStart"
+      bindtouchmove="touchMove"
+      bindtouchend="touchEnd"
+      bindtouchcancel="touchCancel"
+    >
+      <image class="card-mountains" src="/assets/favorite-landscape.svg" mode="aspectFit" />
+      <view class="favorite-top">
+        <view class="name-group">
+          <view class="favorite-heading {{item.item.displayName.length > 4 ? 'long-name-heading' : ''}}">
+            <view class="favorite-name {{nameFontReady ? 'wenkai-name' : ''}}">{{item.item.displayName}}</view>
+            <view class="mini-scores">
+              <view class="mini-score mini-male"><image src="/assets/icons/male-muted.svg" mode="aspectFit" /><text>{{item.item.maleScore}}%</text></view>
+              <view class="mini-score mini-female"><image src="/assets/icons/female-muted.svg" mode="aspectFit" /><text>{{item.item.femaleScore}}%</text></view>
+            </view>
+          </view>
+          <view class="favorite-pinyin">{{item.item.pinyin}}</view>
+        </view>
+        <view class="favorite-actions">
+        <button class="favorite-share-button" open-type="share" catchtap="prepareFavoriteShare" data-id="{{item.id}}" aria-label="分享{{item.item.displayName}}"><image src="/assets/icons/share-green.svg" mode="aspectFit" /><text>分享</text></button>
+        <button class="source-button" data-id="{{item.id}}" disabled="{{removingId}}" catchtap="detail" aria-label="查看{{item.item.displayName}}的出处与释义">
+          <image src="/assets/icons/document-green.svg" mode="aspectFit" /><text>{{item.item.isCustom ? '查看释义与五行' : '查看出处'}}</text><image class="source-arrow" src="/assets/icons/arrow-right-green.svg" mode="aspectFit" />
+        </button>
+        </view>
+      </view>
+      <view class="favorite-meaning">{{item.item.meaning}}</view>
+      <view class="favorite-tags" wx:if="{{item.item.tags.length}}">
+        <text wx:for="{{item.item.tags}}" wx:for-item="tag" wx:for-index="tagIndex" wx:key="*this" wx:if="{{tagIndex < 3}}">{{tag}}</text>
+      </view>
+      <view class="favorite-source">
+        <image src="/assets/icons/book-open.svg" mode="aspectFit" />
+        <text>{{item.item.isCustom ? '用户自定义' : '《' + item.item.book + '》'}}<text wx:if="{{item.item.chapter}}"> · {{item.item.chapter}}</text></text>
+      </view>
+    </view>
+  </view>
+  <view class="list-foot" wx:if="{{cards.length && !error}}">
+    {{loading ? '正在翻阅收藏…' : (nextCursor ? '上拉查看更多' : '喜欢的名字，都在这里')}}
+  </view>
+  <view class="custom-entry">
+    <view class="custom-add-ornament">
+      <button class="custom-toggle {{customOpen ? 'custom-toggle-open' : ''}}" catchtap="toggleCustom" disabled="{{customSaving}}" aria-label="{{customOpen ? '收起自定义名字' : '新增自定义名字'}}">
+        <image class="custom-plus" src="/assets/icons/collection-plus.svg" mode="aspectFit" />
+      </button>
+    </view>
+    <view class="custom-form" wx:if="{{customOpen}}">
+      <text class="custom-copy">输入不含姓氏的名字，自动补全五行、释义和男女适配标记。</text>
+      <input value="{{customName}}" bindinput="inputCustom" maxlength="-1" disabled="{{customSaving}}" placeholder="如：清和（不含姓氏）" aria-label="自定义名字" />
+      <view class="custom-error" wx:if="{{customError}}">{{customError}}</view>
+      <button class="custom-submit" catchtap="saveCustom" loading="{{customSaving}}" disabled="{{customSaving}}">{{customSaving ? '正在补全名字信息…' : '补全并加入收藏'}}</button>
+    </view>
+  </view>
 </view>
+
+<canvas type="2d" id="shareCanvas" style="position:fixed;left:-2000px;top:0;width:750px;height:600px;pointer-events:none;" aria-hidden="true"></canvas>

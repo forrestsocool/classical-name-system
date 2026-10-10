@@ -2,12 +2,28 @@ import hashlib
 import hmac
 import os
 import re
+import threading
 import time
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
 
 from .数据库 import 连接数据库
+
+_清理锁 = threading.Lock()
+_下次清理 = 0.0
+
+
+def _清理过期随机数(c):
+    global _下次清理
+    now = time.monotonic()
+    if now < _下次清理:
+        return
+    with _清理锁:
+        if now < _下次清理:
+            return
+        c.execute("DELETE FROM app_nonces WHERE expires_at < now()")
+        _下次清理 = now + 300
 
 
 def 签名原文(timestamp, nonce, body):
@@ -29,11 +45,11 @@ def 校验签名(headers, body):
     if not re.fullmatch(r"[a-f0-9]{64}", 签名) or not hmac.compare_digest(预期, 签名):
         raise HTTPException(401, "接入凭据无效")
     with 连接数据库() as c:
-        c.execute("DELETE FROM app_nonces WHERE expires_at < now()")
         行 = c.execute("INSERT INTO app_nonces VALUES (%s,%s) ON CONFLICT DO NOTHING RETURNING nonce",
                       (nonce, datetime.fromtimestamp(int(时间) + 301, timezone.utc))).fetchone()
         if not 行:
             raise HTTPException(409, "接入请求已处理")
+        _清理过期随机数(c)
 
 
 def 用户身份(appid, openid):

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 250" fill="none">
+  <defs>
+    <linearGradient id="far" x1="95" y1="63" x2="154" y2="192" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#e5ece2" stop-opacity=".46"/>
+      <stop offset="1" stop-color="#f1f4ed" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="near" x1="50" y1="112" x2="118" y2="230" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#d9e6da" stop-opacity=".52"/>
+      <stop offset="1" stop-color="#f3f6ee" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="foreground" x1="67" y1="166" x2="115" y2="246" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#dce7d9" stop-opacity=".2"/>
+      <stop offset="1" stop-color="#f3f6ee" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="365" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="white"/>
+      <stop offset=".52" stop-color="white" stop-opacity=".85"/>
+      <stop offset="1" stop-color="white" stop-opacity="0"/>
+    </linearGradient>
+    <mask id="edge"><path fill="url(#fade)" d="M0 0H420V250H0Z"/></mask>
+  </defs>
+  <g mask="url(#edge)">
+    <path d="M0 83C10 84 14 65 25 64C36 63 43 82 56 87C67 92 76 80 86 82C101 85 109 104 121 103C135 102 143 86 154 87C170 90 180 115 194 118C207 121 218 114 230 122C246 133 255 145 274 147C291 149 298 160 319 164C341 169 356 176 380 180V232H0Z" fill="url(#far)"/>
+    <path d="M0 145C10 138 14 122 25 126C36 131 44 109 55 113C69 116 77 134 89 137C102 140 108 154 119 155C129 156 134 148 144 153C157 160 163 174 180 174C193 174 200 182 212 186C231 192 241 189 255 197C273 207 289 212 316 218V250H0Z" fill="url(#near)"/>
+    <path d="M0 179C19 172 24 184 37 182C51 180 58 166 70 171C85 178 92 193 110 192C122 191 131 198 144 202C163 208 174 207 190 216C205 224 222 223 241 230V250H0Z" fill="url(#foreground)"/>
+  </g>
+</svg>

@@ -1,0 +1,87 @@
+// All artwork and text are drawn locally. Only the durable share link needs the API.
+const queues = new WeakMap();
+const surfaces = new WeakMap();
+const {nameGlyphs, drawName} = require('./shareGlyphs');
+function canvasNode(page) {
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+    const find = () => wx.createSelectorQuery().in(page).select('#shareCanvas').fields({node: true}).exec(rows => {
+      if (rows[0] && rows[0].node) resolve(rows[0].node);
+      else if (++attempts < 15) setTimeout(find, 100);
+      else reject(new Error('分享画布未准备好，请重试'));
+    });
+    find();
+  });
+}
+function image(canvas, path) {
+  return new Promise((resolve, reject) => {
+    const asset = canvas.createImage();
+    asset.onload = () => resolve(asset);
+    asset.onerror = () => reject(new Error('分享背景读取失败'));
+    asset.src = path;
+  });
+}
+function fit(ctx, text, size, width, family) {
+  do { ctx.font = `${size}px ${family}`; if (ctx.measureText(text).width <= width) break; size--; } while (size > 12);
+  return size;
+}
+function ellipse(ctx, text, width) {
+  if (ctx.measureText(text).width <= width) return text;
+  while (text && ctx.measureText(text + '…').width > width) text = text.slice(0, -1);
+  return text + '…';
+}
+function pill(ctx, x, y, width, height) {
+  const radius = height / 2;
+  ctx.beginPath(); ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y); ctx.arc(x + width - radius, y + radius, radius, -Math.PI / 2, Math.PI / 2);
+  ctx.lineTo(x + radius, y + height); ctx.arc(x + radius, y + radius, radius, Math.PI / 2, Math.PI * 1.5);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+}
+async function draw(card, page) {
+  const item = card.item;
+  const name = Array.from(String(item.displayName || item.name || item['姓名'] || '')).slice(0, 6).join('');
+  if (!surfaces.has(page)) {
+    const surface = canvasNode(page).then(async canvas => ({canvas,
+      background: await image(canvas, '/assets/share/background.jpg')}));
+    surfaces.set(page, surface);
+    surface.catch(() => surfaces.delete(page));
+  }
+  const [{canvas, background}, glyphs] = await Promise.all([surfaces.get(page), nameGlyphs(name)]);
+  page.shareFontLoaded = glyphs.every(glyph => !!glyph.units);
+  canvas.width = 750; canvas.height = 600;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(background, 0, 0, 750, 600);
+  const book = String(item.book || item['书名'] || '');
+  const chapter = String(item.chapter || item['篇章'] || '');
+  const tags = (item.tags || item['文化标签'] || []).slice(0, 3).map(tag => String(tag).slice(0, 12));
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  drawName(ctx, glyphs);
+  ctx.strokeStyle = '#a83d32'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(384, 289); ctx.lineTo(416, 289); ctx.stroke();
+  const small = '"PingFang SC", "Microsoft YaHei", sans-serif';
+  const source = book === '用户自定义' ? book : book ? `《${book}》${chapter ? ' · ' + chapter : ''}` : '';
+  fit(ctx, source, 28, 520, small); ctx.fillStyle = '#52685b';
+  ctx.fillText(ellipse(ctx, source, 520), 400, 327);
+  let size = 25, widths;
+  do {
+    ctx.font = `${size}px ${small}`;
+    widths = tags.map(tag => ctx.measureText(tag).width + 36);
+    if (widths.reduce((a, b) => a + b, 0) + Math.max(0, tags.length - 1) * 16 <= 520) break;
+  } while (--size > 10);
+  let x = 400 - (widths.reduce((a, b) => a + b, 0) + Math.max(0, tags.length - 1) * 16) / 2;
+  tags.forEach((tag, i) => {
+    ctx.fillStyle = '#ebf0e0'; ctx.strokeStyle = '#c4d1bc'; ctx.lineWidth = 1;
+    pill(ctx, x, 364, widths[i], 48); ctx.fillStyle = '#46624e'; ctx.fillText(tag, x + widths[i] / 2, 388);
+    x += widths[i] + 16;
+  });
+  return new Promise((resolve, reject) => wx.canvasToTempFilePath({canvas, x: 0, y: 0,
+    width: 750, height: 600, destWidth: 750, destHeight: 600, fileType: 'jpg', quality: .92,
+    success: result => resolve(result.tempFilePath), fail: () => reject(new Error('分享图片生成失败，请重试'))}, page));
+}
+function renderShareImage(card, page) {
+  const previous = queues.get(page) || Promise.resolve();
+  const task = previous.catch(() => {}).then(() => draw(card, page));
+  queues.set(page, task);
+  return task;
+}
+module.exports = {renderShareImage};
